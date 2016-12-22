@@ -9,19 +9,14 @@ public class OvermindServer extends Thread {
 	
 	public final static int SERVER_PORT = 4444;
 
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub	
-		
-		System.out.println("Hello world!");
-				
-	}
 	
 	static boolean shutdown = false;
 	
 	@Override 
 	public void run() {
-		super.run();
-		
+		super.run();		
+	
+		/*
 		ServerSocket serverSocket = null;		
 		try {
 			serverSocket = new ServerSocket(SERVER_PORT);
@@ -36,12 +31,12 @@ public class OvermindServer extends Thread {
 			System.out.println(e);			
 		}
 		
-		DataOutputStream output; 
+		DataOutputStream output = null; 
 		try {
 			output = new DataOutputStream(clientSocket.getOutputStream());
 		} catch (IOException e) {
 			System.out.println(e);
-		}
+		}*/
 						
 		byte[] presynapticSpikes = new byte[(Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES) / 8];
 		int byteIndex; 
@@ -66,12 +61,26 @@ public class OvermindServer extends Thread {
                 		   presynapticSpikes[byteIndex] &= ~(1 << index - byteIndex * 8);                		   
                 	   }
                    } else {
+                	   presynapticSpikes[byteIndex] &= ~(1 << index - byteIndex * 8);
                 	   waitARP[index]--;
                    }
         	   }
-        	   /* [End of for loop] */
+        	   /* [End of the for loop] */
+       
+        	   /*
+        	   try {
+        		   output.write(presynapticSpikes);
+        	   } catch (IOException e) {
+        		   System.out.println(e);
+        	   }    */   	   
         }
-        /* [End of while loop] */
+        /* [End of while for loop] */
+        /*
+        try {
+        	serverSocket.close();
+        } catch (IOException e) {
+        	System.out.println(e);
+        } */
 	}
 	/* [End of run method] */ 
 }
