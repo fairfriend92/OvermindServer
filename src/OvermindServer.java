@@ -2,8 +2,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket; 
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 public class OvermindServer extends Thread {
 	
@@ -39,12 +39,14 @@ public class OvermindServer extends Thread {
 		}
 						
 		byte[] presynapticSpikes = new byte[(Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES) / 8];
+		byte[] oldPresynapticSpikes;
 		int byteIndex; 
 		Random random = new Random();
         int[] waitARP = new int[Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES];   
-        long lastTime = 0, newTime = 0;
+        long lastTime = 0, newTime = 0, sendTime = 0;
         
         while (!shutdown) {
+        	oldPresynapticSpikes = presynapticSpikes.clone();
         	/**
     		 * For testing purposes we randomly generate the spikes we send to the client. 		
     		 */
@@ -66,22 +68,27 @@ public class OvermindServer extends Thread {
                 	   waitARP[index]--;
                    }
         	   }
-        	   /* [End of the for loop] */       
+        	   /* [End of the for loop] */               	   
+
+        	   lastTime = newTime;  
+        	   newTime = System.nanoTime();               
         	   
-        	   try {        		   
-        		   output.write(presynapticSpikes);
-        	   } catch (IOException e) {
-        		   System.out.println(e);
-        	   } 
-        	   
-        	   lastTime = newTime;
-               newTime = System.nanoTime();
+               while (newTime - lastTime < Constants.SAMPLING_RATE * 100000 - sendTime) {
+            	   newTime = System.nanoTime();
+            	   System.out.println(newTime - lastTime);
+               }                      	   
+                     
+        	   // TODO mask output stream and send only if different from previous output data 
+               if (!Arrays.equals(oldPresynapticSpikes, presynapticSpikes)) {
+            	   try {        		   
+            		   output.write(presynapticSpikes, 0, (Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES) / 8);
+            		   output.flush();
+            	   } catch (IOException e) {
+            		   System.out.println(e);
+            	   }             	   
+               } 
                
-               try {
-   				TimeUnit.NANOSECONDS.sleep(600000 - (newTime - lastTime));
-               	} catch (InterruptedException e) {
-               		System.out.println(e);
-               	}               	
+        	   sendTime = System.nanoTime() - newTime;
         }
         /* [End of while for loop] */
         
