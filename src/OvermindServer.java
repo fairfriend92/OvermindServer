@@ -45,14 +45,25 @@ public class OvermindServer extends Thread {
         int[] waitARP = new int[Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES];   
         long lastTime = 0, newTime = 0, sendTime = 0;
         
-        while (!shutdown) {
+        int indexK = 0;
+        
+        while (!shutdown) {        	
         	oldPresynapticSpikes = presynapticSpikes.clone();
         	/**
     		 * For testing purposes we randomly generate the spikes we send to the client. 		
     		 */
+        	
         	   for (int index = 0; index < Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES; index++) {  
         		   byteIndex = (int) index / 8;
-                   // A new spike is randomly generated only if the absolute refractory period has elapsed
+        		   if (index == indexK) {
+        			   presynapticSpikes[byteIndex] |= (1 << index - byteIndex * 8);
+        		   } else {
+        			   presynapticSpikes[byteIndex] &= ~(1 << index - byteIndex * 8);
+        		   }
+        	   }
+        		   /*
+        		   byteIndex = (int) index / 8;
+                   // A new spike is randomly generated only if the absolute refractory period has elapsed        		  
                    if (waitARP[index] == 0) {
                 	   if (random.nextBoolean()) {
                 		   // Set the bit corresponding to the index-th synapse 
@@ -66,29 +77,29 @@ public class OvermindServer extends Thread {
                    } else {
                 	   presynapticSpikes[byteIndex] &= ~(1 << index - byteIndex * 8);
                 	   waitARP[index]--;
-                   }
+                   }                   
         	   }
+        	   */
         	   /* [End of the for loop] */               	   
 
         	   lastTime = newTime;  
         	   newTime = System.nanoTime();               
         	   
                while (newTime - lastTime < Constants.SAMPLING_RATE * 100000 - sendTime) {
-            	   newTime = System.nanoTime();
-            	   System.out.println(newTime - lastTime);
+            	   newTime = System.nanoTime();            	   
                }                      	   
                      
         	   // TODO mask output stream and send only if different from previous output data 
                if (!Arrays.equals(oldPresynapticSpikes, presynapticSpikes)) {
             	   try {        		   
             		   output.write(presynapticSpikes, 0, (Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES) / 8);
-            		   output.flush();
-            	   } catch (IOException e) {
+               	   } catch (IOException e) {
             		   System.out.println(e);
             	   }             	   
                } 
                
-        	   sendTime = System.nanoTime() - newTime;
+               sendTime = System.nanoTime() - newTime;
+               indexK = indexK < 8 ? indexK + 1 : 0;
         }
         /* [End of while for loop] */
         
