@@ -4,8 +4,9 @@ import java.io.IOException;
 public class DataReceiver implements Runnable {
 
     	private DataInputStream input;
-        private byte[] outputSpikes = new byte[Constants.NUMBER_OF_NEURONS / 8 + 1];
-        private long oldTime = 0, newTime = 0;
+    	private char dataBytes = (Constants.NUMBER_OF_NEURONS % 8) == 0 ? (char)(Constants.NUMBER_OF_NEURONS / 8) : (char)(Constants.NUMBER_OF_NEURONS / 8) + 1;
+        private byte[] outputSpikes = new byte[dataBytes];
+        private long startTime = 0, endTime = 0;        
         public DataReceiver (DataInputStream d) {
             this.input = d;
         }
@@ -24,13 +25,19 @@ public class DataReceiver implements Runnable {
         @Override
         public void run () {
             while (!OvermindServer.shutdown) {
+            	startTime = System.nanoTime();
                 try {
-                    input.readFully(outputSpikes, 0, Constants.NUMBER_OF_NEURONS / 8 + 1);                
+                    input.readFully(outputSpikes, 0, dataBytes);                
                 } catch (IOException e) {
                 	System.out.println(e);
                 }
-                System.out.println("Elapsed time in nanoseconds " + (System.nanoTime() - oldTime) + " Spikes in hex " + this.bytesToHex(outputSpikes));       
-                oldTime = System.nanoTime();
+                endTime = System.nanoTime(); 
+                
+                while (endTime - startTime < 200000) {
+                	endTime = System.nanoTime();
+                }
+                
+                System.out.println("Elapsed time in nanoseconds " + (System.nanoTime() - startTime) + " Spikes in hex " + bytesToHex(outputSpikes));       
             }
         }
     }
