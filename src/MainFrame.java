@@ -13,15 +13,18 @@ public class MainFrame {
 		JFrame frame = new JFrame("Main frame");
 		JPanel panel = new JPanel();
 		JButton pauseResumeButton = new JButton();
-		OvermindServer server = new OvermindServer();
+		//OvermindServer server = new OvermindServer();
+		VirtualLayerManager VLManager = new VirtualLayerManager();
 		
-		server.start();
+		//server.start();
+		VLManager.start();
 		
 		pauseResumeButton.setText("Stop");
 		pauseResumeButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {							
-				server.shutdown = true;
+				//server.shutdown = true;
+				VirtualLayerManager.shutdown = true;
 			}
 		});	
 		

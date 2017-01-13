@@ -1,8 +1,9 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.ServerSocket; 
-import java.net.Socket;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -10,7 +11,6 @@ import java.util.concurrent.Executors;
 public class OvermindServer extends Thread {
 	
 	public final static int SERVER_PORT = 4194;
-
 	
 	static boolean shutdown = false;
 	
@@ -20,20 +20,19 @@ public class OvermindServer extends Thread {
 		
 		ExecutorService dataReceiverExecutor = Executors.newSingleThreadExecutor();
 		
-		// Create socket for this server
+		// Create socket for this server		
+		/*
 		ServerSocket serverSocket = null;		
 		try {
 			serverSocket = new ServerSocket(SERVER_PORT);
 		} catch (IOException e) {
 			System.out.println(e);
 		}
-		
+				
 		// Accept connections from the clients
 		Socket clientSocket = null;
 		try {
 			clientSocket = serverSocket.accept();
-			//clientSocket.setTrafficClass(0x08);
-			//clientSocket.setTcpNoDelay(true);
 		} catch (IOException e) {
 			System.out.println(e);			
 		}
@@ -54,19 +53,44 @@ public class OvermindServer extends Thread {
 	    catch (IOException e) {
 	       System.out.println(e);
 	    }
-	    // Execute the thread that reads the incoming spikes from the client
-	    dataReceiverExecutor.execute(new DataReceiver(input));
-			    
+	    */	     
+		
+		// The array used to hold the spikes that must be sent to the client
 		byte[] presynapticSpikes = new byte[(Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES) / 8];
-		int byteIndex, randomNum;
+	
 		// Every synapse has an array to count down to the expiration of the Absolute Refractory Period
-		int[] waitARP = new int[Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES];
-        long lastTime = 0, newTime = 0, sendTime = 0;
-        Random rand = new Random();
-
+		int[] waitARP = new int[Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES];    
+        
+        // For testing purposes we hardcode the IP of the client 
+        byte address[] = new byte[] {(byte)0b00100001, (byte)0b10101101, (byte)0b01011010, (byte)0b00000101};
+      
+        // Create the socket of this server for the UDP connection
+        DatagramSocket serverSocket = null;
+		try {
+			serverSocket = new DatagramSocket(4194);
+		} catch (SocketException e) {
+			System.out.println(e);				
+		}
+		
+		// Create the packet containing the testing spikes
+		DatagramPacket sendPacket = null;
+		try {
+			sendPacket = new DatagramPacket(presynapticSpikes, (Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES) / 8, InetAddress.getByAddress(address), SERVER_PORT);
+		} catch (UnknownHostException e) {
+			System.out.println(e);
+		}
+		
+		// Execute the thread that reads the incoming spikes from the client
+		dataReceiverExecutor.execute(new DataReceiver(serverSocket));			
+		
         /**
          * For testing purposes we randomly generate the spikes to send to the clients every Absolute Refractory Period
-         */
+         */		
+		
+		int byteIndex, randomNum;
+		Random rand = new Random();
+        long lastTime = 0, newTime = 0, sendTime = 0;   
+		
         while (!shutdown) {       	
        	
         	for (int index = 0; index < Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES; index++) {  
@@ -91,13 +115,13 @@ public class OvermindServer extends Thread {
         	lastTime = newTime;  
         	newTime = System.nanoTime();               
         	
-        	// New spikes are sent to the clients every ms
+        	// New spikes are sent to the clients every millisecond
         	while (newTime - lastTime < Constants.SAMPLING_RATE * 1000000 - sendTime) {
         		newTime = System.nanoTime();            	   
         	}                      	   
 
         	try {        		   
-        		output.write(presynapticSpikes, 0, (Constants.NUMBER_OF_EXC_SYNAPSES + Constants.NUMBER_OF_INH_SYNAPSES) / 8);
+        		serverSocket.send(sendPacket);
         	} catch (IOException e) {
         		System.out.println(e);
         	}         	   
@@ -107,14 +131,7 @@ public class OvermindServer extends Thread {
         /* [End of while for loop] */
         
         dataReceiverExecutor.shutdown();
-        try {
-        	output.close();
-        	input.close();
-        	clientSocket.close();
-        	serverSocket.close();
-        } catch (IOException e) {
-        	System.out.println(e);
-        } 
+        serverSocket.close(); 
 	}
 	/* [End of run method] */ 
 }

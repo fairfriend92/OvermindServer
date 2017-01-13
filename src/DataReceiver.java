@@ -1,14 +1,17 @@
-import java.io.DataInputStream;
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 
 public class DataReceiver implements Runnable {
 
-    	private DataInputStream input;
+    	private DatagramSocket serverSocket;    	
     	private char dataBytes = (Constants.NUMBER_OF_NEURONS % 8) == 0 ? (char)(Constants.NUMBER_OF_NEURONS / 8) : (char)(Constants.NUMBER_OF_NEURONS / 8) + 1;
         private byte[] outputSpikes = new byte[dataBytes];
+        private DatagramPacket receivePacket = new DatagramPacket(outputSpikes, dataBytes);
         private long startTime = 0, endTime = 0;        
-        public DataReceiver (DataInputStream d) {
-            this.input = d;
+       
+        public DataReceiver (DatagramSocket d) {
+            this.serverSocket = d;
         }
         
         final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
@@ -26,11 +29,13 @@ public class DataReceiver implements Runnable {
         public void run () {
             while (!OvermindServer.shutdown) {
             	startTime = System.nanoTime();
-                try {
-                    input.readFully(outputSpikes, 0, dataBytes);                
-                } catch (IOException e) {
-                	System.out.println(e);
-                }
+            	
+            	try {
+					serverSocket.receive(receivePacket);
+				} catch (IOException e) {
+					System.out.println(e);
+				}
+
                 endTime = System.nanoTime(); 
                 
                 while (endTime - startTime < 200000) {
