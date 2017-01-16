@@ -13,6 +13,7 @@ public class MainFrame {
 		JFrame frame = new JFrame("Main frame");
 		JPanel panel = new JPanel();
 		JButton pauseResumeButton = new JButton();
+		JButton syncButton = new JButton();
 		//OvermindServer server = new OvermindServer();
 		VirtualLayerManager VLManager = new VirtualLayerManager();
 		
@@ -28,8 +29,17 @@ public class MainFrame {
 			}
 		});	
 		
+		syncButton.setText("Sync nodes");
+		syncButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {							
+				VirtualLayerManager.syncNow = true;
+			}
+		});	
+		
 		panel.setLayout(new FlowLayout());
 		panel.add(pauseResumeButton);	
+		panel.add(syncButton);	
 		
 		frame.getContentPane().add(panel, BorderLayout.CENTER);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
