@@ -25,6 +25,8 @@ public class VirtualLayerManager extends Thread{
 		
 		ArrayList<com.example.overmind.LocalNetwork> availableNodes = new ArrayList<>();
 		ArrayList<com.example.overmind.LocalNetwork> unsyncNodes = new ArrayList<>();
+		ArrayList<com.example.overmind.LocalNetwork> syncNodes = new ArrayList<>();
+		ArrayList<LocalNetworkFrame> syncFrames = new ArrayList<>();
 		
 		
 		// Create socket for this server
@@ -39,6 +41,11 @@ public class VirtualLayerManager extends Thread{
 		clientManagerExecutor.execute(new clientManager(clientSocketsQueue, localNetworksQueue));
 		// TODO verify that multiple threads are executed if concurrent requests from terminals are received
 		while (!shutdown) {
+			
+			/**
+			 * 
+			 */
+			
 			// Accept connections from the clients			
 			try {
 				clientSocket = serverSocket.accept();
@@ -82,13 +89,8 @@ public class VirtualLayerManager extends Thread{
 						localNetwork.postsynapticNodes.add(currentNode);
 
 						// Send to the list of terminals which need to be updated the current node
-						if (!unsyncNodes.contains(currentNode)) {
-							unsyncNodes.add(currentNode);
-						} else {
-							int index = unsyncNodes.indexOf(currentNode);
-							unsyncNodes.set(index, currentNode);
-						}
-
+						unsyncNodes.add(currentNode);
+						
 						// Update the current node in the list availableNodes
 						availableNodes.set(i, currentNode);
 
@@ -105,12 +107,7 @@ public class VirtualLayerManager extends Thread{
 						currentNode.postsynapticNodes.add(localNetwork);
 						localNetwork.presynapticNodes.add(currentNode);
 
-						if (!unsyncNodes.contains(currentNode)) {
-							unsyncNodes.add(currentNode);
-						} else {
-							int index = unsyncNodes.indexOf(currentNode);
-							unsyncNodes.set(index, currentNode);
-						}
+						unsyncNodes.add(currentNode);
 
 						availableNodes.set(i, currentNode);
 
@@ -139,12 +136,50 @@ public class VirtualLayerManager extends Thread{
 			// Add the local network to the list of nodes that need to be sync with the physical terminals
 			unsyncNodes.add(localNetwork);	
 			
+			/**
+			 * Sync the GUI with the updated info about the nodes
+			 */
+			
 			if (!syncNow && !unsyncNodes.isEmpty()) {
+				
+				LocalNetworkFrame tmp;
+				
 				for (int i = 0; i < unsyncNodes.size(); i++) {
-					LocalNetworkFrame localNetworkFrame = new LocalNetworkFrame(unsyncNodes.get(i));
-					localNetworkFrame.display();					
-				}
+					
+					// Branch depending on whether the node is new or not
+					if (!syncNodes.contains(unsyncNodes.get(i))) {						
+					
+						tmp = new LocalNetworkFrame();
+						tmp.update(unsyncNodes.get(i));
+						
+						// The node is new so a new frame needs to be created
+						tmp.display();
+						
+						// Add the new window to the list of frames 
+						syncFrames.add(tmp);
+						
+						// Add the new node to the list of sync nodes
+						syncNodes.add(unsyncNodes.get(i));
+						
+					} else {
+						
+						int index = syncNodes.indexOf(unsyncNodes.get(i));
+						
+						// Since the node is not new its alreay existing window must be retrieved from the list
+						tmp = syncFrames.get(index);
+						
+						// The retrieved window needs only to be updated 
+						tmp.update(unsyncNodes.get(i));
+						
+						// The old node is substituted with the new one in the list of sync nodes
+						syncNodes.set(index, unsyncNodes.get(i));
+						
+					}							
+				}				
+				
+				unsyncNodes.clear();
 				syncNow = false;
+			
 			}
 	
 		}
