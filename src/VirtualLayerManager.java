@@ -13,7 +13,10 @@ public class VirtualLayerManager extends Thread{
 	public final static int SERVER_PORT = 4194;
 	
 	static boolean shutdown = false;	
-	static boolean syncNow = false;
+	
+	static ArrayList<com.example.overmind.LocalNetwork> unsyncNodes = new ArrayList<>();
+	static ArrayList<com.example.overmind.LocalNetwork> syncNodes = new ArrayList<>();
+	static ArrayList<LocalNetworkFrame> syncFrames = new ArrayList<>();
 			
 	@Override
 	public void run() {
@@ -23,12 +26,8 @@ public class VirtualLayerManager extends Thread{
 		BlockingQueue<com.example.overmind.LocalNetwork> localNetworksQueue = new ArrayBlockingQueue<>(16);
 		ExecutorService clientManagerExecutor = Executors.newCachedThreadPool();	
 		
-		ArrayList<com.example.overmind.LocalNetwork> availableNodes = new ArrayList<>();
-		ArrayList<com.example.overmind.LocalNetwork> unsyncNodes = new ArrayList<>();
-		ArrayList<com.example.overmind.LocalNetwork> syncNodes = new ArrayList<>();
-		ArrayList<LocalNetworkFrame> syncFrames = new ArrayList<>();
-		
-		
+		ArrayList<com.example.overmind.LocalNetwork> availableNodes = new ArrayList<>();	
+			
 		// Create socket for this server
 		ServerSocket serverSocket = null;		
 		try {
@@ -38,16 +37,16 @@ public class VirtualLayerManager extends Thread{
 		}
 		
 		Socket clientSocket = null;
-		clientManagerExecutor.execute(new clientManager(clientSocketsQueue, localNetworksQueue));
+		clientManagerExecutor.execute(new ClientManager(clientSocketsQueue, localNetworksQueue));
 		// TODO verify that multiple threads are executed if concurrent requests from terminals are received
 		while (!shutdown) {
 			
 			/**
-			 * 
+			 * Open new connections with the clients
 			 */
-			
+		
 			// Accept connections from the clients			
-			try {
+			try {				
 				clientSocket = serverSocket.accept();
 				clientSocketsQueue.put(clientSocket);
 			} catch (IOException|InterruptedException e) {
@@ -134,67 +133,69 @@ public class VirtualLayerManager extends Thread{
 			/* [End of the outer if] */
 			
 			// Add the local network to the list of nodes that need to be sync with the physical terminals
-			unsyncNodes.add(localNetwork);	
-			
-			/**
-			 * Sync the GUI with the updated info about the nodes
-			 */
-			
-			if (!syncNow && !unsyncNodes.isEmpty()) {
+			unsyncNodes.add(localNetwork);						
 				
-				LocalNetworkFrame tmp;
-				
-				for (int i = 0; i < unsyncNodes.size(); i++) {
-					
-					// Branch depending on whether the node is new or not
-					if (!syncNodes.contains(unsyncNodes.get(i))) {						
-					
-						tmp = new LocalNetworkFrame();
-						tmp.update(unsyncNodes.get(i));
-						
-						// The node is new so a new frame needs to be created
-						tmp.display();
-						
-						// Add the new window to the list of frames 
-						syncFrames.add(tmp);
-						
-						// Add the new node to the list of sync nodes
-						syncNodes.add(unsyncNodes.get(i));
-						
-					} else {
-						
-						int index = syncNodes.indexOf(unsyncNodes.get(i));
-						
-						// Since the node is not new its alreay existing window must be retrieved from the list
-						tmp = syncFrames.get(index);
-						
-						// The retrieved window needs only to be updated 
-						tmp.update(unsyncNodes.get(i));
-						
-						// The old node is substituted with the new one in the list of sync nodes
-						syncNodes.set(index, unsyncNodes.get(i));
-						
-					}							
-				}				
-				
-				unsyncNodes.clear();
-				syncNow = false;
-			
-			}
-	
 		}
 		/* [End of while(!shutdown)] */
 							
 	}
-	/* [End of run() method] */
+	/* [End of run() method] */	
+
+	public static void syncNodes() {
+		
+		/**
+		 * Sync the GUI with the updated info about the nodes
+		 */
+		
+		if (!unsyncNodes.isEmpty()) {
+			
+			LocalNetworkFrame tmp;
+			
+			for (int i = 0; i < unsyncNodes.size(); i++) {
+				
+				// Branch depending on whether the node is new or not
+				if (!syncNodes.contains(unsyncNodes.get(i))) {						
+				
+					tmp = new LocalNetworkFrame();
+					tmp.update(unsyncNodes.get(i));
+					
+					// The node is new so a new frame needs to be created
+					tmp.display();
+					
+					// Add the new window to the list of frames 
+					syncFrames.add(tmp);
+					
+					// Add the new node to the list of sync nodes
+					syncNodes.add(unsyncNodes.get(i));
+					
+				} else {
+					
+					int index = syncNodes.indexOf(unsyncNodes.get(i));
+					
+					// Since the node is not new its alreay existing window must be retrieved from the list
+					tmp = syncFrames.get(index);
+					
+					// The retrieved window needs only to be updated 
+					tmp.update(unsyncNodes.get(i));
+					
+					// The old node is substituted with the new one in the list of sync nodes
+					syncNodes.set(index, unsyncNodes.get(i));
+					
+				}							
+			}				
+			
+			unsyncNodes.clear();		
+		}
+		
+	}
 	
-	public class clientManager implements Runnable {
+	public class ClientManager implements Runnable {
 		
 		private BlockingQueue<Socket> clientSockets;
 		private BlockingQueue<com.example.overmind.LocalNetwork> localNetworks;
 		private com.example.overmind.LocalNetwork localNetwork = new com.example.overmind.LocalNetwork();
 		
-		public clientManager (BlockingQueue<Socket> b, BlockingQueue<com.example.overmind.LocalNetwork> b1) {
+		public ClientManager (BlockingQueue<Socket> b, BlockingQueue<com.example.overmind.LocalNetwork> b1) {
 			this.clientSockets = b;
 			this.localNetworks = b1;
 		}
@@ -243,5 +244,6 @@ public class VirtualLayerManager extends Thread{
 		/* [End of run () method] */
 		
 	}
-	/* [End of runnable class] */
+	/* [End of ClientManager inner class] */
 }
+/* [End of VirtualLayerManager class] */
