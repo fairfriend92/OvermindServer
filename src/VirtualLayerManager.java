@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -17,6 +18,7 @@ public class VirtualLayerManager extends Thread{
 	static ArrayList<com.example.overmind.LocalNetwork> unsyncNodes = new ArrayList<>();
 	static ArrayList<com.example.overmind.LocalNetwork> syncNodes = new ArrayList<>();
 	static ArrayList<LocalNetworkFrame> syncFrames = new ArrayList<>();
+	static ArrayList<Node> nodeClients = new ArrayList<>();
 			
 	@Override
 	public void run() {
@@ -39,6 +41,7 @@ public class VirtualLayerManager extends Thread{
 		Socket clientSocket = null;
 		clientManagerExecutor.execute(new ClientManager(clientSocketsQueue, localNetworksQueue));
 		// TODO verify that multiple threads are executed if concurrent requests from terminals are received
+						
 		while (!shutdown) {
 			
 			/**
@@ -53,10 +56,13 @@ public class VirtualLayerManager extends Thread{
 				System.out.println(e);			
 			}
 			
+			// TODO Having ClientManager as a separate thread is futile. 
+			
 			// Retrieve the last local network from the queue
 			com.example.overmind.LocalNetwork localNetwork = null; 
 			try {				
-				localNetwork = localNetworksQueue.take();				
+				localNetwork = localNetworksQueue.take();
+				nodeClients.add(new Node(localNetwork.ip, clientSocket));
 			} catch (InterruptedException e) {
 				System.out.println(e);
 			}
@@ -181,7 +187,18 @@ public class VirtualLayerManager extends Thread{
 					// The old node is substituted with the new one in the list of sync nodes
 					syncNodes.set(index, unsyncNodes.get(i));
 					
-				}							
+				}
+					
+				try {
+					com.example.overmind.LocalNetwork tmpLN = unsyncNodes.get(i);
+					int index = nodeClients.indexOf(new Node(tmpLN.ip, null));
+					Node pendingNode = nodeClients.get(index);
+					ObjectOutputStream output = new ObjectOutputStream(pendingNode.thisClient.getOutputStream());
+					output.writeObject(unsyncNodes.get(i));
+				} catch (IOException e) {
+					System.out.println(e);
+				}
+				
 			}				
 			
 			unsyncNodes.clear();		
@@ -225,11 +242,13 @@ public class VirtualLayerManager extends Thread{
 					System.out.println(e);
 				}
 				// Close the stream
+				/*
 				try {
 					input.close();
 				} catch (IOException | NullPointerException e) {
 					System.out.println(e);
 				} 
+				*/
 				
 				// Put the new localNetwork in a queue
 				try {
