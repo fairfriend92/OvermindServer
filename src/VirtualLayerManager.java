@@ -1,8 +1,11 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -11,7 +14,7 @@ import java.util.concurrent.Executors;
 
 public class VirtualLayerManager extends Thread{
 	
-	public final static int SERVER_PORT = 4194;
+	public final static int SERVER_PORT = 4195;
 	
 	static boolean shutdown = false;	
 	
@@ -26,21 +29,44 @@ public class VirtualLayerManager extends Thread{
 		
 		BlockingQueue<Socket> clientSocketsQueue = new ArrayBlockingQueue<>(16);
 		BlockingQueue<com.example.overmind.LocalNetwork> localNetworksQueue = new ArrayBlockingQueue<>(16);
-		ExecutorService clientManagerExecutor = Executors.newCachedThreadPool();	
-		
+		ExecutorService clientManagerExecutor = Executors.newCachedThreadPool();
 		ArrayList<com.example.overmind.LocalNetwork> availableNodes = new ArrayList<>();	
-			
-		// Create socket for this server
+		
+		/**
+		 * Build the TCP server socket which listens for physical devices ready to connect
+		 */
+		
 		ServerSocket serverSocket = null;		
+		
 		try {
 			serverSocket = new ServerSocket(SERVER_PORT);
 		} catch (IOException e) {
 			System.out.println(e);
 		}
 		
-		Socket clientSocket = null;
-		clientManagerExecutor.execute(new ClientManager(clientSocketsQueue, localNetworksQueue));
-		// TODO verify that multiple threads are executed if concurrent requests from terminals are received
+		assert serverSocket != null;
+		
+		/**
+		 * Build the datagram input socket which listens for test packets from which the nat port can be retrieved
+		 */
+				
+		DatagramSocket inputSocket = null;
+
+        try {
+            inputSocket = new DatagramSocket(SERVER_PORT);
+        } catch (SocketException e) {
+			System.out.println(e);
+        }
+
+        assert inputSocket != null;
+        
+        /**
+         * Start the worker thread which reads LocalNetwork objects from the streams established by the clients
+         */
+        
+        Socket clientSocket = null;
+		
+		clientManagerExecutor.execute(new ClientManager(clientSocketsQueue, localNetworksQueue));		
 						
 		while (!shutdown) {
 			
@@ -56,16 +82,42 @@ public class VirtualLayerManager extends Thread{
 				System.out.println(e);			
 			}
 			
-			// TODO Having ClientManager as a separate thread is futile. 
+			// TODO Having ClientManager as a separate thread is futile. Possibly use NIO channels instead? 
 			
 			// Retrieve the last local network from the queue
-			com.example.overmind.LocalNetwork localNetwork = null; 
+			com.example.overmind.LocalNetwork localNetwork = null; 		
+			
 			try {				
 				localNetwork = localNetworksQueue.take();
-				nodeClients.add(new Node(localNetwork.ip, clientSocket));
 			} catch (InterruptedException e) {
 				System.out.println(e);
 			}
+			
+			/**
+			 * Retrieve nat port of the current device 
+			 */			
+			
+			try {
+				
+				byte[] testPacketBuffer = new byte[1];
+				
+				DatagramPacket testPacket = new DatagramPacket(testPacketBuffer, 1);				
+			
+				inputSocket.receive(testPacket);				
+				
+				localNetwork.natPort = testPacket.getPort();
+				
+				localNetwork.ip = testPacket.getAddress().toString().substring(1);
+			
+				System.out.println("Nat port for device with IP " + localNetwork.ip + " is " + localNetwork.natPort);
+
+				
+			} catch (IOException e) {
+				System.out.println(e);
+			}
+			
+			nodeClients.add(new Node(localNetwork.ip, clientSocket));
+			
 			assert localNetwork != null;
 			
 			/**
@@ -83,7 +135,8 @@ public class VirtualLayerManager extends Thread{
 
 					// Branch depending on whether either the synapses or the dendrites of the current node are saturated
 					if (currentNode.numOfDendrites - localNetwork.numOfNeurons >= 0
-							&& localNetwork.numOfSynapses - currentNode.numOfNeurons >= 0) {
+							&& localNetwork.numOfSynapses - currentNode.numOfNeurons >= 0 
+							&& currentNode.postsynapticNodes.size() >= currentNode.presynapticNodes.size()) {
 
 						// Update the number of dendrites and synapses for the current node and the local network
 						currentNode.numOfDendrites -= localNetwork.numOfNeurons;
@@ -149,15 +202,17 @@ public class VirtualLayerManager extends Thread{
 
 	public static void syncNodes() {
 		
+		ExecutorService randomSpikesGeneratorExecutor = Executors.newCachedThreadPool();
+		
 		/**
 		 * Sync the GUI with the updated info about the nodes
 		 */
 		
-		if (!unsyncNodes.isEmpty()) {
-			
-			LocalNetworkFrame tmp;
+		if (!unsyncNodes.isEmpty()) {		
 			
 			for (int i = 0; i < unsyncNodes.size(); i++) {
+				
+				LocalNetworkFrame tmp;
 				
 				// Branch depending on whether the node is new or not
 				if (!syncNodes.contains(unsyncNodes.get(i))) {						
@@ -174,11 +229,14 @@ public class VirtualLayerManager extends Thread{
 					// Add the new node to the list of sync nodes
 					syncNodes.add(unsyncNodes.get(i));
 					
+					// Send randomly generated spikes to the physical device associated with the current node
+					randomSpikesGeneratorExecutor.execute(new RandomSpikesGenerator(unsyncNodes.get(i)));
+					
 				} else {
 					
 					int index = syncNodes.indexOf(unsyncNodes.get(i));
 					
-					// Since the node is not new its alreay existing window must be retrieved from the list
+					// Since the node is not new its already existing window must be retrieved from the list
 					tmp = syncFrames.get(index);
 					
 					// The retrieved window needs only to be updated 
@@ -188,17 +246,32 @@ public class VirtualLayerManager extends Thread{
 					syncNodes.set(index, unsyncNodes.get(i));
 					
 				}
+				
+				/**
+				 * Updated info regarding the current node are sent back to the physical device
+				 */
 					
 				try {
+					
+					// Temporary object holding the info regarding the local network of the current node
 					com.example.overmind.LocalNetwork tmpLN = unsyncNodes.get(i);
+					
+					// Use the indexOf method to retrieve the current node from the nodeClients list
 					int index = nodeClients.indexOf(new Node(tmpLN.ip, null));
+					
+					// The node whose informations need to be sent back to the physical device
 					Node pendingNode = nodeClients.get(index);
+					
+					// Create an object stream from the client associated with the current node
 					ObjectOutputStream output = new ObjectOutputStream(pendingNode.thisClient.getOutputStream());
+					
+					// Write the info in the steam
 					output.writeObject(unsyncNodes.get(i));
+					
 				} catch (IOException e) {
 					System.out.println(e);
-				}
-				
+				}				
+								
 			}				
 			
 			unsyncNodes.clear();		
@@ -230,7 +303,7 @@ public class VirtualLayerManager extends Thread{
 				}
 				// Receive data stream from the client
 				ObjectInputStream input = null;
-				try {
+				try {					
 					input = new ObjectInputStream(s.getInputStream());
 				} catch (IOException e) {
 					System.out.println(e);
@@ -241,6 +314,7 @@ public class VirtualLayerManager extends Thread{
 				} catch (IOException | ClassNotFoundException e) {
 					System.out.println(e);
 				}
+				
 				// Close the stream
 				/*
 				try {
@@ -264,5 +338,6 @@ public class VirtualLayerManager extends Thread{
 		
 	}
 	/* [End of ClientManager inner class] */
+	
 }
 /* [End of VirtualLayerManager class] */

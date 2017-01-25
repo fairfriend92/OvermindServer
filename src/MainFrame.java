@@ -13,10 +13,8 @@ public class MainFrame {
 		JFrame frame = new JFrame("OvermindServer");
 		JPanel panel = new JPanel();
 		JButton syncButton = new JButton();
-		//OvermindServer server = new OvermindServer();
 		VirtualLayerManager VLManager = new VirtualLayerManager();
 		
-		//server.start();
 		VLManager.start();
 	
 		syncButton.setText("Sync nodes");

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 public class LocalNetwork implements Serializable {
 	public short numOfNeurons, numOfDendrites, numOfSynapses;
     public String ip;
+    public int natPort;
     public ArrayList<LocalNetwork> presynapticNodes;
     public ArrayList<LocalNetwork> postsynapticNodes;   
     
