@@ -12,11 +12,13 @@ public class RandomSpikesGenerator implements Runnable {
 	
 	public final static int UDP_CLIENT_PORT = 4194;	
 	
-	private com.example.overmind.LocalNetwork targetDevice;
+	public com.example.overmind.LocalNetwork targetDevice;
 	
 	RandomSpikesGenerator(com.example.overmind.LocalNetwork l) {
 		this.targetDevice = l;
 	}
+	
+	public boolean shutdown = false;
 	
 	@Override 
 	public void run() {	
@@ -51,15 +53,15 @@ public class RandomSpikesGenerator implements Runnable {
         
         assert targetDeviceAddr != null;
 		
-        while (!VirtualLayerManager.shutdown) {       	
+        while (!shutdown) {       	
         	
         	/**
         	 * Generate spikes randomly, with the only condition that a period of time at least equal to the ARP 
         	 * should pass between two subsequent spikes
         	 */
         	
-        	byte[] outputSpikes = new byte[dataBytes];
-       	
+        	byte[] outputSpikes = new byte[dataBytes];       	
+      	
         	for (int index = 0; index < targetDevice.numOfDendrites; index++) {  
         		
         		int byteIndex = (int) index / 8;

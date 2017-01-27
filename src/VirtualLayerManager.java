@@ -200,9 +200,7 @@ public class VirtualLayerManager extends Thread{
 	}
 	/* [End of run() method] */	
 
-	public static void syncNodes() {
-		
-		ExecutorService randomSpikesGeneratorExecutor = Executors.newCachedThreadPool();
+	public static void syncNodes() {		
 		
 		/**
 		 * Sync the GUI with the updated info about the nodes
@@ -228,9 +226,7 @@ public class VirtualLayerManager extends Thread{
 					
 					// Add the new node to the list of sync nodes
 					syncNodes.add(unsyncNodes.get(i));
-					
-					// Send randomly generated spikes to the physical device associated with the current node
-					randomSpikesGeneratorExecutor.execute(new RandomSpikesGenerator(unsyncNodes.get(i)));
+										
 					
 				} else {
 					

@@ -8,6 +8,9 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 public class MainFrame {
+	
+	// TODO Make the access of the static variables of the VirtualLayerManager class thread safe (allow to press 
+	// the sync button only when the variables are not being accessed)
 
 	public static void main(String[] args) {		
 		JFrame frame = new JFrame("OvermindServer");
