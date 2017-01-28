@@ -32,8 +32,9 @@ public class LocalNetworkFrame {
 	private ExecutorService randomSpikesGeneratorExecutor = Executors.newSingleThreadExecutor();	
 	
 	private com.example.overmind.LocalNetwork localUpdatedNode = new com.example.overmind.LocalNetwork();
+	private com.example.overmind.LocalNetwork oldNode = new com.example.overmind.LocalNetwork();
 	
-	private RandomSpikesGenerator thisNodeRSG = new RandomSpikesGenerator(localUpdatedNode);	
+	public RandomSpikesGenerator thisNodeRSG = new RandomSpikesGenerator(localUpdatedNode);	
 		
 	public void display() {			
 		
@@ -47,12 +48,20 @@ public class LocalNetworkFrame {
 		JScrollPane preConnScrollPanel = new JScrollPane();
 		JScrollPane postConnScrollPanel = new JScrollPane();
 		
+		JList<String> presynapticConnections = new JList<>();
+		JList<String> postsynapticConnections = new JList<>();	
+		
+		/**
+		 * Radio buttons used to select the external stimulus
+		 */
+		
 		JRadioButton randomSpikesRadioButton = new JRadioButton("Random spikes");
 		randomSpikesRadioButton.addActionListener(new ActionListener() {
 			@Override
-			public void actionPerformed(ActionEvent e) {
-				thisNodeRSG.shutdown = false;
-				randomSpikesGeneratorExecutor.execute(thisNodeRSG);			
+			public void actionPerformed(ActionEvent e) {				
+				thisNodeRSG.shutdown = false;	
+				VirtualLayerManager.stimulateNode(localUpdatedNode, !thisNodeRSG.shutdown);
+				randomSpikesGeneratorExecutor.execute(thisNodeRSG);						
 			}
 		});	
 		
@@ -61,17 +70,15 @@ public class LocalNetworkFrame {
 		noneRadioButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {							
-				thisNodeRSG.shutdown = true;				
+				thisNodeRSG.shutdown = true;
+				VirtualLayerManager.stimulateNode(localUpdatedNode, !thisNodeRSG.shutdown);
 			}
 		});	
 		
 		ButtonGroup stimulusButtonsGroup = new ButtonGroup();
 	    stimulusButtonsGroup.add(randomSpikesRadioButton);
-	    stimulusButtonsGroup.add(noneRadioButton);
-		
-		JList<String> presynapticConnections = new JList<>();
-		JList<String> postsynapticConnections = new JList<>();		
-		
+	    stimulusButtonsGroup.add(noneRadioButton);		
+			
 		/**
 		 * Lists options		
 		 */

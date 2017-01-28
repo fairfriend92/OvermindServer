@@ -3,9 +3,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -22,15 +24,14 @@ public class VirtualLayerManager extends Thread{
 	static ArrayList<com.example.overmind.LocalNetwork> syncNodes = new ArrayList<>();
 	static ArrayList<LocalNetworkFrame> syncFrames = new ArrayList<>();
 	static ArrayList<Node> nodeClients = new ArrayList<>();
+	static ArrayList<com.example.overmind.LocalNetwork> availableNodes = new ArrayList<>();	
+
 			
 	@Override
 	public void run() {
 		super.run();
 		
 		BlockingQueue<Socket> clientSocketsQueue = new ArrayBlockingQueue<>(16);
-		BlockingQueue<com.example.overmind.LocalNetwork> localNetworksQueue = new ArrayBlockingQueue<>(16);
-		ExecutorService clientManagerExecutor = Executors.newCachedThreadPool();
-		ArrayList<com.example.overmind.LocalNetwork> availableNodes = new ArrayList<>();	
 		
 		/**
 		 * Build the TCP server socket which listens for physical devices ready to connect
@@ -64,9 +65,7 @@ public class VirtualLayerManager extends Thread{
          * Start the worker thread which reads LocalNetwork objects from the streams established by the clients
          */
         
-        Socket clientSocket = null;
-		
-		clientManagerExecutor.execute(new ClientManager(clientSocketsQueue, localNetworksQueue));		
+        Socket clientSocket = null;		
 						
 		while (!shutdown) {
 			
@@ -80,19 +79,29 @@ public class VirtualLayerManager extends Thread{
 				clientSocketsQueue.put(clientSocket);
 			} catch (IOException|InterruptedException e) {
 				System.out.println(e);			
-			}
+			}		
 			
-			// TODO Having ClientManager as a separate thread is futile. Possibly use NIO channels instead? 
+			com.example.overmind.LocalNetwork localNetwork = null; 					
+			ObjectInputStream input = null;
 			
-			// Retrieve the last local network from the queue
-			com.example.overmind.LocalNetwork localNetwork = null; 		
-			
-			try {				
-				localNetwork = localNetworksQueue.take();
-			} catch (InterruptedException e) {
+			// Receive data stream from the client
+			try {					
+				input = new ObjectInputStream(clientSocket.getInputStream());
+			} catch (IOException e) {
 				System.out.println(e);
 			}
 			
+			assert input != null;
+			
+			// Read the localNetwork class from the data stream
+			try {
+				localNetwork = (com.example.overmind.LocalNetwork) input.readObject();					
+			} catch (IOException | ClassNotFoundException e) {
+				System.out.println(e);
+			}
+			
+			assert localNetwork != null;
+				
 			/**
 			 * Retrieve nat port of the current device 
 			 */			
@@ -187,7 +196,7 @@ public class VirtualLayerManager extends Thread{
 				
 				// Add the local network automatically if the list is empty
 				availableNodes.add(localNetwork);
-				
+				  
 			}
 			/* [End of the outer if] */
 			
@@ -199,6 +208,46 @@ public class VirtualLayerManager extends Thread{
 							
 	}
 	/* [End of run() method] */	
+	
+	public static void stimulateNode (com.example.overmind.LocalNetwork targetDevice, boolean isStimulated) {
+		
+		com.example.overmind.LocalNetwork server = new com.example.overmind.LocalNetwork();
+		
+		try {
+			server.ip = InetAddress.getLocalHost().toString().substring(1);
+		} catch (UnknownHostException e) {
+			System.out.println(e);
+		}
+		
+		if (isStimulated) {
+			
+			availableNodes.remove(targetDevice);
+			
+			targetDevice.numOfDendrites = 0;			
+					
+			targetDevice.presynapticNodes.add(server);
+			
+			if (unsyncNodes.contains(targetDevice)) {			
+				int index = unsyncNodes.indexOf(targetDevice);			
+				unsyncNodes.set(index, targetDevice); 			
+			} else { unsyncNodes.add(targetDevice); }
+			
+		} else {
+					
+			targetDevice.postsynapticNodes.remove(server);
+			
+			availableNodes.add(targetDevice);
+			
+			if (unsyncNodes.contains(targetDevice)) {			
+				int index = unsyncNodes.indexOf(targetDevice);			
+				unsyncNodes.set(index, targetDevice); 			
+			} else { unsyncNodes.add(targetDevice); }
+			
+		}
+		
+		//syncNodes();
+		
+	}
 
 	public static void syncNodes() {		
 		
@@ -233,6 +282,7 @@ public class VirtualLayerManager extends Thread{
 					int index = syncNodes.indexOf(unsyncNodes.get(i));
 					
 					// Since the node is not new its already existing window must be retrieved from the list
+					// TODO instead of using index to retrieve frame we could write a method with argument the LocalNetwork itself
 					tmp = syncFrames.get(index);
 					
 					// The retrieved window needs only to be updated 
@@ -260,7 +310,7 @@ public class VirtualLayerManager extends Thread{
 					
 					// Create an object stream from the client associated with the current node
 					ObjectOutputStream output = new ObjectOutputStream(pendingNode.thisClient.getOutputStream());
-					
+
 					// Write the info in the steam
 					output.writeObject(unsyncNodes.get(i));
 					
@@ -274,66 +324,6 @@ public class VirtualLayerManager extends Thread{
 		}
 		
 	}
-	
-	public class ClientManager implements Runnable {
-		
-		private BlockingQueue<Socket> clientSockets;
-		private BlockingQueue<com.example.overmind.LocalNetwork> localNetworks;
-		private com.example.overmind.LocalNetwork localNetwork = new com.example.overmind.LocalNetwork();
-		
-		public ClientManager (BlockingQueue<Socket> b, BlockingQueue<com.example.overmind.LocalNetwork> b1) {
-			this.clientSockets = b;
-			this.localNetworks = b1;
-		}
-		
-		@Override
-		public void run () {
-			
-			while (!shutdown) {
-				// Read from BlockingQueue next socket
-				Socket s = null;
-				try {
-					s = clientSockets.take();
-				} catch (InterruptedException e) {
-					System.out.println(e);
-				}
-				// Receive data stream from the client
-				ObjectInputStream input = null;
-				try {					
-					input = new ObjectInputStream(s.getInputStream());
-				} catch (IOException e) {
-					System.out.println(e);
-				}
-				// Read the localNetwork class from the data stream
-				try {
-					localNetwork = (com.example.overmind.LocalNetwork) input.readObject();					
-				} catch (IOException | ClassNotFoundException e) {
-					System.out.println(e);
-				}
-				
-				// Close the stream
-				/*
-				try {
-					input.close();
-				} catch (IOException | NullPointerException e) {
-					System.out.println(e);
-				} 
-				*/
-				
-				// Put the new localNetwork in a queue
-				try {
-					localNetworks.put(localNetwork);
-				} catch (InterruptedException e) {
-					System.out.println(e);			
-				}
-			}
-			/* [End of while loop] */
-		    		    
-		}
-		/* [End of run () method] */
-		
-	}
-	/* [End of ClientManager inner class] */
-	
+
 }
 /* [End of VirtualLayerManager class] */
