@@ -1,5 +1,7 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.net.InetAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +36,7 @@ public class LocalNetworkFrame {
 	private com.example.overmind.LocalNetwork localUpdatedNode = new com.example.overmind.LocalNetwork();
 	private com.example.overmind.LocalNetwork oldNode = new com.example.overmind.LocalNetwork();
 	
+	// TODO This being initialized only once causes problems...
 	public RandomSpikesGenerator thisNodeRSG = new RandomSpikesGenerator(localUpdatedNode);	
 		
 	public void display() {			
@@ -60,7 +63,6 @@ public class LocalNetworkFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {				
 				thisNodeRSG.shutdown = false;	
-				VirtualLayerManager.stimulateNode(localUpdatedNode, !thisNodeRSG.shutdown);
 				randomSpikesGeneratorExecutor.execute(thisNodeRSG);						
 			}
 		});	
@@ -71,7 +73,6 @@ public class LocalNetworkFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {							
 				thisNodeRSG.shutdown = true;
-				VirtualLayerManager.stimulateNode(localUpdatedNode, !thisNodeRSG.shutdown);
 			}
 		});	
 		
@@ -182,10 +183,25 @@ public class LocalNetworkFrame {
 		
 		preConnListModel.clear();
 		postConnListModel.clear();		
+		
+		String serverIP = null; 
+		
+		try {
+			serverIP = InetAddress.getLocalHost().toString().substring(1);
+		} catch (IOException e ){
+			System.out.println(e);
+		}
+		
+		assert serverIP != null;
 				
 		for (int i = 0; i < updatedNode.presynapticNodes.size(); i++) {
 			com.example.overmind.LocalNetwork presynapticNode = updatedNode.presynapticNodes.get(i);
-			preConnListModel.addElement("Presynaptic device # " + i + " has ip: " + presynapticNode.ip);
+			if (presynapticNode.ip == serverIP) {
+				preConnListModel.addElement("Presynaptic device # " + i + " is this server (random spike generator)");
+
+			} else {
+				preConnListModel.addElement("Presynaptic device # " + i + " has ip: " + presynapticNode.ip);
+			}
 		}
 		
 		if (updatedNode.presynapticNodes.size() == 0) {

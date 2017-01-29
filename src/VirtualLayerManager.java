@@ -25,7 +25,6 @@ public class VirtualLayerManager extends Thread{
 	static ArrayList<LocalNetworkFrame> syncFrames = new ArrayList<>();
 	static ArrayList<Node> nodeClients = new ArrayList<>();
 	static ArrayList<com.example.overmind.LocalNetwork> availableNodes = new ArrayList<>();	
-
 			
 	@Override
 	public void run() {
@@ -123,133 +122,108 @@ public class VirtualLayerManager extends Thread{
 				
 			} catch (IOException e) {
 				System.out.println(e);
-			}
-			
-			nodeClients.add(new Node(localNetwork.ip, clientSocket));
-			
-			assert localNetwork != null;
-			
-			/**
-			 * Populate and update the list of terminals available for connection
-			 */
-			
-			// The algorithm starts only if the list has at least one element
-			if (!availableNodes.isEmpty()) {
-			
-				// Iterate over all the available terminals
-				for (int i = 0; i < availableNodes.size()
-						|| (localNetwork.numOfDendrites == 0 && localNetwork.numOfSynapses == 0); i++) {
-
-					com.example.overmind.LocalNetwork currentNode = availableNodes.get(i);
-
-					// Branch depending on whether either the synapses or the dendrites of the current node are saturated
-					if (currentNode.numOfDendrites - localNetwork.numOfNeurons >= 0
-							&& localNetwork.numOfSynapses - currentNode.numOfNeurons >= 0 
-							&& currentNode.postsynapticNodes.size() >= currentNode.presynapticNodes.size()) {
-
-						// Update the number of dendrites and synapses for the current node and the local network
-						currentNode.numOfDendrites -= localNetwork.numOfNeurons;
-						localNetwork.numOfSynapses -= currentNode.numOfNeurons;
-
-						// Update the list of connected terminals for both the node and the local network
-						currentNode.presynapticNodes.add(localNetwork);
-						localNetwork.postsynapticNodes.add(currentNode);
-
-						// Send to the list of terminals which need to be updated the current node
-						unsyncNodes.add(currentNode);
-						
-						// Update the current node in the list availableNodes
-						availableNodes.set(i, currentNode);
-
-					} else if (currentNode.numOfSynapses - localNetwork.numOfNeurons >= 0
-							&& localNetwork.numOfDendrites - currentNode.numOfNeurons >= 0) {
-
-						/**
-						 * Just as before but now synapses and dendrites are exchanged
-						 */
-
-						currentNode.numOfSynapses -= localNetwork.numOfNeurons;
-						localNetwork.numOfDendrites -= currentNode.numOfNeurons;
-
-						currentNode.postsynapticNodes.add(localNetwork);
-						localNetwork.presynapticNodes.add(currentNode);
-
-						unsyncNodes.add(currentNode);
-
-						availableNodes.set(i, currentNode);
-
-					} else if (currentNode.numOfSynapses == 0 && currentNode.numOfDendrites == 0) {
-						// If BOTH the synapses and the dendrites of the current node are saturated it can be removed
-						availableNodes.remove(i);
-					}
-					/* [End of the inner if] */
-
-				}
-				/* [End of for loop] */
+			}			
 				
-				// If either the dendrites or the synapses of the local network are not saturated it can be added to the list
-				if (localNetwork.numOfDendrites > 0 || localNetwork.numOfSynapses > 0) {
-					availableNodes.add(localNetwork);
-				} 
-				
-			} else {
-				
-				// Add the local network automatically if the list is empty
-				availableNodes.add(localNetwork);
-				  
-			}
-			/* [End of the outer if] */
+			Node newNode = new Node(localNetwork.ip, clientSocket);
+			newNode.initialize();
 			
-			// Add the local network to the list of nodes that need to be sync with the physical terminals
-			unsyncNodes.add(localNetwork);						
-				
+			nodeClients.add(newNode);
+			
+			
+			assert localNetwork != null;	
+			
+			connectDevices(localNetwork);
+								
 		}
 		/* [End of while(!shutdown)] */
 							
 	}
 	/* [End of run() method] */	
 	
-	public static void stimulateNode (com.example.overmind.LocalNetwork targetDevice, boolean isStimulated) {
+	public synchronized static void connectDevices(com.example.overmind.LocalNetwork localNetwork) {
 		
-		com.example.overmind.LocalNetwork server = new com.example.overmind.LocalNetwork();
+		/**
+		 * Populate and update the list of terminals available for connection
+		 */
 		
-		try {
-			server.ip = InetAddress.getLocalHost().toString().substring(1);
-		} catch (UnknownHostException e) {
-			System.out.println(e);
-		}
+		// The algorithm starts only if the list has at least one element
+		if (!availableNodes.isEmpty() && !availableNodes.contains(localNetwork)) {
 		
-		if (isStimulated) {
-			
-			availableNodes.remove(targetDevice);
-			
-			targetDevice.numOfDendrites = 0;			
+			// Iterate over all the available terminals
+			for (int i = 0; i < availableNodes.size()
+					|| (localNetwork.numOfDendrites == 0 && localNetwork.numOfSynapses == 0); i++) {
+
+				com.example.overmind.LocalNetwork currentNode = availableNodes.get(i);
+
+				// Branch depending on whether either the synapses or the dendrites of the current node are saturated
+				if (currentNode.numOfDendrites - localNetwork.numOfNeurons >= 0
+						&& localNetwork.numOfSynapses - currentNode.numOfNeurons >= 0 
+						&& currentNode.postsynapticNodes.size() >= currentNode.presynapticNodes.size()) {
+
+					// Update the number of dendrites and synapses for the current node and the local network
+					currentNode.numOfDendrites -= localNetwork.numOfNeurons;
+					localNetwork.numOfSynapses -= currentNode.numOfNeurons;
+
+					// Update the list of connected terminals for both the node and the local network
+					currentNode.presynapticNodes.add(localNetwork);
+					localNetwork.postsynapticNodes.add(currentNode);
+
+					// Send to the list of terminals which need to be updated the current node
+					unsyncNodes.add(currentNode);
 					
-			targetDevice.presynapticNodes.add(server);
+					// Update the current node in the list availableNodes
+					availableNodes.set(i, currentNode);
+
+				} else if (currentNode.numOfSynapses - localNetwork.numOfNeurons >= 0
+						&& localNetwork.numOfDendrites - currentNode.numOfNeurons >= 0) {
+
+					/**
+					 * Just as before but now synapses and dendrites are exchanged
+					 */
+
+					currentNode.numOfSynapses -= localNetwork.numOfNeurons;
+					localNetwork.numOfDendrites -= currentNode.numOfNeurons;
+
+					currentNode.postsynapticNodes.add(localNetwork);
+					localNetwork.presynapticNodes.add(currentNode);
+
+					unsyncNodes.add(currentNode);
+
+					availableNodes.set(i, currentNode);
+
+				} else if (currentNode.numOfSynapses == 0 && currentNode.numOfDendrites == 0) {
+					// If BOTH the synapses and the dendrites of the current node are saturated it can be removed
+					availableNodes.remove(i);
+				}
+				/* [End of the inner if] */
+
+			}
+			/* [End of for loop] */
 			
-			if (unsyncNodes.contains(targetDevice)) {			
-				int index = unsyncNodes.indexOf(targetDevice);			
-				unsyncNodes.set(index, targetDevice); 			
-			} else { unsyncNodes.add(targetDevice); }
+			// If either the dendrites or the synapses of the local network are not saturated it can be added to the list
+			if (localNetwork.numOfDendrites > 0 || localNetwork.numOfSynapses > 0) {
+				availableNodes.add(localNetwork);
+			} 
 			
-		} else {
-					
-			targetDevice.postsynapticNodes.remove(server);
+		} else if (availableNodes.isEmpty()) {
 			
-			availableNodes.add(targetDevice);
+			// Add the local network automatically if the list is empty
+			availableNodes.add(localNetwork);
+			  
+		} else if (availableNodes.contains(localNetwork)) {
 			
-			if (unsyncNodes.contains(targetDevice)) {			
-				int index = unsyncNodes.indexOf(targetDevice);			
-				unsyncNodes.set(index, targetDevice); 			
-			} else { unsyncNodes.add(targetDevice); }
+			// If availableNodes contains the localNetwork it needs only to update its reference
+			availableNodes.set(availableNodes.indexOf(localNetwork), localNetwork);							
 			
 		}
+		/* [End of the outer if] */
 		
-		//syncNodes();
+		// Add the local network to the list of nodes that need to be sync with the physical terminals
+		unsyncNodes.add(localNetwork);		
 		
 	}
 
-	public static void syncNodes() {		
+	public synchronized static void syncNodes() {		
 		
 		/**
 		 * Sync the GUI with the updated info about the nodes
@@ -306,13 +280,10 @@ public class VirtualLayerManager extends Thread{
 					int index = nodeClients.indexOf(new Node(tmpLN.ip, null));
 					
 					// The node whose informations need to be sent back to the physical device
-					Node pendingNode = nodeClients.get(index);
+					Node pendingNode = nodeClients.get(index);					
 					
-					// Create an object stream from the client associated with the current node
-					ObjectOutputStream output = new ObjectOutputStream(pendingNode.thisClient.getOutputStream());
-
 					// Write the info in the steam
-					output.writeObject(unsyncNodes.get(i));
+					pendingNode.output.writeObject(unsyncNodes.get(i));
 					
 				} catch (IOException e) {
 					System.out.println(e);

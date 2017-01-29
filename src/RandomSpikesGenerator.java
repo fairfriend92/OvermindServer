@@ -4,6 +4,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Random;
 
 public class RandomSpikesGenerator implements Runnable {
@@ -18,7 +19,7 @@ public class RandomSpikesGenerator implements Runnable {
 		this.targetDevice = l;
 	}
 	
-	public boolean shutdown = false;
+	public boolean shutdown = false;	
 	
 	@Override 
 	public void run() {	
@@ -28,7 +29,42 @@ public class RandomSpikesGenerator implements Runnable {
         int[] waitARP = new int[targetDevice.numOfDendrites];
         short dataBytes = targetDevice.numOfDendrites % 8 == 0 ? 
         		(short) (targetDevice.numOfDendrites / 8) : (short) (targetDevice.numOfDendrites / 8 + 1);
+        
+        com.example.overmind.LocalNetwork targetDeviceOld = new com.example.overmind.LocalNetwork();
+        
+        /**
+         * Procedure to set external stimulus and update local network info
+         */
         		
+        // Store locally the info of the target device before sending the stimulus
+        targetDeviceOld = targetDevice;   
+        
+        // Update the info of the targetDevice according to the chosen stimulus
+        targetDevice.numOfDendrites = 0;
+        
+        // Create a local network representing this server
+        com.example.overmind.LocalNetwork server = new com.example.overmind.LocalNetwork();
+        server.postsynapticNodes = new ArrayList<>();
+        server.presynapticNodes = new ArrayList<>();
+        
+        try {
+			server.ip = InetAddress.getLocalHost().toString().substring(1);
+		} catch (UnknownHostException e1) {
+			System.out.println(e1);
+		}
+        
+        server.postsynapticNodes.add(targetDevice);
+        server.numOfNeurons = 1024;
+        server.numOfSynapses = (short)(1024 - targetDevice.numOfNeurons);
+        server.numOfDendrites = 1024;
+        server.natPort = VirtualLayerManager.SERVER_PORT;
+        
+        // Add the server to the list of presynaptic devices connected to the target device
+        targetDevice.presynapticNodes.add(server);
+        
+        VirtualLayerManager.connectDevices(targetDevice);    
+        VirtualLayerManager.syncNodes();
+
         /**
          * Open the socket for sending the spikes and build the InetAddress of the target device
          */
@@ -46,7 +82,7 @@ public class RandomSpikesGenerator implements Runnable {
         InetAddress targetDeviceAddr = null;
         		
         try {
-			targetDeviceAddr = InetAddress.getByName(targetDevice.ip);
+			targetDeviceAddr = InetAddress.getByName(targetDeviceOld.ip);
 		} catch (UnknownHostException e) {
 			System.out.println(e);
 		}
@@ -62,7 +98,7 @@ public class RandomSpikesGenerator implements Runnable {
         	
         	byte[] outputSpikes = new byte[dataBytes];       	
       	
-        	for (int index = 0; index < targetDevice.numOfDendrites; index++) {  
+        	for (int index = 0; index < targetDeviceOld.numOfDendrites; index++) {  
         		
         		int byteIndex = (int) index / 8;
         		
@@ -102,7 +138,7 @@ public class RandomSpikesGenerator implements Runnable {
         	}                    	   
         	
             try {
-                DatagramPacket outputSpikesPacket = new DatagramPacket(outputSpikes, dataBytes, targetDeviceAddr, targetDevice.natPort);	
+                DatagramPacket outputSpikesPacket = new DatagramPacket(outputSpikes, dataBytes, targetDeviceAddr, targetDeviceOld.natPort);	
 				outputSocket.send(outputSpikesPacket);
 			} catch (IOException e) {
 				System.out.println(e);
@@ -112,7 +148,10 @@ public class RandomSpikesGenerator implements Runnable {
    	                             
         	sendTime = System.nanoTime() - newTime;
         }
-        /* [End of while for loop] */        
+        /* [End of while for loop] */       
+        
+        VirtualLayerManager.connectDevices(targetDeviceOld);
+        VirtualLayerManager.syncNodes();
         
 	}
 	/* [End of run method] */ 
