@@ -33,11 +33,13 @@ public class LocalNetworkFrame {
 	
 	private ExecutorService randomSpikesGeneratorExecutor = Executors.newSingleThreadExecutor();	
 	
-	private com.example.overmind.LocalNetwork localUpdatedNode = new com.example.overmind.LocalNetwork();
+	public com.example.overmind.LocalNetwork localUpdatedNode = new com.example.overmind.LocalNetwork();
 	private com.example.overmind.LocalNetwork oldNode = new com.example.overmind.LocalNetwork();
 	
 	// TODO This being initialized only once causes problems...
-	public RandomSpikesGenerator thisNodeRSG = new RandomSpikesGenerator(localUpdatedNode);	
+	public RandomSpikesGenerator thisNodeRSG = new RandomSpikesGenerator(this);	
+	
+	private boolean randomSpikeRadioButton;
 		
 	public void display() {			
 		
@@ -61,9 +63,12 @@ public class LocalNetworkFrame {
 		JRadioButton randomSpikesRadioButton = new JRadioButton("Random spikes");
 		randomSpikesRadioButton.addActionListener(new ActionListener() {
 			@Override
-			public void actionPerformed(ActionEvent e) {				
-				thisNodeRSG.shutdown = false;	
-				randomSpikesGeneratorExecutor.execute(thisNodeRSG);						
+			public void actionPerformed(ActionEvent e) {
+				if (!randomSpikeRadioButton) {
+					thisNodeRSG.shutdown = false;	
+					randomSpikesGeneratorExecutor.execute(thisNodeRSG);	
+					randomSpikeRadioButton = true;
+				}
 			}
 		});	
 		
@@ -73,6 +78,7 @@ public class LocalNetworkFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {							
 				thisNodeRSG.shutdown = true;
+				randomSpikeRadioButton = false;
 			}
 		});	
 		
@@ -166,7 +172,7 @@ public class LocalNetworkFrame {
 		
 		localUpdatedNode = updatedNode;		
 		
-		thisNodeRSG.targetDevice = localUpdatedNode;
+		
 				
 		/**
 		 * Update info about local network
@@ -184,21 +190,17 @@ public class LocalNetworkFrame {
 		preConnListModel.clear();
 		postConnListModel.clear();		
 		
-		String serverIP = null; 
+		String serverIP; 
 		
-		try {
-			serverIP = InetAddress.getLocalHost().toString().substring(1);
-		} catch (IOException e ){
-			System.out.println(e);
-		}
-		
-		assert serverIP != null;
+		serverIP = VirtualLayerManager.serverIP;
+	
+		preConnListModel.clear();
+		postConnListModel.clear();
 				
 		for (int i = 0; i < updatedNode.presynapticNodes.size(); i++) {
 			com.example.overmind.LocalNetwork presynapticNode = updatedNode.presynapticNodes.get(i);
 			if (presynapticNode.ip == serverIP) {
-				preConnListModel.addElement("Presynaptic device # " + i + " is this server (random spike generator)");
-
+				preConnListModel.addElement("Presynaptic device # " + i + " is this server (RSG)");
 			} else {
 				preConnListModel.addElement("Presynaptic device # " + i + " has ip: " + presynapticNode.ip);
 			}

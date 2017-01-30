@@ -25,10 +25,22 @@ public class VirtualLayerManager extends Thread{
 	static ArrayList<LocalNetworkFrame> syncFrames = new ArrayList<>();
 	static ArrayList<Node> nodeClients = new ArrayList<>();
 	static ArrayList<com.example.overmind.LocalNetwork> availableNodes = new ArrayList<>();	
+	
+	static public String serverIP = null;
 			
 	@Override
 	public void run() {
 		super.run();
+		
+        try (java.util.Scanner s = new java.util.Scanner(new java.net.URL("https://api.ipify.org").openStream(), "UTF-8").useDelimiter("\\A")) {
+            serverIP = s.next();
+        } catch (java.io.IOException e) {
+            System.out.println(e);
+        }
+        
+        assert serverIP != null;
+        
+        System.out.println("This server has IP " + serverIP);
 		
 		BlockingQueue<Socket> clientSocketsQueue = new ArrayBlockingQueue<>(16);
 		
@@ -280,10 +292,13 @@ public class VirtualLayerManager extends Thread{
 					int index = nodeClients.indexOf(new Node(tmpLN.ip, null));
 					
 					// The node whose informations need to be sent back to the physical device
-					Node pendingNode = nodeClients.get(index);					
+					Node pendingNode = nodeClients.get(index);	
 					
+					pendingNode.output.reset();					
+									
 					// Write the info in the steam
-					pendingNode.output.writeObject(unsyncNodes.get(i));
+					pendingNode.output.writeObject(unsyncNodes.get(i));	
+					
 					
 				} catch (IOException e) {
 					System.out.println(e);

@@ -13,10 +13,11 @@ public class RandomSpikesGenerator implements Runnable {
 	
 	public final static int UDP_CLIENT_PORT = 4194;	
 	
-	public com.example.overmind.LocalNetwork targetDevice;
+	private com.example.overmind.LocalNetwork targetDevice;
+	private LocalNetworkFrame parentFrame;
 	
-	RandomSpikesGenerator(com.example.overmind.LocalNetwork l) {
-		this.targetDevice = l;
+	RandomSpikesGenerator(LocalNetworkFrame l) {
+		this.parentFrame = l;
 	}
 	
 	public boolean shutdown = false;	
@@ -24,20 +25,22 @@ public class RandomSpikesGenerator implements Runnable {
 	@Override 
 	public void run() {	
 		
+		targetDevice = parentFrame.localUpdatedNode;
+		
 		Random rand = new Random();
         long lastTime = 0, newTime = 0, sendTime = 0;   
         int[] waitARP = new int[targetDevice.numOfDendrites];
         short dataBytes = targetDevice.numOfDendrites % 8 == 0 ? 
         		(short) (targetDevice.numOfDendrites / 8) : (short) (targetDevice.numOfDendrites / 8 + 1);
         
-        com.example.overmind.LocalNetwork targetDeviceOld = new com.example.overmind.LocalNetwork();
-        
+        com.example.overmind.LocalNetwork targetDeviceOld = new com.example.overmind.LocalNetwork();        
+                
         /**
          * Procedure to set external stimulus and update local network info
          */
         		
-        // Store locally the info of the target device before sending the stimulus
-        targetDeviceOld = targetDevice;   
+        // Store locally the info of the target device before sending the stimulus       
+        targetDeviceOld.update(targetDevice);;   
         
         // Update the info of the targetDevice according to the chosen stimulus
         targetDevice.numOfDendrites = 0;
@@ -47,11 +50,7 @@ public class RandomSpikesGenerator implements Runnable {
         server.postsynapticNodes = new ArrayList<>();
         server.presynapticNodes = new ArrayList<>();
         
-        try {
-			server.ip = InetAddress.getLocalHost().toString().substring(1);
-		} catch (UnknownHostException e1) {
-			System.out.println(e1);
-		}
+        server.ip = VirtualLayerManager.serverIP;
         
         server.postsynapticNodes.add(targetDevice);
         server.numOfNeurons = 1024;
@@ -149,6 +148,10 @@ public class RandomSpikesGenerator implements Runnable {
         	sendTime = System.nanoTime() - newTime;
         }
         /* [End of while for loop] */       
+        
+        // In the meantime the stimulated device may have formed new postsynaptic connections which need to be carried on to the old local network
+        targetDeviceOld.numOfSynapses = targetDevice.numOfSynapses;
+        targetDeviceOld.postsynapticNodes = new ArrayList<>(targetDevice.postsynapticNodes);
         
         VirtualLayerManager.connectDevices(targetDeviceOld);
         VirtualLayerManager.syncNodes();

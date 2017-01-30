@@ -27,7 +27,7 @@ public class LocalNetwork implements Serializable {
         this.numOfSynapses = updatedLN.numOfSynapses;
         this.ip = updatedLN.ip;
         this.natPort = updatedLN.natPort;
-        this.presynapticNodes = updatedLN.presynapticNodes;
-        this.postsynapticNodes = updatedLN.postsynapticNodes;
+        this.presynapticNodes = new ArrayList<>(updatedLN.presynapticNodes);
+        this.postsynapticNodes = new ArrayList<>(updatedLN.postsynapticNodes);
     }
 }
