@@ -16,7 +16,11 @@ import java.util.concurrent.Executors;
 
 public class VirtualLayerManager extends Thread{
 	
-	public final static int SERVER_PORT = 4195;
+	// TODO put these constants in Constants
+	
+	public final static int SERVER_PORT_TCP = 4195;
+	public final static int SERVER_PORT_UDP = 4196;
+	private final static int IPTOS_RELIABILITY = 0x04;
 	
 	static boolean shutdown = false;	
 	
@@ -51,7 +55,7 @@ public class VirtualLayerManager extends Thread{
 		ServerSocket serverSocket = null;		
 		
 		try {
-			serverSocket = new ServerSocket(SERVER_PORT);
+			serverSocket = new ServerSocket(SERVER_PORT_TCP);
 		} catch (IOException e) {
 			System.out.println(e);
 		}
@@ -65,7 +69,7 @@ public class VirtualLayerManager extends Thread{
 		DatagramSocket inputSocket = null;
 
         try {
-            inputSocket = new DatagramSocket(SERVER_PORT);
+            inputSocket = new DatagramSocket(SERVER_PORT_UDP);
         } catch (SocketException e) {
 			System.out.println(e);
         }
@@ -139,8 +143,7 @@ public class VirtualLayerManager extends Thread{
 			Node newNode = new Node(localNetwork.ip, clientSocket);
 			newNode.initialize();
 			
-			nodeClients.add(newNode);
-			
+			nodeClients.add(newNode);			
 			
 			assert localNetwork != null;	
 			
@@ -294,12 +297,14 @@ public class VirtualLayerManager extends Thread{
 					// The node whose informations need to be sent back to the physical device
 					Node pendingNode = nodeClients.get(index);	
 					
-					pendingNode.output.reset();					
+					com.example.overmind.LocalNetwork tmpLocalNetwork = new com.example.overmind.LocalNetwork();
+					tmpLocalNetwork.update(unsyncNodes.get(i));
 									
 					// Write the info in the steam
-					pendingNode.output.writeObject(unsyncNodes.get(i));	
-					
-					
+					pendingNode.output.writeObject(tmpLocalNetwork);						
+								
+					//pendingNode.output.reset();										
+										
 				} catch (IOException e) {
 					System.out.println(e);
 				}				

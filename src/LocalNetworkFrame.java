@@ -31,7 +31,7 @@ public class LocalNetworkFrame {
 	private DefaultListModel<String> preConnListModel = new DefaultListModel<>();
 	private DefaultListModel<String> postConnListModel = new DefaultListModel<>();
 	
-	private ExecutorService randomSpikesGeneratorExecutor = Executors.newSingleThreadExecutor();	
+	public ExecutorService randomSpikesGeneratorExecutor = Executors.newSingleThreadExecutor();	
 	
 	public com.example.overmind.LocalNetwork localUpdatedNode = new com.example.overmind.LocalNetwork();
 	private com.example.overmind.LocalNetwork oldNode = new com.example.overmind.LocalNetwork();

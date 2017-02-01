@@ -12,6 +12,7 @@ public class RandomSpikesGenerator implements Runnable {
 	// TODO Create a method to stop the generation of random spikes
 	
 	public final static int UDP_CLIENT_PORT = 4194;	
+	private final static int IPTOS_THROUGHPUT = 0x08;
 	
 	private com.example.overmind.LocalNetwork targetDevice;
 	private LocalNetworkFrame parentFrame;
@@ -52,18 +53,21 @@ public class RandomSpikesGenerator implements Runnable {
         
         server.ip = VirtualLayerManager.serverIP;
         
+        // TODO Some of these fields are unnecessary
         server.postsynapticNodes.add(targetDevice);
         server.numOfNeurons = 1024;
         server.numOfSynapses = (short)(1024 - targetDevice.numOfNeurons);
         server.numOfDendrites = 1024;
-        server.natPort = VirtualLayerManager.SERVER_PORT;
+        server.natPort = VirtualLayerManager.SERVER_PORT_UDP;
         
         // Add the server to the list of presynaptic devices connected to the target device
         targetDevice.presynapticNodes.add(server);
         
         VirtualLayerManager.connectDevices(targetDevice);    
-        VirtualLayerManager.syncNodes();
-
+        VirtualLayerManager.syncNodes();  
+        
+        
+        
         /**
          * Open the socket for sending the spikes and build the InetAddress of the target device
          */
@@ -72,6 +76,8 @@ public class RandomSpikesGenerator implements Runnable {
 
         try {
     	    outputSocket = new DatagramSocket();
+    	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);    
+    	    //outputSocket.setSendBufferSize(1024);
         } catch (SocketException e) {
 		 	System.out.println(e);
         }
@@ -131,23 +137,25 @@ public class RandomSpikesGenerator implements Runnable {
         	lastTime = newTime;  
         	newTime = System.nanoTime();               
         	
-        	// New spikes are sent to the clients every millisecond
-        	while (newTime - lastTime < Constants.SAMPLING_RATE * 1000000 - sendTime) {
+        	// New spikes are sent to the clients every 2 milliseconds
+        	while (newTime - lastTime < Constants.SAMPLING_RATE * 2 * 10 * 1000000 - sendTime) {
         		newTime = System.nanoTime();            	   
         	}                    	   
-        	
+        	        	
             try {
                 DatagramPacket outputSpikesPacket = new DatagramPacket(outputSpikes, dataBytes, targetDeviceAddr, targetDeviceOld.natPort);	
 				outputSocket.send(outputSpikesPacket);
 			} catch (IOException e) {
 				System.out.println(e);
-			}
+			}			
             
             //System.out.println("Spikes sent to device with IP " + targetDeviceAddr.toString().substring(1) + " and nat port " + targetDevice.natPort);
    	                             
         	sendTime = System.nanoTime() - newTime;
         }
-        /* [End of while for loop] */       
+        /* [End of while for loop] */         
+        
+        outputSocket.close();
         
         // In the meantime the stimulated device may have formed new postsynaptic connections which need to be carried on to the old local network
         targetDeviceOld.numOfSynapses = targetDevice.numOfSynapses;

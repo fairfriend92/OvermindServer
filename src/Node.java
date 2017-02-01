@@ -18,6 +18,8 @@ public class Node {
 	public void initialize() {
 		try {
 			output = new ObjectOutputStream(thisClient.getOutputStream());
+            thisClient.setTrafficClass(0x04);
+			thisClient.setTcpNoDelay(true);
 		} catch (IOException e) {
 			System.out.println(e);
 		}
