@@ -236,6 +236,8 @@ public class VirtualLayerManager extends Thread{
 		// Add the local network to the list of nodes that need to be sync with the physical terminals
 		unsyncNodes.add(localNetwork);		
 		
+		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), syncNodes.size()));
+		
 	}
 
 	public synchronized static void syncNodes() {		
@@ -311,7 +313,10 @@ public class VirtualLayerManager extends Thread{
 								
 			}				
 			
-			unsyncNodes.clear();		
+			unsyncNodes.clear();	
+			
+			MainFrame.updateMainFrame(new MainFrameInfo(0, syncNodes.size()));
+			
 		}
 		
 	}

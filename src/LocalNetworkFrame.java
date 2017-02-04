@@ -170,10 +170,8 @@ public class LocalNetworkFrame {
 	
 	public void update(com.example.overmind.LocalNetwork updatedNode) {
 		
-		localUpdatedNode = updatedNode;		
-		
-		
-				
+		localUpdatedNode = updatedNode;			
+						
 		/**
 		 * Update info about local network
 		 */

@@ -1,40 +1,88 @@
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 public class MainFrame {
 	
 	// TODO Make the access of the static variables of the VirtualLayerManager class thread safe (allow to press 
 	// the sync button only when the variables are not being accessed)
+	
+	private static JLabel numOfUnsyncNodes = new JLabel("# of unsync nodes is 0");
+	private static JLabel numOfSyncNodes = new JLabel("# of sync nodes is 0");
+	private static JFrame frame = new JFrame();
 
 	public static void main(String[] args) {		
-		JFrame frame = new JFrame("OvermindServer");
-		JPanel panel = new JPanel();
-		JButton syncButton = new JButton();
-		VirtualLayerManager VLManager = new VirtualLayerManager();
 		
-		VLManager.start();
+		displayMainFrame();
+					
+		VirtualLayerManager VLManager = new VirtualLayerManager();		
+		VLManager.start();		
+	}
 	
+	private static void displayMainFrame() {
+		
+		JPanel mainPanel = new JPanel();
+		JPanel nodesInfoPanel = new JPanel();		
+		
+		JButton syncButton = new JButton();
 		syncButton.setText("Sync nodes");
 		syncButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {							
 				VirtualLayerManager.syncNodes();			
 			}
-		});	
+		});			
 		
-		panel.setLayout(new FlowLayout());
-		panel.add(syncButton);	
+		/**
+		 * Nodes info panel layout
+		 */
 		
-		frame.getContentPane().add(panel, BorderLayout.CENTER);
+		nodesInfoPanel.setLayout(new BoxLayout(nodesInfoPanel, BoxLayout.Y_AXIS));
+		nodesInfoPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Virtual Layer Info"),
+                BorderFactory.createEmptyBorder(5,5,5,5)));
+		nodesInfoPanel.add(numOfUnsyncNodes);
+		nodesInfoPanel.add(numOfSyncNodes);
+					
+		/**
+		 * Main panel layout
+		 */
+		
+		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.X_AXIS));
+		mainPanel.add(syncButton);	
+		mainPanel.add(nodesInfoPanel);
+		
+		/**
+		 * Frame composition
+		 */
+		
+		frame.setTitle("OvermindServer");
+		frame.setContentPane(mainPanel);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setAlwaysOnTop(true);
 		frame.pack();
 		frame.setVisible(true);
+		
+	}
+	
+	public static void updateMainFrame(MainFrameInfo updatedInfo) {
+		
+		numOfUnsyncNodes.setText("# of unsync nodes is " + updatedInfo.numOfUnsyncNodes);
+		numOfSyncNodes.setText("# of sync nodes is " + updatedInfo.numOfSyncNodes);
+		
+		/**
+		 * Redraw the frame
+		 */
+		
+		frame.revalidate();		
+		frame.repaint();
+		
 	}
 
 }
