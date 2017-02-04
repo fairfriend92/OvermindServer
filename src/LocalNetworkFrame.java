@@ -19,11 +19,15 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 
+import com.example.overmind.LocalNetwork;
+
 public class LocalNetworkFrame {
+	
+	private long lastTime = 0;
 	
 	private JFrame frame = new JFrame();
 	
-	private String ip = new String();
+	public String ip = new String();
 	private JLabel numOfNeurons = new JLabel();
 	private JLabel numOfDendrites = new JLabel();
 	private JLabel numOfSynapses = new JLabel();	
@@ -40,7 +44,7 @@ public class LocalNetworkFrame {
 	public RandomSpikesGenerator thisNodeRSG = new RandomSpikesGenerator(this);	
 	
 	private boolean randomSpikeRadioButton;
-		
+
 	public void display() {			
 		
 		JPanel mainPanel = new JPanel(); 
@@ -168,7 +172,7 @@ public class LocalNetworkFrame {
 		frame.setVisible(true);		
 	}
 	
-	public void update(com.example.overmind.LocalNetwork updatedNode) {
+	public synchronized void update(com.example.overmind.LocalNetwork updatedNode) {
 		
 		localUpdatedNode = updatedNode;			
 						
@@ -198,7 +202,7 @@ public class LocalNetworkFrame {
 		for (int i = 0; i < updatedNode.presynapticNodes.size(); i++) {
 			com.example.overmind.LocalNetwork presynapticNode = updatedNode.presynapticNodes.get(i);
 			if (presynapticNode.ip == serverIP) {
-				preConnListModel.addElement("Presynaptic device # " + i + " is this server (RSG)");
+				preConnListModel.addElement("Presynaptic device # " + i + " is this server");
 			} else {
 				preConnListModel.addElement("Presynaptic device # " + i + " has ip: " + presynapticNode.ip);
 			}
@@ -212,7 +216,12 @@ public class LocalNetworkFrame {
 
 		for (int i = 0; i < updatedNode.postsynapticNodes.size(); i++) {
 			com.example.overmind.LocalNetwork postsynapticNode = updatedNode.postsynapticNodes.get(i);
-			postConnListModel.addElement("Postsynaptic device # " + i + " has ip: " + postsynapticNode.ip);
+			if (postsynapticNode.ip == serverIP) {
+				preConnListModel.addElement("Postsynaptic device # " + i + " is this server");
+			} else {
+				postConnListModel.addElement("Postsynaptic device # " + i + " has ip: " + postsynapticNode.ip);
+
+			}
 		}
 		
 		if (updatedNode.postsynapticNodes.size() == 0) {
@@ -227,6 +236,28 @@ public class LocalNetworkFrame {
 		
 		frame.revalidate();		
 		frame.repaint();
+	}
+	
+	@Override
+    public synchronized boolean equals(Object obj) {
+        if (obj == null || obj.getClass() != this.getClass()) { return false; }
+        LocalNetworkFrame compare = (LocalNetworkFrame) obj;
+        return compare.ip.equals(ip);
+    }	
+	
+	public void displaysSpikes(byte[] bytes) {
+		
+		char[] hexArray = "0123456789ABCDEF".toCharArray();
+		char[] hexChars = new char[bytes.length * 2];
+		for ( int j = 0; j < bytes.length; j++ ) {
+			int v = bytes[j] & 0xFF;
+			hexChars[j * 2] = hexArray[v >>> 4];
+			hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+		}
+		
+		System.out.println("Device with ip " + ip + "has sent: " + hexChars + "with rate " + (System.nanoTime() - lastTime));
+		lastTime = System.nanoTime();
+		
 	}
 	
 }

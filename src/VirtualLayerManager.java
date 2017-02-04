@@ -4,10 +4,13 @@ import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -121,8 +124,8 @@ public class VirtualLayerManager extends Thread{
 			 * Retrieve nat port of the current device 
 			 */			
 			
-			try {
-				
+			try {				
+						
 				byte[] testPacketBuffer = new byte[1];
 				
 				DatagramPacket testPacket = new DatagramPacket(testPacketBuffer, 1);				
@@ -223,19 +226,18 @@ public class VirtualLayerManager extends Thread{
 		} else if (availableNodes.isEmpty()) {
 			
 			// Add the local network automatically if the list is empty
-			availableNodes.add(localNetwork);
+			availableNodes.add(localNetwork);		
+			unsyncNodes.add(localNetwork);	
 			  
 		} else if (availableNodes.contains(localNetwork)) {
 			
 			// If availableNodes contains the localNetwork it needs only to update its reference
-			availableNodes.set(availableNodes.indexOf(localNetwork), localNetwork);							
+			availableNodes.set(availableNodes.indexOf(localNetwork), localNetwork);					
+			unsyncNodes.add(localNetwork);	
 			
 		}
-		/* [End of the outer if] */
-		
-		// Add the local network to the list of nodes that need to be sync with the physical terminals
-		unsyncNodes.add(localNetwork);		
-		
+		/* [End of the outer if] */		
+					
 		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), syncNodes.size()));
 		
 	}
@@ -253,7 +255,9 @@ public class VirtualLayerManager extends Thread{
 				LocalNetworkFrame tmp;
 				
 				// Branch depending on whether the node is new or not
-				if (!syncNodes.contains(unsyncNodes.get(i))) {						
+				if (!syncNodes.contains(unsyncNodes.get(i))) {
+					
+					System.out.println("a");
 				
 					tmp = new LocalNetworkFrame();
 					tmp.update(unsyncNodes.get(i));
@@ -269,6 +273,8 @@ public class VirtualLayerManager extends Thread{
 										
 					
 				} else {
+					
+					System.out.println("b");
 					
 					int index = syncNodes.indexOf(unsyncNodes.get(i));
 					
