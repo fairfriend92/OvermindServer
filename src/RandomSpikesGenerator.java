@@ -79,7 +79,7 @@ public class RandomSpikesGenerator implements Runnable {
     	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);    
     	    //outputSocket.setSendBufferSize(1024);
         } catch (SocketException e) {
-		 	System.out.println(e);
+        	e.printStackTrace();
         }
         
         assert outputSocket != null;
@@ -89,7 +89,7 @@ public class RandomSpikesGenerator implements Runnable {
         try {
 			targetDeviceAddr = InetAddress.getByName(targetDeviceOld.ip);
 		} catch (UnknownHostException e) {
-			System.out.println(e);
+        	e.printStackTrace();
 		}
         
         assert targetDeviceAddr != null;

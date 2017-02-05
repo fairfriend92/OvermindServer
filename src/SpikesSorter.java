@@ -8,7 +8,7 @@ import java.util.ArrayList;
 
 public class SpikesSorter extends Thread{
 	
-	private ArrayList<LocalNetworkFrame> localSyncFrames = new ArrayList<>();
+	private static ArrayList<LocalNetworkFrame> localSyncFrames = new ArrayList<>();
 	
 	@Override
 	public void run() {
@@ -32,25 +32,27 @@ public class SpikesSorter extends Thread{
 				
 				DatagramPacket spikesPacket = new DatagramPacket(spikesBuffer, 128);				
 			
-				spikesReceiver.receive(spikesPacket);				
-				
+				spikesReceiver.receive(spikesPacket);			
+								
 				spikesBuffer = spikesPacket.getData();
 				
 				InetAddress senderAddr = spikesPacket.getAddress();	
 				
+				System.out.println("Received packet from ip " + senderAddr.toString().substring(1));				
+				
 				sendSpikesToFrame(localSyncFrames, spikesBuffer, senderAddr);
 				
 			} catch (IOException e) {
-				System.out.println(e);
-			}	
-        	
-			spikesReceiver.close();
+	        	e.printStackTrace();
+			}	        	
 			
         }
+        
+		//spikesReceiver.close();
 
 	}
 	
-	public synchronized void updateNodeFrames (ArrayList<LocalNetworkFrame> syncFrames) {
+	public static synchronized void updateNodeFrames (ArrayList<LocalNetworkFrame> syncFrames) {
 		
 		localSyncFrames = new ArrayList<>(syncFrames);
 		
@@ -62,7 +64,7 @@ public class SpikesSorter extends Thread{
 		LocalNetworkFrame tmpFrame = new LocalNetworkFrame();
 		tmpFrame.ip = senderAddr.toString().substring(1);
 		
-		for (int index = 0; index < localSyncFrames.size() || frameFound; index++) {
+		for (int index = 0; index < localSyncFrames.size() || !frameFound; index++) {
 			
 			if (localSyncFrames.get(index).equals(tmpFrame)) {
 				

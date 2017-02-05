@@ -42,7 +42,7 @@ public class VirtualLayerManager extends Thread{
         try (java.util.Scanner s = new java.util.Scanner(new java.net.URL("https://api.ipify.org").openStream(), "UTF-8").useDelimiter("\\A")) {
             serverIP = s.next();
         } catch (java.io.IOException e) {
-            System.out.println(e);
+        	e.printStackTrace();
         }
         
         assert serverIP != null;
@@ -60,7 +60,7 @@ public class VirtualLayerManager extends Thread{
 		try {
 			serverSocket = new ServerSocket(SERVER_PORT_TCP);
 		} catch (IOException e) {
-			System.out.println(e);
+        	e.printStackTrace();
 		}
 		
 		assert serverSocket != null;
@@ -74,7 +74,7 @@ public class VirtualLayerManager extends Thread{
         try {
             inputSocket = new DatagramSocket(SERVER_PORT_UDP);
         } catch (SocketException e) {
-			System.out.println(e);
+        	e.printStackTrace();
         }
 
         assert inputSocket != null;
@@ -84,6 +84,10 @@ public class VirtualLayerManager extends Thread{
          */
         
         Socket clientSocket = null;		
+        
+        com.example.overmind.LocalNetwork thisServer = new com.example.overmind.LocalNetwork();
+        thisServer.ip = serverIP;
+        thisServer.natPort = 4194;        
 						
 		while (!shutdown) {
 			
@@ -96,7 +100,7 @@ public class VirtualLayerManager extends Thread{
 				clientSocket = serverSocket.accept();
 				clientSocketsQueue.put(clientSocket);
 			} catch (IOException|InterruptedException e) {
-				System.out.println(e);			
+	        	e.printStackTrace();
 			}		
 			
 			com.example.overmind.LocalNetwork localNetwork = null; 					
@@ -106,7 +110,7 @@ public class VirtualLayerManager extends Thread{
 			try {					
 				input = new ObjectInputStream(clientSocket.getInputStream());
 			} catch (IOException e) {
-				System.out.println(e);
+	        	e.printStackTrace();
 			}
 			
 			assert input != null;
@@ -115,7 +119,7 @@ public class VirtualLayerManager extends Thread{
 			try {
 				localNetwork = (com.example.overmind.LocalNetwork) input.readObject();					
 			} catch (IOException | ClassNotFoundException e) {
-				System.out.println(e);
+	        	e.printStackTrace();
 			}
 			
 			assert localNetwork != null;
@@ -140,8 +144,10 @@ public class VirtualLayerManager extends Thread{
 
 				
 			} catch (IOException e) {
-				System.out.println(e);
+	        	e.printStackTrace();
 			}			
+			
+			localNetwork.postsynapticNodes.add(thisServer);
 				
 			Node newNode = new Node(localNetwork.ip, clientSocket);
 			newNode.initialize();
@@ -187,7 +193,7 @@ public class VirtualLayerManager extends Thread{
 					localNetwork.postsynapticNodes.add(currentNode);
 
 					// Send to the list of terminals which need to be updated the current node
-					unsyncNodes.add(currentNode);
+					unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
 					
 					// Update the current node in the list availableNodes
 					availableNodes.set(i, currentNode);
@@ -205,8 +211,7 @@ public class VirtualLayerManager extends Thread{
 					currentNode.postsynapticNodes.add(localNetwork);
 					localNetwork.presynapticNodes.add(currentNode);
 
-					unsyncNodes.add(currentNode);
-
+					unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
 					availableNodes.set(i, currentNode);
 
 				} else if (currentNode.numOfSynapses == 0 && currentNode.numOfDendrites == 0) {
@@ -223,6 +228,9 @@ public class VirtualLayerManager extends Thread{
 				availableNodes.add(localNetwork);
 			} 
 			
+			unsyncNodes.add(localNetwork);	
+
+			
 		} else if (availableNodes.isEmpty()) {
 			
 			// Add the local network automatically if the list is empty
@@ -237,7 +245,7 @@ public class VirtualLayerManager extends Thread{
 			
 		}
 		/* [End of the outer if] */		
-					
+									
 		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), syncNodes.size()));
 		
 	}
@@ -255,10 +263,8 @@ public class VirtualLayerManager extends Thread{
 				LocalNetworkFrame tmp;
 				
 				// Branch depending on whether the node is new or not
-				if (!syncNodes.contains(unsyncNodes.get(i))) {
-					
-					System.out.println("a");
-				
+				if (!syncNodes.contains(unsyncNodes.get(i))) {					
+			
 					tmp = new LocalNetworkFrame();
 					tmp.update(unsyncNodes.get(i));
 					
@@ -272,11 +278,9 @@ public class VirtualLayerManager extends Thread{
 					syncNodes.add(unsyncNodes.get(i));
 										
 					
-				} else {
+				} else {					
 					
-					System.out.println("b");
-					
-					int index = syncNodes.indexOf(unsyncNodes.get(i));
+					int index = syncNodes.indexOf(unsyncNodes.get(i));					
 					
 					// Since the node is not new its already existing window must be retrieved from the list
 					// TODO instead of using index to retrieve frame we could write a method with argument the LocalNetwork itself
@@ -314,13 +318,14 @@ public class VirtualLayerManager extends Thread{
 					//pendingNode.output.reset();										
 										
 				} catch (IOException e) {
-					System.out.println(e);
+		        	e.printStackTrace();
 				}				
 								
 			}				
 			
 			unsyncNodes.clear();	
 			
+			SpikesSorter.updateNodeFrames(syncFrames);
 			MainFrame.updateMainFrame(new MainFrameInfo(0, syncNodes.size()));
 			
 		}

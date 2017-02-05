@@ -23,6 +23,9 @@ public class MainFrame {
 					
 		VirtualLayerManager VLManager = new VirtualLayerManager();		
 		VLManager.start();		
+		
+		SpikesSorter spikesSorter = new SpikesSorter();
+		spikesSorter.start();
 	}
 	
 	private static void displayMainFrame() {

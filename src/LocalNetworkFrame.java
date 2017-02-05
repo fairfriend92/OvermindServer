@@ -217,7 +217,7 @@ public class LocalNetworkFrame {
 		for (int i = 0; i < updatedNode.postsynapticNodes.size(); i++) {
 			com.example.overmind.LocalNetwork postsynapticNode = updatedNode.postsynapticNodes.get(i);
 			if (postsynapticNode.ip == serverIP) {
-				preConnListModel.addElement("Postsynaptic device # " + i + " is this server");
+				postConnListModel.addElement("Postsynaptic device # " + i + " is this server");
 			} else {
 				postConnListModel.addElement("Postsynaptic device # " + i + " has ip: " + postsynapticNode.ip);
 
@@ -247,6 +247,8 @@ public class LocalNetworkFrame {
 	
 	public void displaysSpikes(byte[] bytes) {
 		
+		// TODO restrict bytes only to meaningful information
+		
 		char[] hexArray = "0123456789ABCDEF".toCharArray();
 		char[] hexChars = new char[bytes.length * 2];
 		for ( int j = 0; j < bytes.length; j++ ) {
@@ -255,7 +257,7 @@ public class LocalNetworkFrame {
 			hexChars[j * 2 + 1] = hexArray[v & 0x0F];
 		}
 		
-		System.out.println("Device with ip " + ip + "has sent: " + hexChars + "with rate " + (System.nanoTime() - lastTime));
+		System.out.println("Device with ip " + ip + " has sent: " + hexChars + " with rate " + (System.nanoTime() - lastTime));
 		lastTime = System.nanoTime();
 		
 	}
