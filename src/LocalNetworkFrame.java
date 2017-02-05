@@ -25,7 +25,7 @@ public class LocalNetworkFrame {
 	
 	private long lastTime = 0;
 	
-	private JFrame frame = new JFrame();
+	public JFrame frame = new JFrame();
 	
 	public String ip = new String();
 	private JLabel numOfNeurons = new JLabel();

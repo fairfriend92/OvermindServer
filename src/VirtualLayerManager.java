@@ -249,6 +249,39 @@ public class VirtualLayerManager extends Thread{
 		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), syncNodes.size()));
 		
 	}
+	
+	public synchronized static void removeNode(com.example.overmind.LocalNetwork removableNode) {
+		
+		syncNodes();
+		
+		availableNodes.remove(removableNode); 
+		int index = syncNodes.indexOf(removableNode);		
+		syncNodes.remove(removableNode);
+		syncFrames.get(index).frame.dispose();
+		syncFrames.remove(index);
+		
+		for (int i = 0; i < availableNodes.size(); i++) {
+			
+			boolean nodeIsModified = false;
+			
+			if (availableNodes.get(i).postsynapticNodes.contains(removableNode)) {
+				availableNodes.get(i).postsynapticNodes.remove(removableNode);
+				nodeIsModified = true;
+			}
+			
+			if (availableNodes.get(i).presynapticNodes.contains(removableNode)) {
+				availableNodes.get(i).presynapticNodes.remove(removableNode);
+				unsyncNodes.add(availableNodes.get(i)); 
+				nodeIsModified = true;
+			}
+			
+			if (nodeIsModified) { unsyncNodes.add(availableNodes.get(i)); }			
+			
+		}
+		
+		syncNodes();
+		
+	}
 
 	public synchronized static void syncNodes() {		
 		
@@ -323,8 +356,8 @@ public class VirtualLayerManager extends Thread{
 								
 			}				
 			
-			unsyncNodes.clear();	
-			
+			unsyncNodes.clear();			
+						
 			SpikesSorter.updateNodeFrames(syncFrames);
 			MainFrame.updateMainFrame(new MainFrameInfo(0, syncNodes.size()));
 			

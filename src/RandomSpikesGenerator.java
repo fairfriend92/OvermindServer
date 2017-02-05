@@ -3,6 +3,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Random;
@@ -64,10 +65,8 @@ public class RandomSpikesGenerator implements Runnable {
         targetDevice.presynapticNodes.add(server);
         
         VirtualLayerManager.connectDevices(targetDevice);    
-        VirtualLayerManager.syncNodes();  
-        
-        
-        
+        VirtualLayerManager.syncNodes();          
+                
         /**
          * Open the socket for sending the spikes and build the InetAddress of the target device
          */
@@ -76,7 +75,7 @@ public class RandomSpikesGenerator implements Runnable {
 
         try {
     	    outputSocket = new DatagramSocket();
-    	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);    
+    	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);   
     	    //outputSocket.setSendBufferSize(1024);
         } catch (SocketException e) {
         	e.printStackTrace();
@@ -144,7 +143,7 @@ public class RandomSpikesGenerator implements Runnable {
         	        	
             try {
                 DatagramPacket outputSpikesPacket = new DatagramPacket(outputSpikes, dataBytes, targetDeviceAddr, targetDeviceOld.natPort);	
-				outputSocket.send(outputSpikesPacket);
+				outputSocket.send(outputSpikesPacket);			
 			} catch (IOException e) {
 				System.out.println(e);
 			}			
