@@ -261,7 +261,6 @@ public class LocalNetworkFrame {
 	private class SpikesMonitor implements Runnable {
 		
 		private BlockingQueue<byte[]> spikesReceivedQueue = new ArrayBlockingQueue<>(4);
-		private byte[] spikesReceived = new byte[128];
 		
 		SpikesMonitor(BlockingQueue<byte[]> b) {
 			
@@ -272,9 +271,18 @@ public class LocalNetworkFrame {
 		@Override
 		public void run() {
 			
+		    
+		    short dataBytes = (localUpdatedNode.numOfNeurons % 8) == 0 ? 
+		    		(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);
+			
 			long lastTime = 0;
 			
+			
 			while (!shutdown) {
+				
+				byte[] spikesReceived = new byte[dataBytes];
+				
+				String spikes = new String();
 				
 				try {
 					spikesReceived = spikesReceivedQueue.poll(1000, TimeUnit.MILLISECONDS);
@@ -282,19 +290,17 @@ public class LocalNetworkFrame {
 					e.printStackTrace();
 				} 
 				
-				// TODO restrict bytes only to meaningful information 				
-				if (spikesReceived != null) {
-					/*
-					char[] hexArray = "0123456789ABCDEF".toCharArray();
-					char[] hexChars = new char[spikesReceived.length * 2];
-					for ( int j = 0; j < spikesReceived.length; j++ ) {
-						int v = spikesReceived[j] & 0xFF;
-						hexChars[j * 2] = hexArray[v >>> 4];
-						hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-					}					
-					*/
+				if (spikesReceived != null) {	
 					
-					System.out.println("Device with ip " + ip + " has sent spikes with rate " + (System.nanoTime() - lastTime));
+					for (int i = 0; i < dataBytes; i++) {
+						for (int j = 0; j < 8; j++) {
+							if ((spikesReceived[i] & (1 << j)) != 0) {
+								spikes = spikes + "1";
+							} else { spikes = spikes + "0";}
+						}
+					}
+						
+					System.out.println("Device with ip " + ip + " has sent " + spikes + " with rate " + (System.nanoTime() - lastTime));
 					lastTime = System.nanoTime();
 				
 				} else {

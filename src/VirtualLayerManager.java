@@ -85,6 +85,7 @@ public class VirtualLayerManager extends Thread{
         
         com.example.overmind.LocalNetwork thisServer = new com.example.overmind.LocalNetwork();
         thisServer.ip = serverIP;
+        //thisServer.ip = "192.168.1.213";
         thisServer.natPort = 4194;        
 						
 		while (!shutdown) {
@@ -190,7 +191,11 @@ public class VirtualLayerManager extends Thread{
 					localNetwork.postsynapticNodes.add(currentNode);
 
 					// Send to the list of terminals which need to be updated the current node
-					unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
+					if (unsyncNodes.contains(currentNode)) {
+						unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
+					} else {
+						unsyncNodes.add(currentNode);
+					}
 					
 					// Update the current node in the list availableNodes
 					availableNodes.set(i, currentNode);
@@ -208,7 +213,11 @@ public class VirtualLayerManager extends Thread{
 					currentNode.postsynapticNodes.add(localNetwork);
 					localNetwork.presynapticNodes.add(currentNode);
 
-					unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
+					if (unsyncNodes.contains(currentNode)) {
+						unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
+					} else {
+						unsyncNodes.add(currentNode);
+					}
 					availableNodes.set(i, currentNode);
 
 				} else if (currentNode.numOfSynapses == 0 && currentNode.numOfDendrites == 0) {
@@ -255,6 +264,7 @@ public class VirtualLayerManager extends Thread{
 		int index = syncNodes.indexOf(removableNode);
 		syncNodes.remove(index);
 		syncFrames.get(index).spikesMonitorExecutor.shutdown();
+		syncFrames.get(index).randomSpikesGeneratorExecutor.shutdown();
 		syncFrames.get(index).frame.dispose();
 		syncFrames.remove(index);
 		nodeClients.get(index).close();
@@ -266,12 +276,13 @@ public class VirtualLayerManager extends Thread{
 			
 			if (availableNodes.get(i).postsynapticNodes.contains(removableNode)) {
 				availableNodes.get(i).postsynapticNodes.remove(removableNode);
+				availableNodes.get(i).numOfSynapses += removableNode.numOfNeurons;
 				nodeIsModified = true;
 			}
 			
 			if (availableNodes.get(i).presynapticNodes.contains(removableNode)) {
 				availableNodes.get(i).presynapticNodes.remove(removableNode);
-				unsyncNodes.add(availableNodes.get(i)); 
+				availableNodes.get(i).numOfDendrites += removableNode.numOfNeurons;
 				nodeIsModified = true;
 			}
 			

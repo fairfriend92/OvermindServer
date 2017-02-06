@@ -51,8 +51,8 @@ public class RandomSpikesGenerator implements Runnable {
         com.example.overmind.LocalNetwork server = new com.example.overmind.LocalNetwork();
         server.postsynapticNodes = new ArrayList<>();
         server.presynapticNodes = new ArrayList<>();
-        
         server.ip = VirtualLayerManager.serverIP;
+        //server.ip = "192.168.1.213";
         
         // TODO Some of these fields are unnecessary
         server.postsynapticNodes.add(targetDevice);
@@ -137,7 +137,7 @@ public class RandomSpikesGenerator implements Runnable {
         	newTime = System.nanoTime();               
         	
         	// New spikes are sent to the clients every 2 milliseconds
-        	while (newTime - lastTime < Constants.SAMPLING_RATE * 2 * 10 * 1000000 - sendTime) {
+        	while (newTime - lastTime < Constants.SAMPLING_RATE * 20 * 1000000 - sendTime) {
         		newTime = System.nanoTime();            	   
         	}                    	   
         	        	
