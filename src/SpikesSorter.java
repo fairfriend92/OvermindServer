@@ -4,11 +4,12 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
-
+import java.util.concurrent.TimeUnit;
 
 public class SpikesSorter extends Thread{
 	
 	private static ArrayList<LocalNetworkFrame> localSyncFrames = new ArrayList<>();
+	private final static int IPTOS_THROUGHPUT = 0x08;
 	
 	@Override
 	public void run() {
@@ -18,6 +19,8 @@ public class SpikesSorter extends Thread{
 
         try {
             spikesReceiver = new DatagramSocket(4194);
+    	    spikesReceiver.setTrafficClass(IPTOS_THROUGHPUT);  
+
         } catch (SocketException e) {
         	e.printStackTrace();
         }
@@ -37,9 +40,7 @@ public class SpikesSorter extends Thread{
 				spikesBuffer = spikesPacket.getData();
 				
 				InetAddress senderAddr = spikesPacket.getAddress();	
-				
-				System.out.println("Received packet from ip " + senderAddr.toString().substring(1));				
-				
+								
 				sendSpikesToFrame(localSyncFrames, spikesBuffer, senderAddr);
 				
 			} catch (IOException e) {
@@ -58,7 +59,7 @@ public class SpikesSorter extends Thread{
 		
 	}
 	
-	public synchronized void sendSpikesToFrame (ArrayList<LocalNetworkFrame> localSyncFrames, byte[] spikesBuffer, InetAddress senderAddr) {
+	private static synchronized void sendSpikesToFrame (ArrayList<LocalNetworkFrame> localSyncFrames, byte[] spikesBuffer, InetAddress senderAddr) {
 		
 		boolean frameFound = false;
 		LocalNetworkFrame tmpFrame = new LocalNetworkFrame();
@@ -68,8 +69,17 @@ public class SpikesSorter extends Thread{
 			
 			if (localSyncFrames.get(index).equals(tmpFrame)) {
 				
-				frameFound = true;
-				localSyncFrames.get(index).displaysSpikes(spikesBuffer);
+				frameFound = true;				
+								
+				try {
+					localSyncFrames.get(index).receivedSpikesQueue.offer(spikesBuffer, 100, TimeUnit.MILLISECONDS);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				
+				if (!localSyncFrames.get(index).spikesMonitorIsActive) {
+					localSyncFrames.get(index).startSpikesMonitor();
+				}
 				
 			}
 			

@@ -24,6 +24,14 @@ public class Node {
 			System.out.println(e);
 		}
 	}
+	
+	public void close() {
+		try {
+			this.thisClient.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 	@Override
     public boolean equals(Object obj) {

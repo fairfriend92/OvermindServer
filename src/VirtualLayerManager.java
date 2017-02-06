@@ -47,9 +47,7 @@ public class VirtualLayerManager extends Thread{
         
         assert serverIP != null;
         
-        System.out.println("This server has IP " + serverIP);
-		
-		BlockingQueue<Socket> clientSocketsQueue = new ArrayBlockingQueue<>(16);
+        System.out.println("This server has IP " + serverIP);		
 		
 		/**
 		 * Build the TCP server socket which listens for physical devices ready to connect
@@ -98,8 +96,7 @@ public class VirtualLayerManager extends Thread{
 			// Accept connections from the clients			
 			try {				
 				clientSocket = serverSocket.accept();
-				clientSocketsQueue.put(clientSocket);
-			} catch (IOException|InterruptedException e) {
+			} catch (IOException e) {
 	        	e.printStackTrace();
 			}		
 			
@@ -255,10 +252,13 @@ public class VirtualLayerManager extends Thread{
 		syncNodes();
 		
 		availableNodes.remove(removableNode); 
-		int index = syncNodes.indexOf(removableNode);		
-		syncNodes.remove(removableNode);
+		int index = syncNodes.indexOf(removableNode);
+		syncNodes.remove(index);
+		syncFrames.get(index).spikesMonitorExecutor.shutdown();
 		syncFrames.get(index).frame.dispose();
 		syncFrames.remove(index);
+		nodeClients.get(index).close();
+		nodeClients.remove(index);
 		
 		for (int i = 0; i < availableNodes.size(); i++) {
 			
@@ -356,12 +356,12 @@ public class VirtualLayerManager extends Thread{
 								
 			}				
 			
-			unsyncNodes.clear();			
-						
-			SpikesSorter.updateNodeFrames(syncFrames);
-			MainFrame.updateMainFrame(new MainFrameInfo(0, syncNodes.size()));
-			
+			unsyncNodes.clear();	
+												
 		}
+		
+		SpikesSorter.updateNodeFrames(syncFrames);
+		MainFrame.updateMainFrame(new MainFrameInfo(0, syncNodes.size()));
 		
 	}
 

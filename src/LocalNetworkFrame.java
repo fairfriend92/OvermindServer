@@ -2,6 +2,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -23,7 +25,7 @@ import com.example.overmind.LocalNetwork;
 
 public class LocalNetworkFrame {
 	
-	private long lastTime = 0;
+	public boolean shutdown = false;	
 	
 	public JFrame frame = new JFrame();
 	
@@ -44,8 +46,12 @@ public class LocalNetworkFrame {
 	public RandomSpikesGenerator thisNodeRSG = new RandomSpikesGenerator(this);	
 	
 	private boolean randomSpikeRadioButton;
+	
+	public BlockingQueue<byte[]> receivedSpikesQueue = new ArrayBlockingQueue<>(4);
+	public ExecutorService spikesMonitorExecutor = Executors.newSingleThreadExecutor();
+	public boolean spikesMonitorIsActive = false;
 
-	public void display() {			
+	public void display() {				
 		
 		JPanel mainPanel = new JPanel(); 
 		JPanel infoPanel = new JPanel();
@@ -243,22 +249,63 @@ public class LocalNetworkFrame {
         if (obj == null || obj.getClass() != this.getClass()) { return false; }
         LocalNetworkFrame compare = (LocalNetworkFrame) obj;
         return compare.ip.equals(ip);
-    }	
+    }		
 	
-	public void displaysSpikes(byte[] bytes) {
+	public void startSpikesMonitor () {
 		
-		// TODO restrict bytes only to meaningful information
+		spikesMonitorExecutor.execute(new SpikesMonitor(receivedSpikesQueue));
+		spikesMonitorIsActive = true;
 		
-		char[] hexArray = "0123456789ABCDEF".toCharArray();
-		char[] hexChars = new char[bytes.length * 2];
-		for ( int j = 0; j < bytes.length; j++ ) {
-			int v = bytes[j] & 0xFF;
-			hexChars[j * 2] = hexArray[v >>> 4];
-			hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+	}
+	
+	private class SpikesMonitor implements Runnable {
+		
+		private BlockingQueue<byte[]> spikesReceivedQueue = new ArrayBlockingQueue<>(4);
+		private byte[] spikesReceived = new byte[128];
+		
+		SpikesMonitor(BlockingQueue<byte[]> b) {
+			
+			this.spikesReceivedQueue = b;
+			
 		}
 		
-		System.out.println("Device with ip " + ip + " has sent: " + hexChars + " with rate " + (System.nanoTime() - lastTime));
-		lastTime = System.nanoTime();
+		@Override
+		public void run() {
+			
+			long lastTime = 0;
+			
+			while (!shutdown) {
+				
+				try {
+					spikesReceived = spikesReceivedQueue.poll(1000, TimeUnit.MILLISECONDS);
+				} catch (InterruptedException e ) {
+					e.printStackTrace();
+				} 
+				
+				// TODO restrict bytes only to meaningful information 				
+				if (spikesReceived != null) {
+					/*
+					char[] hexArray = "0123456789ABCDEF".toCharArray();
+					char[] hexChars = new char[spikesReceived.length * 2];
+					for ( int j = 0; j < spikesReceived.length; j++ ) {
+						int v = spikesReceived[j] & 0xFF;
+						hexChars[j * 2] = hexArray[v >>> 4];
+						hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+					}					
+					*/
+					
+					System.out.println("Device with ip " + ip + " has sent spikes with rate " + (System.nanoTime() - lastTime));
+					lastTime = System.nanoTime();
+				
+				} else {
+					shutdown = true;
+				}
+				
+			}
+			
+			VirtualLayerManager.removeNode(localUpdatedNode);	
+			
+		}
 		
 	}
 	
