@@ -75,8 +75,7 @@ public class RandomSpikesGenerator implements Runnable {
 
         try {
     	    outputSocket = new DatagramSocket();
-    	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);   
-    	    //outputSocket.setSendBufferSize(1024);
+    	    outputSocket.setTrafficClass(0x10);   
         } catch (SocketException e) {
         	e.printStackTrace();
         }
@@ -91,7 +90,7 @@ public class RandomSpikesGenerator implements Runnable {
         	e.printStackTrace();
 		}
         
-        assert targetDeviceAddr != null;
+        assert targetDeviceAddr != null;        
 		
         while (!shutdown) {       	
         	
@@ -100,8 +99,9 @@ public class RandomSpikesGenerator implements Runnable {
         	 * should pass between two subsequent spikes
         	 */
         	
-        	byte[] outputSpikes = new byte[dataBytes];       	
-      	
+        	
+        	byte[] outputSpikes = new byte[dataBytes];       	      	
+        	
         	for (int index = 0; index < targetDeviceOld.numOfDendrites; index++) {  
         		
         		int byteIndex = (int) index / 8;
@@ -127,30 +127,29 @@ public class RandomSpikesGenerator implements Runnable {
         			outputSpikes[byteIndex] &= ~(1 << index - byteIndex * 8);
         		}
         		
-        	}
+        	}        	
         	
         	/**
         	 * Send the generated spikes every 2 milliseconds
         	 */
         	
-        	lastTime = newTime;  
         	newTime = System.nanoTime();               
         	
-        	// New spikes are sent to the clients every 2 milliseconds
-        	while (newTime - lastTime < Constants.SAMPLING_RATE * 20 * 1000000 - sendTime) {
-        		newTime = System.nanoTime();            	   
-        	}                    	   
+        	// New spikes are sent to the clients every 5 milliseconds
+        	
+        	while (newTime - lastTime < Constants.SAMPLING_RATE * 50000000 - sendTime) {
+        		newTime = System.nanoTime();         
+        	}          	                 	   
         	        	
             try {
                 DatagramPacket outputSpikesPacket = new DatagramPacket(outputSpikes, dataBytes, targetDeviceAddr, targetDeviceOld.natPort);	
 				outputSocket.send(outputSpikesPacket);			
 			} catch (IOException e) {
 				System.out.println(e);
-			}			
-            
-            //System.out.println("Spikes sent to device with IP " + targetDeviceAddr.toString().substring(1) + " and nat port " + targetDevice.natPort);
+			}		
+                                   
+            lastTime = System.nanoTime();            
    	                             
-        	sendTime = System.nanoTime() - newTime;
         }
         /* [End of while for loop] */         
         

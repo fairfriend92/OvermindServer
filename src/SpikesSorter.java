@@ -19,7 +19,7 @@ public class SpikesSorter extends Thread{
 
         try {
             spikesReceiver = new DatagramSocket(4194);
-    	    spikesReceiver.setTrafficClass(IPTOS_THROUGHPUT);  
+    	    spikesReceiver.setTrafficClass(0x10);  
 
         } catch (SocketException e) {
         	e.printStackTrace();

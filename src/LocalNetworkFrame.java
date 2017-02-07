@@ -273,10 +273,9 @@ public class LocalNetworkFrame {
 			
 		    
 		    short dataBytes = (localUpdatedNode.numOfNeurons % 8) == 0 ? 
-		    		(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);
+		    		(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);			
 			
-			long lastTime = 0;
-			
+			int k = 0;
 			
 			while (!shutdown) {
 				
@@ -300,8 +299,8 @@ public class LocalNetworkFrame {
 						}
 					}
 						
-					System.out.println("Device with ip " + ip + " has sent " + spikes + " with rate " + (System.nanoTime() - lastTime));
-					lastTime = System.nanoTime();
+					System.out.println("Device with ip " + ip + " has sent " + spikes + " with rate " + k);
+					k++;
 				
 				} else {
 					shutdown = true;
