@@ -1,7 +1,11 @@
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -20,6 +24,7 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
+import javax.swing.border.BevelBorder;
 
 import com.example.overmind.LocalNetwork;
 
@@ -50,15 +55,83 @@ public class LocalNetworkFrame {
 	public BlockingQueue<byte[]> receivedSpikesQueue = new ArrayBlockingQueue<>(4);
 	public ExecutorService spikesMonitorExecutor = Executors.newSingleThreadExecutor();
 	public boolean spikesMonitorIsActive = false;
+	
+	public MyPanel rastergraphPanel = new MyPanel();
+	public ArrayList<byte[]> latestSpikes = new ArrayList<>();
+	
+	class MyPanel extends JPanel {		
+		
+		private short xCoordinate = 0;
+		
+	    public MyPanel() {
+	        setBorder(BorderFactory.createLineBorder(Color.black));
+			setBackground(Color.white);
+	    }
+
+	    public Dimension getPreferredSize() {
+	        return new Dimension(this.getWidth(), localUpdatedNode.numOfNeurons);
+	    }	    
+
+	    public void paintComponent(Graphics g) {
+	        super.paintComponent(g);  
+	        
+	        ArrayList<byte[]> data = new ArrayList(latestSpikes);
+	    			    		    		    	
+	    	if (xCoordinate != this.getWidth()) {
+		    	xCoordinate += data.size();
+		    } else {
+		    	xCoordinate = 0;
+		    }		    
+	    	
+	    	short dataBytes = (localUpdatedNode.numOfNeurons % 8) == 0 ? 
+	    			(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);
+		    		    
+		    System.out.println("batman " + data.size());
+	    	
+			for (int k = 0; k < data.size(); k++) {
+
+				System.out.println("batman " + data.size());					
+								
+				byte[] spikesData = data.get(k);
+
+				for (int i = 0; i < dataBytes; i++) {
+					
+					for (int j = 0; j < 8; j++) {
+						
+						if ((spikesData[i] & (1 << j)) != 0) {
+
+							System.out.println("test");
+							
+							g.drawLine(xCoordinate + k, i * 8 + j, xCoordinate + k, i * 8 + j);
+
+						}
+						/* [End of inner if] */
+						
+					}
+					/* [End of for over bit] */
+					
+				}
+				/* [End of for over byte] */
+
+			} 
+			/* [End of outer for] */			
+				    
+	    }  
+	    
+	}
 
 	public void display() {				
 		
+		JPanel totalPanel = new JPanel();
 		JPanel mainPanel = new JPanel(); 
 		JPanel infoPanel = new JPanel();
 		JPanel stimulusPanel = new JPanel();
 		JPanel infoAndStimulusPanel = new JPanel();
 		JPanel preConnPanel = new JPanel();
-		JPanel postConnPanel = new JPanel();		
+		JPanel postConnPanel = new JPanel();	
+		JPanel commandsPanel = new JPanel();
+		
+		JButton removeNodeButton = new JButton();
 		
 		JScrollPane preConnScrollPanel = new JScrollPane();
 		JScrollPane postConnScrollPanel = new JScrollPane();
@@ -113,6 +186,19 @@ public class LocalNetworkFrame {
 		postsynapticConnections.setLayoutOrientation(JList.VERTICAL);
 		
 		/**
+		 * Total panel layout
+		 */
+		
+		totalPanel.setLayout(new BoxLayout(totalPanel, BoxLayout.Y_AXIS));
+		totalPanel.add(mainPanel);
+		totalPanel.add(rastergraphPanel);
+		
+		/**
+		 * Raster graph panel layout
+		 */
+
+		
+		/**
 		 * Main panel layout
 		 */
 		
@@ -122,8 +208,9 @@ public class LocalNetworkFrame {
 		infoAndStimulusPanel.add(stimulusPanel);
 		mainPanel.add(infoAndStimulusPanel);
 		mainPanel.add(preConnPanel);
-		mainPanel.add(postConnPanel);
-				
+		mainPanel.add(postConnPanel);	
+		mainPanel.add(commandsPanel);
+					
 		/**
 		 * Info panel layout
 		 */
@@ -165,14 +252,31 @@ public class LocalNetworkFrame {
 		postConnPanel.setBorder(BorderFactory.createCompoundBorder(
 				BorderFactory.createTitledBorder("Postsynaptic connections"),
 				BorderFactory.createEmptyBorder(5,5,5,5)));
-		postConnPanel.add(postConnScrollPanel);			
+		postConnPanel.add(postConnScrollPanel);	
+		
+		/**
+		 * Command panel layout
+		 */
+		
+		commandsPanel.setLayout(new BoxLayout(commandsPanel, BoxLayout.Y_AXIS));
+		commandsPanel.setBorder(BorderFactory.createCompoundBorder(
+					BorderFactory.createTitledBorder("Commands"),
+					BorderFactory.createEmptyBorder(5,5,5,5)));
+		removeNodeButton.setText("Remove this node");
+		removeNodeButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				shutdown = true;			
+			}
+		});		
+		commandsPanel.add(removeNodeButton);
 			
 		/**
 		 * Frame composition
 		 */
 		
 		frame.setTitle(ip);
-		frame.setContentPane(mainPanel);
+		frame.setContentPane(totalPanel);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);		
 		frame.pack();
 		frame.setVisible(true);		
@@ -275,7 +379,9 @@ public class LocalNetworkFrame {
 		    short dataBytes = (localUpdatedNode.numOfNeurons % 8) == 0 ? 
 		    		(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);			
 			
-			int k = 0;
+			//int k = 0;
+			
+			ArrayList<byte[]> latestSpikes = new ArrayList<>(20);
 			
 			while (!shutdown) {
 				
@@ -290,19 +396,20 @@ public class LocalNetworkFrame {
 				} 
 				
 				if (spikesReceived != null) {	
-					
-					for (int i = 0; i < dataBytes; i++) {
-						for (int j = 0; j < 8; j++) {
-							if ((spikesReceived[i] & (1 << j)) != 0) {
-								spikes = spikes + "1";
-							} else { spikes = spikes + "0";}
-						}
+															
+					if (latestSpikes.size() < 40) {
+						latestSpikes.add(spikesReceived);
+					} else {
+						rastergraphPanel.update(rastergraphPanel.getGraphics());
+						//latestSpikes.clear();
 					}
-						
+					
+					/*
 					System.out.println("Device with ip " + ip + " has sent " + spikes + " with rate " + k);
 					k++;
+					*/
 				
-				} else {
+				} else if (!thisNodeRSG.shutdown) {
 					shutdown = true;
 				}
 				

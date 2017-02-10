@@ -137,7 +137,7 @@ public class RandomSpikesGenerator implements Runnable {
         	
         	// New spikes are sent to the clients every 5 milliseconds
         	
-        	while (newTime - lastTime < Constants.SAMPLING_RATE * 50000000 - sendTime) {
+        	while (newTime - lastTime < 5 * 1000000 - sendTime) {
         		newTime = System.nanoTime();         
         	}          	                 	   
         	        	
@@ -158,9 +158,11 @@ public class RandomSpikesGenerator implements Runnable {
         // In the meantime the stimulated device may have formed new postsynaptic connections which need to be carried on to the old local network
         targetDeviceOld.numOfSynapses = targetDevice.numOfSynapses;
         targetDeviceOld.postsynapticNodes = new ArrayList<>(targetDevice.postsynapticNodes);
-        
-        VirtualLayerManager.connectDevices(targetDeviceOld);
-        VirtualLayerManager.syncNodes();
+       
+        if (VirtualLayerManager.availableNodes.contains(targetDeviceOld)) {
+        	VirtualLayerManager.connectDevices(targetDeviceOld);
+            VirtualLayerManager.syncNodes();
+        }
         
 	}
 	/* [End of run method] */ 

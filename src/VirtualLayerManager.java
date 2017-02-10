@@ -16,6 +16,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class VirtualLayerManager extends Thread{
 	
@@ -258,15 +259,15 @@ public class VirtualLayerManager extends Thread{
 	
 	public synchronized static void removeNode(com.example.overmind.LocalNetwork removableNode) {
 		
-		syncNodes();
+		syncNodes();		
 		
-		availableNodes.remove(removableNode); 
 		int index = syncNodes.indexOf(removableNode);
-		syncNodes.remove(index);
 		syncFrames.get(index).spikesMonitorExecutor.shutdown();
-		syncFrames.get(index).randomSpikesGeneratorExecutor.shutdown();
+		syncFrames.get(index).randomSpikesGeneratorExecutor.shutdown();	
 		syncFrames.get(index).frame.dispose();
-		syncFrames.remove(index);
+		syncFrames.remove(index);	
+		availableNodes.remove(removableNode); 
+		syncNodes.remove(index);		
 		nodeClients.get(index).close();
 		nodeClients.remove(index);
 		
@@ -288,7 +289,7 @@ public class VirtualLayerManager extends Thread{
 			
 			if (nodeIsModified) { unsyncNodes.add(availableNodes.get(i)); }			
 			
-		}
+		}	
 		
 		syncNodes();
 		

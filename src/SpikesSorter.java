@@ -65,7 +65,7 @@ public class SpikesSorter extends Thread{
 		LocalNetworkFrame tmpFrame = new LocalNetworkFrame();
 		tmpFrame.ip = senderAddr.toString().substring(1);
 		
-		for (int index = 0; index < localSyncFrames.size() || !frameFound; index++) {
+		for (int index = 0; (index < localSyncFrames.size()) && !frameFound; index++) {
 			
 			if (localSyncFrames.get(index).equals(tmpFrame)) {
 				
