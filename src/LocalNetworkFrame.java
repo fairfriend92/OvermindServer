@@ -56,12 +56,13 @@ public class LocalNetworkFrame {
 	public ExecutorService spikesMonitorExecutor = Executors.newSingleThreadExecutor();
 	public boolean spikesMonitorIsActive = false;
 	
-	public MyPanel rastergraphPanel = new MyPanel();
-	public ArrayList<byte[]> latestSpikes = new ArrayList<>();
+	public MyPanel rastergraphPanel = new MyPanel();	
+
 	
 	class MyPanel extends JPanel {		
 		
-		private short xCoordinate = 0;
+		public short xCoordinate = 0;
+		public ArrayList<byte[]> latestSpikes = new ArrayList<>();
 		
 	    public MyPanel() {
 	        setBorder(BorderFactory.createLineBorder(Color.black));
@@ -70,37 +71,23 @@ public class LocalNetworkFrame {
 
 	    public Dimension getPreferredSize() {
 	        return new Dimension(this.getWidth(), localUpdatedNode.numOfNeurons);
-	    }	    
+	    }	  	    
 
 	    public void paintComponent(Graphics g) {
-	        super.paintComponent(g);  
-	        
-	        ArrayList<byte[]> data = new ArrayList(latestSpikes);
-	    			    		    		    	
-	    	if (xCoordinate != this.getWidth()) {
-		    	xCoordinate += data.size();
-		    } else {
-		    	xCoordinate = 0;
-		    }		    
-	    	
+	        super.paintComponent(g);  	        	    			    		    		    	
+	    		    	    	
 	    	short dataBytes = (localUpdatedNode.numOfNeurons % 8) == 0 ? 
-	    			(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);
-		    		    
-		    System.out.println("batman " + data.size());
+	    			(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);	    		    
 	    	
-			for (int k = 0; k < data.size(); k++) {
-
-				System.out.println("batman " + data.size());					
+			for (int k = 0; k < latestSpikes.size(); k++) {
 								
-				byte[] spikesData = data.get(k);
+				byte[] spikesData = latestSpikes.get(k);
 
 				for (int i = 0; i < dataBytes; i++) {
 					
 					for (int j = 0; j < 8; j++) {
 						
 						if ((spikesData[i] & (1 << j)) != 0) {
-
-							System.out.println("test");
 							
 							g.drawLine(xCoordinate + k, i * 8 + j, xCoordinate + k, i * 8 + j);
 
@@ -192,12 +179,7 @@ public class LocalNetworkFrame {
 		totalPanel.setLayout(new BoxLayout(totalPanel, BoxLayout.Y_AXIS));
 		totalPanel.add(mainPanel);
 		totalPanel.add(rastergraphPanel);
-		
-		/**
-		 * Raster graph panel layout
-		 */
-
-		
+			
 		/**
 		 * Main panel layout
 		 */
@@ -365,6 +347,7 @@ public class LocalNetworkFrame {
 	private class SpikesMonitor implements Runnable {
 		
 		private BlockingQueue<byte[]> spikesReceivedQueue = new ArrayBlockingQueue<>(4);
+		private ArrayList<byte[]> localLatestSpikes = new ArrayList<>(40);
 		
 		SpikesMonitor(BlockingQueue<byte[]> b) {
 			
@@ -380,8 +363,8 @@ public class LocalNetworkFrame {
 		    		(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);			
 			
 			//int k = 0;
-			
-			ArrayList<byte[]> latestSpikes = new ArrayList<>(20);
+
+		    short tmpXCoordinate = 0;
 			
 			while (!shutdown) {
 				
@@ -397,11 +380,26 @@ public class LocalNetworkFrame {
 				
 				if (spikesReceived != null) {	
 															
-					if (latestSpikes.size() < 40) {
-						latestSpikes.add(spikesReceived);
+					if (localLatestSpikes.size() < 40) {
+						
+						localLatestSpikes.add(spikesReceived);
+						
 					} else {
-						rastergraphPanel.update(rastergraphPanel.getGraphics());
-						//latestSpikes.clear();
+						
+						rastergraphPanel.latestSpikes = new ArrayList<>(localLatestSpikes);						
+						
+						if (rastergraphPanel.xCoordinate < rastergraphPanel.getWidth()) {
+							rastergraphPanel.xCoordinate  = tmpXCoordinate;
+							rastergraphPanel.repaint(rastergraphPanel.xCoordinate, 0, rastergraphPanel.latestSpikes.size(), localUpdatedNode.numOfNeurons);
+							tmpXCoordinate += rastergraphPanel.latestSpikes.size();
+					    } else {
+					    	rastergraphPanel.xCoordinate = 0;
+					    	tmpXCoordinate = (short)rastergraphPanel.latestSpikes.size();
+					    	rastergraphPanel.repaint();
+					    }					
+												
+						
+						localLatestSpikes.clear();
 					}
 					
 					/*
@@ -409,9 +407,9 @@ public class LocalNetworkFrame {
 					k++;
 					*/
 				
-				} else if (!thisNodeRSG.shutdown) {
+				} /* else if (!thisNodeRSG.shutdown) {
 					shutdown = true;
-				}
+				} */
 				
 			}
 			
