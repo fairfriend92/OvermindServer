@@ -259,17 +259,67 @@ public class VirtualLayerManager extends Thread{
 	
 	public synchronized static void removeNode(com.example.overmind.LocalNetwork removableNode) {
 		
-		syncNodes();		
+		//syncNodes();		
+		
+		// If the method has been called unnecessarily exit without doing anything
+		if (!availableNodes.contains(removableNode)) { return; }
 		
 		int index = syncNodes.indexOf(removableNode);
+		
+		availableNodes.remove(removableNode); 		
+		
+		/**
+		 * Shutdown the executor of the the spikes monitor 
+		 */		
+		
+		boolean spikesMonitorIsShutdown = false;
+		
+		syncFrames.get(index).shutdown = true;
+		
 		syncFrames.get(index).spikesMonitorExecutor.shutdown();
+		
+		try {
+			spikesMonitorIsShutdown = syncFrames.get(index).spikesMonitorExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		if (!spikesMonitorIsShutdown) {
+			System.out.println("Failed to shutdown spikes monitor for device with ip " + removableNode.ip);	
+		} 			
+		
+		/**
+		 * Shutdown the executor of the random spikes generator
+		 */
+		
+		syncFrames.get(index).thisNodeRSG.shutdown = true;		
+		
 		syncFrames.get(index).randomSpikesGeneratorExecutor.shutdown();	
+		
+		boolean RSPGIsShutdown = false;
+		try {
+			RSPGIsShutdown = syncFrames.get(index).randomSpikesGeneratorExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		if (!RSPGIsShutdown) {
+			System.out.println("Failed to shutdown RSG for device with ip " + removableNode.ip);	
+		}		
+		
+		/**
+		 * Close the frame associated to the node and remove its references from the list of clients
+		 */
+		
 		syncFrames.get(index).frame.dispose();
-		syncFrames.remove(index);	
-		availableNodes.remove(removableNode); 
+		syncFrames.remove(index);			
+		
 		syncNodes.remove(index);		
+		
 		nodeClients.get(index).close();
 		nodeClients.remove(index);
+		
+		/**
+		 * Remove all references to the current node from the other nodes' lists
+		 */
 		
 		for (int i = 0; i < availableNodes.size(); i++) {
 			
@@ -291,6 +341,7 @@ public class VirtualLayerManager extends Thread{
 			
 		}	
 		
+		// Sync other nodes that have been eventually modified
 		syncNodes();
 		
 	}

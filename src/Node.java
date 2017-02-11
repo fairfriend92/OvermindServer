@@ -37,6 +37,6 @@ public class Node {
     public boolean equals(Object obj) {
         if (obj == null || obj.getClass() != this.getClass()) { return false; }
         Node compare = (Node) obj;
-        return compare.localNetworkIP.equals(localNetworkIP);
+        return compare.localNetworkIP.equals(this.localNetworkIP);
     }
 }

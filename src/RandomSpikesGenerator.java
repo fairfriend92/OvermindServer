@@ -52,8 +52,7 @@ public class RandomSpikesGenerator implements Runnable {
         server.postsynapticNodes = new ArrayList<>();
         server.presynapticNodes = new ArrayList<>();
         server.ip = VirtualLayerManager.serverIP;
-        //server.ip = "192.168.1.213";
-        
+                
         // TODO Some of these fields are unnecessary
         server.postsynapticNodes.add(targetDevice);
         server.numOfNeurons = 1024;
@@ -130,14 +129,12 @@ public class RandomSpikesGenerator implements Runnable {
         	}        	
         	
         	/**
-        	 * Send the generated spikes every 2 milliseconds
+        	 * Send the generated spikes every 5 milliseconds
         	 */
         	
-        	newTime = System.nanoTime();               
-        	
-        	// New spikes are sent to the clients every 5 milliseconds
-        	
-        	while (newTime - lastTime < 5 * 1000000 - sendTime) {
+        	newTime = System.nanoTime();              
+       	        	
+        	while (newTime - lastTime < 5000000 - sendTime) {
         		newTime = System.nanoTime();         
         	}          	                 	   
         	        	
@@ -161,8 +158,9 @@ public class RandomSpikesGenerator implements Runnable {
        
         if (VirtualLayerManager.availableNodes.contains(targetDeviceOld)) {
         	VirtualLayerManager.connectDevices(targetDeviceOld);
-            VirtualLayerManager.syncNodes();
+        	VirtualLayerManager.syncNodes();
         }
+        
         
 	}
 	/* [End of run method] */ 

@@ -31,10 +31,11 @@ import com.example.overmind.LocalNetwork;
 public class LocalNetworkFrame {
 	
 	public boolean shutdown = false;	
-	
+		
 	public JFrame frame = new JFrame();
 	
 	public String ip = new String();
+	
 	private JLabel numOfNeurons = new JLabel();
 	private JLabel numOfDendrites = new JLabel();
 	private JLabel numOfSynapses = new JLabel();	
@@ -47,7 +48,6 @@ public class LocalNetworkFrame {
 	public com.example.overmind.LocalNetwork localUpdatedNode = new com.example.overmind.LocalNetwork();
 	private com.example.overmind.LocalNetwork oldNode = new com.example.overmind.LocalNetwork();
 	
-	// TODO This being initialized only once causes problems...
 	public RandomSpikesGenerator thisNodeRSG = new RandomSpikesGenerator(this);	
 	
 	private boolean randomSpikeRadioButton;
@@ -58,10 +58,16 @@ public class LocalNetworkFrame {
 	
 	public MyPanel rastergraphPanel = new MyPanel();	
 
+	public JPanel mainPanel = new JPanel(); 
+	
+	/**
+	 * Custom panel to display the raster graph
+	 */
 	
 	class MyPanel extends JPanel {		
 		
 		public short xCoordinate = 0;
+		public long time = 0;
 		public ArrayList<byte[]> latestSpikes = new ArrayList<>();
 		
 	    public MyPanel() {
@@ -70,25 +76,34 @@ public class LocalNetworkFrame {
 	    }
 
 	    public Dimension getPreferredSize() {
-	        return new Dimension(this.getWidth(), localUpdatedNode.numOfNeurons);
+	        return new Dimension(this.getWidth(), localUpdatedNode.numOfNeurons + 30);
 	    }	  	    
 
 	    public void paintComponent(Graphics g) {
-	        super.paintComponent(g);  	        	    			    		    		    	
-	    		    	    	
+	        super.paintComponent(g); 
+	        
+	        // Draw string in the left corne of the raster graph
+	        g.drawString("Average spikes interval: " + time + " ms", 10, localUpdatedNode.numOfNeurons + 20);
+	    		    	
+	        // Comput the number of bytes of the vector holding the spikes
 	    	short dataBytes = (localUpdatedNode.numOfNeurons % 8) == 0 ? 
 	    			(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);	    		    
 	    	
+	    	// Iterate over the latest # latestSpikes.size() spikes vectors
 			for (int k = 0; k < latestSpikes.size(); k++) {
-								
+				
+				// Get the current spikes vector
 				byte[] spikesData = latestSpikes.get(k);
 
+				// Iterate over the bytes of the vector
 				for (int i = 0; i < dataBytes; i++) {
 					
+					// Iterate over the single bit, each one representing a spike
 					for (int j = 0; j < 8; j++) {
-						
+												
 						if ((spikesData[i] & (1 << j)) != 0) {
 							
+							// If the bit is set a spike has been emitted and therefore a pixel needs to be turned on
 							g.drawLine(xCoordinate + k, i * 8 + j, xCoordinate + k, i * 8 + j);
 
 						}
@@ -110,7 +125,6 @@ public class LocalNetworkFrame {
 	public void display() {				
 		
 		JPanel totalPanel = new JPanel();
-		JPanel mainPanel = new JPanel(); 
 		JPanel infoPanel = new JPanel();
 		JPanel stimulusPanel = new JPanel();
 		JPanel infoAndStimulusPanel = new JPanel();
@@ -135,7 +149,7 @@ public class LocalNetworkFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!randomSpikeRadioButton) {
-					thisNodeRSG.shutdown = false;	
+					thisNodeRSG.shutdown = false;					
 					randomSpikesGeneratorExecutor.execute(thisNodeRSG);	
 					randomSpikeRadioButton = true;
 				}
@@ -326,8 +340,8 @@ public class LocalNetworkFrame {
 		 * Redraw the frame
 		 */
 		
-		frame.revalidate();		
-		frame.repaint();
+		mainPanel.revalidate();		
+		mainPanel.repaint();
 	}
 	
 	@Override
@@ -365,6 +379,7 @@ public class LocalNetworkFrame {
 			//int k = 0;
 
 		    short tmpXCoordinate = 0;
+		    long lastTime = 0;
 			
 			while (!shutdown) {
 				
@@ -386,11 +401,14 @@ public class LocalNetworkFrame {
 						
 					} else {
 						
-						rastergraphPanel.latestSpikes = new ArrayList<>(localLatestSpikes);						
+						rastergraphPanel.time = (long)(System.nanoTime() - lastTime) / (40 * 1000000);
+						rastergraphPanel.latestSpikes = new ArrayList<>(localLatestSpikes);													
 						
 						if (rastergraphPanel.xCoordinate < rastergraphPanel.getWidth()) {
 							rastergraphPanel.xCoordinate  = tmpXCoordinate;
-							rastergraphPanel.repaint(rastergraphPanel.xCoordinate, 0, rastergraphPanel.latestSpikes.size(), localUpdatedNode.numOfNeurons);
+							int stringHeight = rastergraphPanel.getHeight() - localUpdatedNode.numOfNeurons;
+							rastergraphPanel.paintImmediately(0, localUpdatedNode.numOfNeurons, rastergraphPanel.getWidth(), stringHeight);
+							rastergraphPanel.paintImmediately(rastergraphPanel.xCoordinate, 0, rastergraphPanel.latestSpikes.size(), localUpdatedNode.numOfNeurons);
 							tmpXCoordinate += rastergraphPanel.latestSpikes.size();
 					    } else {
 					    	rastergraphPanel.xCoordinate = 0;
@@ -398,7 +416,7 @@ public class LocalNetworkFrame {
 					    	rastergraphPanel.repaint();
 					    }					
 												
-						
+						lastTime = System.nanoTime();
 						localLatestSpikes.clear();
 					}
 					
@@ -407,9 +425,9 @@ public class LocalNetworkFrame {
 					k++;
 					*/
 				
-				} /* else if (!thisNodeRSG.shutdown) {
+				} else if (!thisNodeRSG.shutdown) {
 					shutdown = true;
-				} */
+				} 
 				
 			}
 			
