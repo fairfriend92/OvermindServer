@@ -1,3 +1,9 @@
+/**
+ * Main class which displays the main panel and executes the two main threads: 1) the VirtualLayerManager and the 
+ * 2) SpikesSorter. The first manages incoming connections and routes the peers, the second constantly listen for inbounds spikes
+ * that need to be displayed in the raster graph portion of the frame associated with the sending device
+ */
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 

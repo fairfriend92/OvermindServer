@@ -1,10 +1,12 @@
+/**
+ * Class which describes the frame used to monitor the activity of a node
+ */
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -24,9 +26,6 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
-import javax.swing.border.BevelBorder;
-
-import com.example.overmind.LocalNetwork;
 
 public class LocalNetworkFrame {
 	
@@ -121,6 +120,10 @@ public class LocalNetworkFrame {
 	    }  
 	    
 	}
+	
+	/**
+	 * Main method used to display the frame for the first time
+	 */
 
 	public void display() {				
 		
@@ -262,7 +265,8 @@ public class LocalNetworkFrame {
 		removeNodeButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				shutdown = true;			
+				//shutdown = true;		
+				VirtualLayerManager.removeNode(localUpdatedNode);
 			}
 		});		
 		commandsPanel.add(removeNodeButton);
@@ -277,6 +281,10 @@ public class LocalNetworkFrame {
 		frame.pack();
 		frame.setVisible(true);		
 	}
+	
+	/**
+	 * Method used to update the frame
+	 */
 	
 	public synchronized void update(com.example.overmind.LocalNetwork updatedNode) {
 		
@@ -358,6 +366,10 @@ public class LocalNetworkFrame {
 		
 	}
 	
+	/**
+	 * Method which reads the incoming spikes and pass them to the raster graph panel
+	 */
+	
 	private class SpikesMonitor implements Runnable {
 		
 		private BlockingQueue<byte[]> spikesReceivedQueue = new ArrayBlockingQueue<>(4);
@@ -372,61 +384,85 @@ public class LocalNetworkFrame {
 		@Override
 		public void run() {
 			
-		    
+		    /**
+		     * dataBytes is the number of bytes which make up the vector containing the spikes
+		     */
+			
 		    short dataBytes = (localUpdatedNode.numOfNeurons % 8) == 0 ? 
 		    		(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);			
 			
-			//int k = 0;
-
+		    // Used to store temporarily the x coordinate of the upper right vertex of the rectangle 
+		    // defining the region of the raster graph that needs to be redrawn
 		    short tmpXCoordinate = 0;
+		    
+		    // Used to compute the time interval between spikes
 		    long lastTime = 0;
 			
 			while (!shutdown) {
 				
 				byte[] spikesReceived = new byte[dataBytes];
 				
-				String spikes = new String();
-				
+
+				// The vector containing the spikes is put in this queue by the SpikesSorter class
 				try {
-					spikesReceived = spikesReceivedQueue.poll(1000, TimeUnit.MILLISECONDS);
+					spikesReceived = spikesReceivedQueue.poll(100, TimeUnit.MILLISECONDS);
 				} catch (InterruptedException e ) {
 					e.printStackTrace();
 				} 
 				
+				// Proceed only if the vector contains meaningful info
 				if (spikesReceived != null) {	
 															
+					// The raster graph is updated every 40 iterations of the simulation to prevent screen flickering 
 					if (localLatestSpikes.size() < 40) {
 						
 						localLatestSpikes.add(spikesReceived);
 						
 					} else {
 						
+						// Update the info regarding the time interval between spikes
 						rastergraphPanel.time = (long)(System.nanoTime() - lastTime) / (40 * 1000000);
+						
+						// Update the list holding the last 40 spikes vectors
 						rastergraphPanel.latestSpikes = new ArrayList<>(localLatestSpikes);													
 						
+						// If there is still room in the raster graph write in the same buffer
 						if (rastergraphPanel.xCoordinate < rastergraphPanel.getWidth()) {
+							
+							// Update the x coordinate of the portion of the raster graph that needs to be redrawn							
 							rastergraphPanel.xCoordinate  = tmpXCoordinate;
+							
+							// Update the height 
 							int stringHeight = rastergraphPanel.getHeight() - localUpdatedNode.numOfNeurons;
+							
+							// Redraw the region of the raster graph where the new 40 spikes vectors should appear
 							rastergraphPanel.paintImmediately(0, localUpdatedNode.numOfNeurons, rastergraphPanel.getWidth(), stringHeight);
+							
+							// Redraw the region of the raster graph where the spikes time interval is displayed
 							rastergraphPanel.paintImmediately(rastergraphPanel.xCoordinate, 0, rastergraphPanel.latestSpikes.size(), localUpdatedNode.numOfNeurons);
+							
+							// Increase the x coordinate
 							tmpXCoordinate += rastergraphPanel.latestSpikes.size();
+							
 					    } else {
+					    	
+					    	// If there isn't room in the raster graph the hole graph needs to be refreshed
 					    	rastergraphPanel.xCoordinate = 0;
 					    	tmpXCoordinate = (short)rastergraphPanel.latestSpikes.size();
 					    	rastergraphPanel.repaint();
+					    	
 					    }					
 												
 						lastTime = System.nanoTime();
 						localLatestSpikes.clear();
-					}
-					
-					/*
-					System.out.println("Device with ip " + ip + " has sent " + spikes + " with rate " + k);
-					k++;
-					*/
+					}					
 				
-				} else if (!thisNodeRSG.shutdown) {
-					shutdown = true;
+				} else if (spikesReceived == null && thisNodeRSG.shutdown) { // The additional condition is need to prevent an unwanted shutdown when the generation of 
+																			 // random spikes is resumed in condition of absence of other stimuli
+					
+					// If the spikes vector is null something bad has happened and the node needs to be disconnected
+					//shutdown = true;
+					
 				} 
 				
 			}

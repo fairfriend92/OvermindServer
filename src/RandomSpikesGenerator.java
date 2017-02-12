@@ -1,9 +1,13 @@
+/**
+ * Called by a particular instance of LocalNetworkFrame to generate random spikes to be sent to the 
+ * device whose frame is managed by that instance
+ */
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Random;
@@ -74,7 +78,7 @@ public class RandomSpikesGenerator implements Runnable {
 
         try {
     	    outputSocket = new DatagramSocket();
-    	    outputSocket.setTrafficClass(0x10);   
+    	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);   
         } catch (SocketException e) {
         	e.printStackTrace();
         }
@@ -129,12 +133,12 @@ public class RandomSpikesGenerator implements Runnable {
         	}        	
         	
         	/**
-        	 * Send the generated spikes every 5 milliseconds
+        	 * Send the generated spikes every 4 milliseconds
         	 */
         	
         	newTime = System.nanoTime();              
        	        	
-        	while (newTime - lastTime < 5000000 - sendTime) {
+        	while (newTime - lastTime < 3000000 - sendTime) {
         		newTime = System.nanoTime();         
         	}          	                 	   
         	        	

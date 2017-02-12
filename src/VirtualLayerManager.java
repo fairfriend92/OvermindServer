@@ -1,21 +1,27 @@
+/**
+ * Called by my MainFrame to manage the connection and disconnection of the devices which make up the 
+ * physical layer (PL). The connected devices form the virtual layer (VL) on top of which the Overmind is built.
+ * 
+ * TERMINOLOGY
+ * 
+ * a) Device: the physical terminal
+ * b) Local network: the network hosted by the device
+ * c) Node: the representation of the local network in the virtual space
+ * 
+ * 1) Physical layer: the network of terminals 
+ * 2) Virtual layer: the network of nodes managed by the server
+ * 3) Overmind: the highest abstraction which implements the A.I. on top of the VL, which itself is
+ * 		        a representation of the PL
+ */
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class VirtualLayerManager extends Thread{
@@ -24,7 +30,6 @@ public class VirtualLayerManager extends Thread{
 	
 	public final static int SERVER_PORT_TCP = 4195;
 	public final static int SERVER_PORT_UDP = 4196;
-	private final static int IPTOS_RELIABILITY = 0x04;
 	
 	static boolean shutdown = false;	
 	
@@ -272,11 +277,9 @@ public class VirtualLayerManager extends Thread{
 		 * Shutdown the executor of the the spikes monitor 
 		 */		
 		
-		boolean spikesMonitorIsShutdown = false;
-		
-		syncFrames.get(index).shutdown = true;
-		
-		syncFrames.get(index).spikesMonitorExecutor.shutdown();
+		boolean spikesMonitorIsShutdown = false;			
+	
+		syncFrames.get(index).spikesMonitorExecutor.shutdown();	
 		
 		try {
 			spikesMonitorIsShutdown = syncFrames.get(index).spikesMonitorExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
