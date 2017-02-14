@@ -100,8 +100,7 @@ public class RandomSpikesGenerator implements Runnable {
         	/**
         	 * Generate spikes randomly, with the only condition that a period of time at least equal to the ARP 
         	 * should pass between two subsequent spikes
-        	 */
-        	
+        	 */        	
         	
         	byte[] outputSpikes = new byte[dataBytes];       	      	
         	

@@ -87,7 +87,9 @@ public class SpikesSorter extends Thread{
 				frameFound = true;				
 								
 				try {
-					localSyncFrames.get(index).receivedSpikesQueue.offer(spikesBuffer, 100, TimeUnit.MILLISECONDS);
+					if (spikesBuffer != null) {
+						localSyncFrames.get(index).receivedSpikesQueue.offer(spikesBuffer, 100, TimeUnit.MILLISECONDS);
+					}
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}

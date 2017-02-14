@@ -401,7 +401,6 @@ public class LocalNetworkFrame {
 			while (!shutdown) {
 				
 				byte[] spikesReceived = new byte[dataBytes];
-				
 
 				// The vector containing the spikes is put in this queue by the SpikesSorter class
 				try {
@@ -457,11 +456,14 @@ public class LocalNetworkFrame {
 						localLatestSpikes.clear();
 					}					
 				
-				} else if (spikesReceived == null && thisNodeRSG.shutdown) { // The additional condition is need to prevent an unwanted shutdown when the generation of 
-																			 // random spikes is resumed in condition of absence of other stimuli
+				} else if ((System.nanoTime() - lastTime) / (40 * 1000000000) > 5) { 
 					
-					// If the spikes vector is null something bad has happened and the node needs to be disconnected
-					//shutdown = true;
+					/**
+					 * If no new signal has been received in the last 5 seconds the node is automatically disconnected
+					 */
+					
+					// If the spikes vector is null the socket timeout has expired and the node needs to be disconnected
+					shutdown = true;
 					
 				} 
 				

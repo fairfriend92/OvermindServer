@@ -269,9 +269,13 @@ public class VirtualLayerManager extends Thread{
 		// If the method has been called unnecessarily exit without doing anything
 		if (!availableNodes.contains(removableNode)) { return; }
 		
+		unsyncNodes.remove(removableNode);
+		
 		int index = syncNodes.indexOf(removableNode);
 		
-		availableNodes.remove(removableNode); 		
+		availableNodes.remove(removableNode); 	
+		
+		// TODO The spikes monitor and RSG fail to close properly more often than not...
 		
 		/**
 		 * Shutdown the executor of the the spikes monitor 
@@ -299,6 +303,7 @@ public class VirtualLayerManager extends Thread{
 		syncFrames.get(index).randomSpikesGeneratorExecutor.shutdown();	
 		
 		boolean RSPGIsShutdown = false;
+		
 		try {
 			RSPGIsShutdown = syncFrames.get(index).randomSpikesGeneratorExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException e1) {
@@ -318,7 +323,7 @@ public class VirtualLayerManager extends Thread{
 		syncNodes.remove(index);		
 		
 		nodeClients.get(index).close();
-		nodeClients.remove(index);
+		nodeClients.remove(index);		
 		
 		/**
 		 * Remove all references to the current node from the other nodes' lists
@@ -418,6 +423,7 @@ public class VirtualLayerManager extends Thread{
 										
 				} catch (IOException e) {
 		        	e.printStackTrace();
+		        	removeNode(unsyncNodes.get(i));
 				}				
 								
 			}				
