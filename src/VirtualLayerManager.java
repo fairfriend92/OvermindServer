@@ -281,7 +281,9 @@ public class VirtualLayerManager extends Thread{
 		 * Shutdown the executor of the the spikes monitor 
 		 */		
 		
-		boolean spikesMonitorIsShutdown = false;			
+		boolean spikesMonitorIsShutdown = false;	
+		
+		syncFrames.get(index).shutdown = true;
 	
 		syncFrames.get(index).spikesMonitorExecutor.shutdown();	
 		
@@ -295,22 +297,23 @@ public class VirtualLayerManager extends Thread{
 		} 			
 		
 		/**
-		 * Shutdown the executor of the random spikes generator
+		 * Shutdown the executor of the external stimuli
 		 */
 		
 		syncFrames.get(index).thisNodeRSG.shutdown = true;		
+		syncFrames.get(index).thisNodeRSS.shutdown = true;	
 		
-		syncFrames.get(index).randomSpikesGeneratorExecutor.shutdown();	
+		syncFrames.get(index).stimulusExecutor.shutdown();	
 		
-		boolean RSPGIsShutdown = false;
+		boolean stimulusExecIsShutdown = false;
 		
 		try {
-			RSPGIsShutdown = syncFrames.get(index).randomSpikesGeneratorExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+			stimulusExecIsShutdown = syncFrames.get(index).stimulusExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
-		if (!RSPGIsShutdown) {
-			System.out.println("Failed to shutdown RSG for device with ip " + removableNode.ip);	
+		if (!stimulusExecIsShutdown) {
+			System.out.println("Failed to close the stimuli executor for device with ip " + removableNode.ip);	
 		}		
 		
 		/**

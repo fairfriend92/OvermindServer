@@ -12,10 +12,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class RandomSpikesGenerator implements Runnable {
-	
-	// TODO Create a method to stop the generation of random spikes
-	
+public class RandomSpikesGenerator implements Runnable {	
+
 	public final static int UDP_CLIENT_PORT = 4194;	
 	private final static int IPTOS_THROUGHPUT = 0x08;
 	
@@ -26,7 +24,7 @@ public class RandomSpikesGenerator implements Runnable {
 		this.parentFrame = l;
 	}
 	
-	public boolean shutdown = false;	
+	public boolean shutdown = true;	
 	
 	@Override 
 	public void run() {	
@@ -46,7 +44,7 @@ public class RandomSpikesGenerator implements Runnable {
          */
         		
         // Store locally the info of the target device before sending the stimulus       
-        targetDeviceOld.update(targetDevice);;   
+        targetDeviceOld.update(targetDevice);   
         
         // Update the info of the targetDevice according to the chosen stimulus
         targetDevice.numOfDendrites = 0;
@@ -56,7 +54,8 @@ public class RandomSpikesGenerator implements Runnable {
         server.postsynapticNodes = new ArrayList<>();
         server.presynapticNodes = new ArrayList<>();
         server.ip = VirtualLayerManager.serverIP;
-                
+        //server.ip = "192.168.1.213";
+        
         // TODO Some of these fields are unnecessary
         server.postsynapticNodes.add(targetDevice);
         server.numOfNeurons = 1024;
@@ -137,7 +136,7 @@ public class RandomSpikesGenerator implements Runnable {
         	
         	newTime = System.nanoTime();              
        	        	
-        	while (newTime - lastTime < 3000000 - sendTime) {
+        	while (newTime - lastTime < 4000000 - sendTime) {
         		newTime = System.nanoTime();         
         	}          	                 	   
         	        	

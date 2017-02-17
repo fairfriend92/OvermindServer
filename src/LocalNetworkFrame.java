@@ -42,15 +42,13 @@ public class LocalNetworkFrame {
 	private DefaultListModel<String> preConnListModel = new DefaultListModel<>();
 	private DefaultListModel<String> postConnListModel = new DefaultListModel<>();
 	
-	public ExecutorService randomSpikesGeneratorExecutor = Executors.newSingleThreadExecutor();	
+	public ExecutorService stimulusExecutor = Executors.newSingleThreadExecutor();	
 	
 	public com.example.overmind.LocalNetwork localUpdatedNode = new com.example.overmind.LocalNetwork();
-	private com.example.overmind.LocalNetwork oldNode = new com.example.overmind.LocalNetwork();
 	
 	public RandomSpikesGenerator thisNodeRSG = new RandomSpikesGenerator(this);	
-	
-	private boolean randomSpikeRadioButton;
-	
+	public RefreshSignalSender thisNodeRSS = new RefreshSignalSender(this);
+
 	public BlockingQueue<byte[]> receivedSpikesQueue = new ArrayBlockingQueue<>(4);
 	public ExecutorService spikesMonitorExecutor = Executors.newSingleThreadExecutor();
 	public boolean spikesMonitorIsActive = false;
@@ -81,10 +79,10 @@ public class LocalNetworkFrame {
 	    public void paintComponent(Graphics g) {
 	        super.paintComponent(g); 
 	        
-	        // Draw string in the left corne of the raster graph
+	        // Draw string in the left corner of the raster graph
 	        g.drawString("Average spikes interval: " + time + " ms", 10, localUpdatedNode.numOfNeurons + 20);
 	    		    	
-	        // Comput the number of bytes of the vector holding the spikes
+	        // Compute the number of bytes of the vector holding the spikes
 	    	short dataBytes = (localUpdatedNode.numOfNeurons % 8) == 0 ? 
 	    			(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);	    		    
 	    	
@@ -151,13 +149,25 @@ public class LocalNetworkFrame {
 		randomSpikesRadioButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (!randomSpikeRadioButton) {
-					thisNodeRSG.shutdown = false;					
-					randomSpikesGeneratorExecutor.execute(thisNodeRSG);	
-					randomSpikeRadioButton = true;
+				if (thisNodeRSG.shutdown) {
+					thisNodeRSG.shutdown = false;	
+					thisNodeRSS.shutdown = true;
+					stimulusExecutor.execute(thisNodeRSG);	
 				}
 			}
 		});	
+		
+		JRadioButton refreshSignalRadioButton = new JRadioButton("Refresh signal");
+		refreshSignalRadioButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (thisNodeRSS.shutdown) {
+					thisNodeRSG.shutdown = true;	
+					thisNodeRSS.shutdown = false;
+					stimulusExecutor.execute(thisNodeRSS);	
+				}
+			}
+		});
 		
 		JRadioButton noneRadioButton = new JRadioButton("None");
 		noneRadioButton.setSelected(true);
@@ -165,13 +175,14 @@ public class LocalNetworkFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {							
 				thisNodeRSG.shutdown = true;
-				randomSpikeRadioButton = false;
+				thisNodeRSS.shutdown = true;
 			}
 		});	
 		
 		ButtonGroup stimulusButtonsGroup = new ButtonGroup();
 	    stimulusButtonsGroup.add(randomSpikesRadioButton);
-	    stimulusButtonsGroup.add(noneRadioButton);		
+	    stimulusButtonsGroup.add(refreshSignalRadioButton);
+	    stimulusButtonsGroup.add(noneRadioButton);			    
 			
 		/**
 		 * Lists options		
@@ -232,6 +243,7 @@ public class LocalNetworkFrame {
                 BorderFactory.createEmptyBorder(5,5,5,5)));
 		stimulusPanel.add(noneRadioButton);
 		stimulusPanel.add(randomSpikesRadioButton);
+		stimulusPanel.add(refreshSignalRadioButton);
 		
 		/**
 		 * Presynaptic connections panel layout
@@ -458,12 +470,9 @@ public class LocalNetworkFrame {
 				
 				} else if ((System.nanoTime() - lastTime) / (40 * 1000000000) > 5) { 
 					
-					/**
-					 * If no new signal has been received in the last 5 seconds the node is automatically disconnected
-					 */
+					// TODO Manage disconnections automatically in a better way
 					
-					// If the spikes vector is null the socket timeout has expired and the node needs to be disconnected
-					shutdown = true;
+					//shutdown = true;
 					
 				} 
 				
