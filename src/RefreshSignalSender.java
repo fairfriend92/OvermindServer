@@ -37,7 +37,7 @@ public class RefreshSignalSender implements Runnable {
         //server.ip = "192.168.1.213";
         
         server.postsynapticNodes.add(targetDevice);
-        server.numOfNeurons = 1;
+        server.numOfNeurons = 8;
         server.numOfSynapses = (short)(1024 - targetDevice.numOfNeurons);
         server.numOfDendrites = 1024;
         server.natPort = VirtualLayerManager.SERVER_PORT_UDP;
@@ -68,16 +68,24 @@ public class RefreshSignalSender implements Runnable {
         
         assert targetDeviceAddr != null;
         
+        byte[] dummySignal = new byte[1];
+        
+        for (int index = 0; index < 8; index++) {
+        	dummySignal[0] &= ~(1 << index);
+        }
+        
+        short rateMultiplier = parentFrame.rateMultiplier;
+        
         while (!shutdown) {
         	
         	newTime = System.nanoTime();              
 	        	
-        	while (newTime - lastTime < 4000000 - sendTime) {
+        	while (newTime - lastTime < rateMultiplier * 1000000 - sendTime) {
         		newTime = System.nanoTime();         
         	}          	                 	   
         	        	
             try {
-                DatagramPacket outputSpikesPacket = new DatagramPacket(new byte[1], 1, targetDeviceAddr, targetDeviceOld.natPort);	
+                DatagramPacket outputSpikesPacket = new DatagramPacket(dummySignal, 1, targetDeviceAddr, targetDeviceOld.natPort);	
 				outputSocket.send(outputSpikesPacket);			
 			} catch (IOException e) {
 				System.out.println(e);

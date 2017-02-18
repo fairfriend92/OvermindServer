@@ -3,6 +3,7 @@
  */
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
@@ -15,6 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
@@ -37,7 +39,8 @@ public class LocalNetworkFrame {
 	
 	private JLabel numOfNeurons = new JLabel();
 	private JLabel numOfDendrites = new JLabel();
-	private JLabel numOfSynapses = new JLabel();	
+	private JLabel numOfSynapses = new JLabel();
+	private JLabel refreshRate = new JLabel("Clock is: 3 ms");
 
 	private DefaultListModel<String> preConnListModel = new DefaultListModel<>();
 	private DefaultListModel<String> postConnListModel = new DefaultListModel<>();
@@ -56,6 +59,9 @@ public class LocalNetworkFrame {
 	public MyPanel rastergraphPanel = new MyPanel();	
 
 	public JPanel mainPanel = new JPanel(); 
+	
+	public short rateMultiplier = 3;
+
 	
 	/**
 	 * Custom panel to display the raster graph
@@ -132,15 +138,18 @@ public class LocalNetworkFrame {
 		JPanel preConnPanel = new JPanel();
 		JPanel postConnPanel = new JPanel();	
 		JPanel commandsPanel = new JPanel();
+		JPanel refreshRatePanel = new JPanel();
 		
 		JButton removeNodeButton = new JButton();
+		JButton increaseRate = new JButton("+");
+		JButton decreaseRate = new JButton("-");
 		
 		JScrollPane preConnScrollPanel = new JScrollPane();
 		JScrollPane postConnScrollPanel = new JScrollPane();
 		
 		JList<String> presynapticConnections = new JList<>();
-		JList<String> postsynapticConnections = new JList<>();	
-		
+		JList<String> postsynapticConnections = new JList<>();		
+	
 		/**
 		 * Radio buttons used to select the external stimulus
 		 */
@@ -266,6 +275,43 @@ public class LocalNetworkFrame {
 		postConnPanel.add(postConnScrollPanel);	
 		
 		/**
+		 * Refresh rate panel layout
+		 */
+		
+		refreshRatePanel.setLayout(new BoxLayout(refreshRatePanel, BoxLayout.X_AXIS));
+		refreshRatePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		
+		increaseRate.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				rateMultiplier++;
+				refreshRate.setText("Clock is: " + rateMultiplier + " ms");
+				refreshRate.revalidate();
+				refreshRate.repaint();
+			}
+		});		
+		decreaseRate.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (rateMultiplier > 3) {
+					rateMultiplier--;
+					refreshRate.setText("Clock is: " + rateMultiplier + " ms");
+					refreshRate.revalidate();
+					refreshRate.repaint();
+				}
+			}
+		});		
+		
+		refreshRate.setBorder(BorderFactory.createLineBorder(Color.black));
+		refreshRate.setOpaque(true);
+		refreshRate.setBackground(Color.white);
+		refreshRatePanel.add(refreshRate);
+		refreshRatePanel.add(Box.createRigidArea(new Dimension(5,0)));
+		refreshRatePanel.add(increaseRate);
+		refreshRatePanel.add(Box.createRigidArea(new Dimension(5,0)));
+		refreshRatePanel.add(decreaseRate);
+		
+		/**
 		 * Command panel layout
 		 */
 		
@@ -281,7 +327,10 @@ public class LocalNetworkFrame {
 				VirtualLayerManager.removeNode(localUpdatedNode);
 			}
 		});		
+		removeNodeButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 		commandsPanel.add(removeNodeButton);
+		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		commandsPanel.add(refreshRatePanel);
 			
 		/**
 		 * Frame composition

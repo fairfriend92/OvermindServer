@@ -92,7 +92,9 @@ public class RandomSpikesGenerator implements Runnable {
         	e.printStackTrace();
 		}
         
-        assert targetDeviceAddr != null;        
+        assert targetDeviceAddr != null; 
+        
+        short rateMultiplier = parentFrame.rateMultiplier;
 		
         while (!shutdown) {       	
         	
@@ -128,15 +130,11 @@ public class RandomSpikesGenerator implements Runnable {
         			outputSpikes[byteIndex] &= ~(1 << index - byteIndex * 8);
         		}
         		
-        	}        	
-        	
-        	/**
-        	 * Send the generated spikes every 4 milliseconds
-        	 */
+        	}       	
         	
         	newTime = System.nanoTime();              
        	        	
-        	while (newTime - lastTime < 4000000 - sendTime) {
+        	while (newTime - lastTime < rateMultiplier * 1000000 - sendTime) {
         		newTime = System.nanoTime();         
         	}          	                 	   
         	        	
