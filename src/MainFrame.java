@@ -28,10 +28,14 @@ public class MainFrame {
 		displayMainFrame();
 					
 		VirtualLayerManager VLManager = new VirtualLayerManager();		
-		VLManager.start();		
+		VLManager.start();				
 		
 		SpikesSorter spikesSorter = new SpikesSorter();
 		spikesSorter.start();
+		
+		NodesShutdownPoller nodesShutdownPoller = new NodesShutdownPoller();
+		nodesShutdownPoller.start();
+		
 	}
 	
 	private static void displayMainFrame() {

@@ -182,9 +182,29 @@ public class VirtualLayerManager extends Thread{
 					|| (localNetwork.numOfDendrites == 0 && localNetwork.numOfSynapses == 0); i++) {
 
 				com.example.overmind.LocalNetwork currentNode = availableNodes.get(i);
-
+				
 				// Branch depending on whether either the synapses or the dendrites of the current node are saturated
-				if (currentNode.numOfDendrites - localNetwork.numOfNeurons >= 0
+				if (currentNode.numOfSynapses - localNetwork.numOfNeurons >= 0
+						&& localNetwork.numOfDendrites - currentNode.numOfNeurons >= 0) {
+
+					/**
+					 * Just as before but now synapses and dendrites are exchanged
+					 */
+
+					currentNode.numOfSynapses -= localNetwork.numOfNeurons;
+					localNetwork.numOfDendrites -= currentNode.numOfNeurons;
+
+					currentNode.postsynapticNodes.add(localNetwork);
+					localNetwork.presynapticNodes.add(currentNode);
+
+					if (unsyncNodes.contains(currentNode)) {
+						unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
+					} else {
+						unsyncNodes.add(currentNode);
+					}
+					availableNodes.set(i, currentNode);
+					
+				} else if (currentNode.numOfDendrites - localNetwork.numOfNeurons >= 0
 						&& localNetwork.numOfSynapses - currentNode.numOfNeurons >= 0 
 						&& currentNode.postsynapticNodes.size() >= currentNode.presynapticNodes.size()) {
 
@@ -266,7 +286,8 @@ public class VirtualLayerManager extends Thread{
 		
 		//syncNodes();		
 		
-		// If the method has been called unnecessarily exit without doing anything
+		// If the method has been called unnecessarily exit without doing anything 
+		// (However this should not happen...)
 		if (!availableNodes.contains(removableNode)) { return; }
 		
 		unsyncNodes.remove(removableNode);
@@ -274,8 +295,6 @@ public class VirtualLayerManager extends Thread{
 		int index = syncNodes.indexOf(removableNode);
 		
 		availableNodes.remove(removableNode); 	
-		
-		// TODO The spikes monitor and RSG fail to close properly more often than not...
 		
 		/**
 		 * Shutdown the executor of the the spikes monitor 
@@ -377,7 +396,7 @@ public class VirtualLayerManager extends Thread{
 					
 					// The node is new so a new frame needs to be created
 					tmp.display();
-					
+															
 					// Add the new window to the list of frames 
 					syncFrames.add(tmp);
 					

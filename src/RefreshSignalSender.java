@@ -26,8 +26,6 @@ public class RefreshSignalSender implements Runnable {
 		
         long lastTime = 0, newTime = 0, sendTime = 0;   
         
-        com.example.overmind.LocalNetwork targetDeviceOld = new com.example.overmind.LocalNetwork();        
-        targetDeviceOld.update(targetDevice);   
         targetDevice.numOfDendrites -= 8;
         
         com.example.overmind.LocalNetwork server = new com.example.overmind.LocalNetwork();
@@ -61,7 +59,7 @@ public class RefreshSignalSender implements Runnable {
         InetAddress targetDeviceAddr = null;
         		
         try {
-			targetDeviceAddr = InetAddress.getByName(targetDeviceOld.ip);
+			targetDeviceAddr = InetAddress.getByName(targetDevice.ip);
 		} catch (UnknownHostException e) {
         	e.printStackTrace();
 		}
@@ -85,7 +83,7 @@ public class RefreshSignalSender implements Runnable {
         	}          	                 	   
         	        	
             try {
-                DatagramPacket outputSpikesPacket = new DatagramPacket(dummySignal, 1, targetDeviceAddr, targetDeviceOld.natPort);	
+                DatagramPacket outputSpikesPacket = new DatagramPacket(dummySignal, 1, targetDeviceAddr, targetDevice.natPort);	
 				outputSocket.send(outputSpikesPacket);			
 			} catch (IOException e) {
 				System.out.println(e);
@@ -96,12 +94,12 @@ public class RefreshSignalSender implements Runnable {
         }
         
         outputSocket.close();
-        
-        targetDeviceOld.numOfSynapses = targetDevice.numOfSynapses;
-        targetDeviceOld.postsynapticNodes = new ArrayList<>(targetDevice.postsynapticNodes);
        
-        if (VirtualLayerManager.availableNodes.contains(targetDeviceOld)) {
-        	VirtualLayerManager.connectDevices(targetDeviceOld);
+        targetDevice.presynapticNodes.remove(server);
+    	targetDevice.numOfDendrites +=  8;
+        
+        if (VirtualLayerManager.availableNodes.contains(targetDevice)) {        	
+        	VirtualLayerManager.connectDevices(targetDevice);
         	VirtualLayerManager.syncNodes();
         }
         

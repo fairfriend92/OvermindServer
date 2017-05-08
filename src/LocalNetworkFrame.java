@@ -41,6 +41,8 @@ public class LocalNetworkFrame {
 	private JLabel numOfDendrites = new JLabel();
 	private JLabel numOfSynapses = new JLabel();
 	private JLabel refreshRate = new JLabel("Clock is: 3 ms");
+	
+	private JButton removeNodeButton = new JButton();
 
 	private DefaultListModel<String> preConnListModel = new DefaultListModel<>();
 	private DefaultListModel<String> postConnListModel = new DefaultListModel<>();
@@ -62,7 +64,6 @@ public class LocalNetworkFrame {
 	
 	public short rateMultiplier = 3;
 
-	
 	/**
 	 * Custom panel to display the raster graph
 	 */
@@ -140,7 +141,6 @@ public class LocalNetworkFrame {
 		JPanel commandsPanel = new JPanel();
 		JPanel refreshRatePanel = new JPanel();
 		
-		JButton removeNodeButton = new JButton();
 		JButton increaseRate = new JButton("+");
 		JButton decreaseRate = new JButton("-");
 		
@@ -293,7 +293,7 @@ public class LocalNetworkFrame {
 		decreaseRate.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (rateMultiplier > 3) {
+				if (rateMultiplier > 1) {
 					rateMultiplier--;
 					refreshRate.setText("Clock is: " + rateMultiplier + " ms");
 					refreshRate.revalidate();
@@ -426,7 +426,7 @@ public class LocalNetworkFrame {
 		spikesMonitorIsActive = true;
 		
 	}
-	
+			
 	/**
 	 * Method which reads the incoming spikes and pass them to the raster graph panel
 	 */
@@ -443,8 +443,8 @@ public class LocalNetworkFrame {
 		}
 		
 		@Override
-		public void run() {
-			
+		public void run() {					
+		
 		    /**
 		     * dataBytes is the number of bytes which make up the vector containing the spikes
 		     */
@@ -459,20 +459,20 @@ public class LocalNetworkFrame {
 		    // Used to compute the time interval between spikes
 		    long lastTime = 0;
 			
-			while (!shutdown) {
+			while (!shutdown) {		
 				
 				byte[] spikesReceived = new byte[dataBytes];
-
+				
 				// The vector containing the spikes is put in this queue by the SpikesSorter class
 				try {
-					spikesReceived = spikesReceivedQueue.poll(100, TimeUnit.MILLISECONDS);
+					spikesReceived = spikesReceivedQueue.poll(1000, TimeUnit.MILLISECONDS);
 				} catch (InterruptedException e ) {
 					e.printStackTrace();
 				} 
 				
 				// Proceed only if the vector contains meaningful info
-				if (spikesReceived != null) {	
-															
+				if (spikesReceived != null) {						
+																		
 					// The raster graph is updated every 40 iterations of the simulation to prevent screen flickering 
 					if (localLatestSpikes.size() < 40) {
 						
@@ -517,18 +517,14 @@ public class LocalNetworkFrame {
 						localLatestSpikes.clear();
 					}					
 				
-				} else if ((System.nanoTime() - lastTime) / (40 * 1000000000) > 5) { 
-					
-					// TODO Manage disconnections automatically in a better way
-					
-					//shutdown = true;
-					
+				} else {
+
+					shutdown = true; 	
+										
 				} 
 				
-			}
-			
-			VirtualLayerManager.removeNode(localUpdatedNode);	
-			
+			}	
+											
 		}
 		
 	}
