@@ -6,7 +6,7 @@
  * 
  * a) Device: the physical terminal
  * b) Local network: the network hosted by the device
- * c) Node: the representation of the local network in the virtual space
+ * c) Node: the representation of the terminal in the virtual space
  * 
  * 1) Physical layer: the network of terminals 
  * 2) Virtual layer: the network of nodes managed by the server
@@ -33,11 +33,11 @@ public class VirtualLayerManager extends Thread{
 	
 	static boolean shutdown = false;	
 	
-	static ArrayList<com.example.overmind.LocalNetwork> unsyncNodes = new ArrayList<>();
-	static ArrayList<com.example.overmind.LocalNetwork> syncNodes = new ArrayList<>();
-	static ArrayList<LocalNetworkFrame> syncFrames = new ArrayList<>();
+	static ArrayList<com.example.overmind.Terminal> unsyncTerminals = new ArrayList<>();
+	static ArrayList<com.example.overmind.Terminal> syncTerminals = new ArrayList<>();
+	static ArrayList<TerminalFrame> syncFrames = new ArrayList<>();
 	static ArrayList<Node> nodeClients = new ArrayList<>();
-	static ArrayList<com.example.overmind.LocalNetwork> availableNodes = new ArrayList<>();	
+	static ArrayList<com.example.overmind.Terminal> availableTerminals = new ArrayList<>();	
 	
 	static public String serverIP = null;
 			
@@ -84,12 +84,12 @@ public class VirtualLayerManager extends Thread{
         assert inputSocket != null;
         
         /**
-         * Start the worker thread which reads LocalNetwork objects from the streams established by the clients
+         * Start the worker thread which reads Terminal objects from the streams established by the clients
          */
         
         Socket clientSocket = null;		
         
-        com.example.overmind.LocalNetwork thisServer = new com.example.overmind.LocalNetwork();
+        com.example.overmind.Terminal thisServer = new com.example.overmind.Terminal();
         thisServer.ip = serverIP;
         //thisServer.ip = "192.168.1.213";
         thisServer.natPort = 4194;        
@@ -107,7 +107,7 @@ public class VirtualLayerManager extends Thread{
 	        	e.printStackTrace();
 			}		
 			
-			com.example.overmind.LocalNetwork localNetwork = null; 					
+			com.example.overmind.Terminal terminal = null; 					
 			ObjectInputStream input = null;
 			
 			// Receive data stream from the client
@@ -119,14 +119,14 @@ public class VirtualLayerManager extends Thread{
 			
 			assert input != null;
 			
-			// Read the localNetwork class from the data stream
+			// Read the Terminal class from the data stream
 			try {
-				localNetwork = (com.example.overmind.LocalNetwork) input.readObject();					
+				terminal = (com.example.overmind.Terminal) input.readObject();					
 			} catch (IOException | ClassNotFoundException e) {
 	        	e.printStackTrace();
 			}
 			
-			assert localNetwork != null;
+			assert terminal != null;
 				
 			/**
 			 * Retrieve nat port of the current device 
@@ -140,27 +140,27 @@ public class VirtualLayerManager extends Thread{
 			
 				inputSocket.receive(testPacket);				
 				
-				localNetwork.natPort = testPacket.getPort();
+				terminal.natPort = testPacket.getPort();
 				
-				localNetwork.ip = testPacket.getAddress().toString().substring(1);
+				terminal.ip = testPacket.getAddress().toString().substring(1);
 			
-				System.out.println("Nat port for device with IP " + localNetwork.ip + " is " + localNetwork.natPort);
+				System.out.println("Nat port for device with IP " + terminal.ip + " is " + terminal.natPort);
 
 				
 			} catch (IOException e) {
 	        	e.printStackTrace();
 			}			
 			
-			localNetwork.postsynapticNodes.add(thisServer);
+			terminal.postsynapticTerminals.add(thisServer);
 				
-			Node newNode = new Node(localNetwork.ip, clientSocket);
+			Node newNode = new Node(clientSocket, terminal);
 			newNode.initialize();
 			
 			nodeClients.add(newNode);			
 			
-			assert localNetwork != null;	
+			assert terminal != null;	
 			
-			connectDevices(localNetwork);
+			connectTerminals(newNode);
 								
 		}
 		/* [End of while(!shutdown)] */
@@ -168,133 +168,137 @@ public class VirtualLayerManager extends Thread{
 	}
 	/* [End of run() method] */	
 	
-	public synchronized static void connectDevices(com.example.overmind.LocalNetwork localNetwork) {
-		
+	public synchronized static void connectTerminals(Node disconnectedNode) {	
+	
 		/**
 		 * Populate and update the list of terminals available for connection
 		 */
+			
+		com.example.overmind.Terminal disconnectedTerminal = disconnectedNode.terminal;
 		
 		// The algorithm starts only if the list has at least one element
-		if (!availableNodes.isEmpty() && !availableNodes.contains(localNetwork)) {
+		if (!availableTerminals.isEmpty() && !availableTerminals.contains(disconnectedTerminal)) {
 		
 			// Iterate over all the available terminals
-			for (int i = 0; i < availableNodes.size()
-					|| (localNetwork.numOfDendrites == 0 && localNetwork.numOfSynapses == 0); i++) {
+			for (int i = 0; i < availableTerminals.size()
+					|| (disconnectedTerminal.numOfDendrites == 0 && disconnectedTerminal.numOfSynapses == 0); i++) {
 
-				com.example.overmind.LocalNetwork currentNode = availableNodes.get(i);
+				com.example.overmind.Terminal currentTerminal = availableTerminals.get(i);
 				
-				// Branch depending on whether either the synapses or the dendrites of the current node are saturated
-				if (currentNode.numOfSynapses - localNetwork.numOfNeurons >= 0
-						&& localNetwork.numOfDendrites - currentNode.numOfNeurons >= 0) {
+				// Branch depending on whether either the synapses or the dendrites of the current terminal are saturated
+				if (currentTerminal.numOfSynapses - disconnectedTerminal.numOfNeurons >= 0
+						&& disconnectedTerminal.numOfDendrites - currentTerminal.numOfNeurons >= 0
+						&& currentTerminal.postsynapticTerminals.size() <= currentTerminal.presynapticTerminals.size()) {
+
+					// Update the number of synapses and dendrites for both currentTerminal and disconnectedTerminal
+					currentTerminal.numOfSynapses -= disconnectedTerminal.numOfNeurons;
+					disconnectedTerminal.numOfDendrites -= currentTerminal.numOfNeurons;
+
+					// Update the list of connected terminals
+					currentTerminal.postsynapticTerminals.add(disconnectedTerminal);
+					disconnectedTerminal.presynapticTerminals.add(currentTerminal);
+
+					// Send to the list of terminals which need to be updated the current terminal
+					if (unsyncTerminals.contains(currentTerminal)) {
+						unsyncTerminals.set(unsyncTerminals.indexOf(currentTerminal), currentTerminal);
+					} else {
+						unsyncTerminals.add(currentTerminal);
+					}
+					
+					// Update the current terminal in the list availableTerminals
+					availableTerminals.set(i, currentTerminal);
+					
+				} else if (currentTerminal.numOfDendrites - disconnectedTerminal.numOfNeurons >= 0
+						&& disconnectedTerminal.numOfSynapses - currentTerminal.numOfNeurons >= 0) {
+					
+					/**
+					 * Just as before but now synapses and dendrites are exchanged
+					 */
+
+					currentTerminal.numOfDendrites -= disconnectedTerminal.numOfNeurons;
+					disconnectedTerminal.numOfSynapses -= currentTerminal.numOfNeurons;
+
+					currentTerminal.presynapticTerminals.add(disconnectedTerminal);
+					disconnectedTerminal.postsynapticTerminals.add(currentTerminal);
+
+					if (unsyncTerminals.contains(currentTerminal)) {
+						unsyncTerminals.set(unsyncTerminals.indexOf(currentTerminal), currentTerminal);
+					} else {
+						unsyncTerminals.add(currentTerminal);
+					}
+					
+					availableTerminals.set(i, currentTerminal);
+
+				} else if (currentTerminal.numOfSynapses - disconnectedTerminal.numOfNeurons >= 0
+						&& disconnectedTerminal.numOfDendrites - currentTerminal.numOfNeurons >= 0) {
 
 					/**
 					 * Just as before but now synapses and dendrites are exchanged
 					 */
 
-					currentNode.numOfSynapses -= localNetwork.numOfNeurons;
-					localNetwork.numOfDendrites -= currentNode.numOfNeurons;
+					currentTerminal.numOfSynapses -= disconnectedTerminal.numOfNeurons;
+					disconnectedTerminal.numOfDendrites -= currentTerminal.numOfNeurons;
 
-					currentNode.postsynapticNodes.add(localNetwork);
-					localNetwork.presynapticNodes.add(currentNode);
+					currentTerminal.postsynapticTerminals.add(disconnectedTerminal);
+					disconnectedTerminal.presynapticTerminals.add(currentTerminal);
 
-					if (unsyncNodes.contains(currentNode)) {
-						unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
+					if (unsyncTerminals.contains(currentTerminal)) {
+						unsyncTerminals.set(unsyncTerminals.indexOf(currentTerminal), currentTerminal);
 					} else {
-						unsyncNodes.add(currentNode);
-					}
-					availableNodes.set(i, currentNode);
-					
-				} else if (currentNode.numOfDendrites - localNetwork.numOfNeurons >= 0
-						&& localNetwork.numOfSynapses - currentNode.numOfNeurons >= 0 
-						&& currentNode.postsynapticNodes.size() >= currentNode.presynapticNodes.size()) {
-
-					// Update the number of dendrites and synapses for the current node and the local network
-					currentNode.numOfDendrites -= localNetwork.numOfNeurons;
-					localNetwork.numOfSynapses -= currentNode.numOfNeurons;
-
-					// Update the list of connected terminals for both the node and the local network
-					currentNode.presynapticNodes.add(localNetwork);
-					localNetwork.postsynapticNodes.add(currentNode);
-
-					// Send to the list of terminals which need to be updated the current node
-					if (unsyncNodes.contains(currentNode)) {
-						unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
-					} else {
-						unsyncNodes.add(currentNode);
+						unsyncTerminals.add(currentTerminal);
 					}
 					
-					// Update the current node in the list availableNodes
-					availableNodes.set(i, currentNode);
+					availableTerminals.set(i, currentTerminal);
 
-				} else if (currentNode.numOfSynapses - localNetwork.numOfNeurons >= 0
-						&& localNetwork.numOfDendrites - currentNode.numOfNeurons >= 0) {
-
-					/**
-					 * Just as before but now synapses and dendrites are exchanged
-					 */
-
-					currentNode.numOfSynapses -= localNetwork.numOfNeurons;
-					localNetwork.numOfDendrites -= currentNode.numOfNeurons;
-
-					currentNode.postsynapticNodes.add(localNetwork);
-					localNetwork.presynapticNodes.add(currentNode);
-
-					if (unsyncNodes.contains(currentNode)) {
-						unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
-					} else {
-						unsyncNodes.add(currentNode);
-					}
-					availableNodes.set(i, currentNode);
-
-				} else if (currentNode.numOfSynapses == 0 && currentNode.numOfDendrites == 0) {
-					// If BOTH the synapses and the dendrites of the current node are saturated it can be removed
-					availableNodes.remove(i);
+				} else if (currentTerminal.numOfSynapses == 0 && currentTerminal.numOfDendrites == 0) {
+					// If BOTH the synapses and the dendrites of the current terminal are saturated it can be removed
+					availableTerminals.remove(i);
 				}
 				/* [End of the inner if] */
 
 			}
 			/* [End of for loop] */
 			
-			// If either the dendrites or the synapses of the local network are not saturated it can be added to the list
-			if (localNetwork.numOfDendrites > 0 || localNetwork.numOfSynapses > 0) {
-				availableNodes.add(localNetwork);
+			// If either the dendrites or the synapses of the disconnected terminal are not saturated it can be added to the list
+			if (disconnectedTerminal.numOfDendrites > 0 || disconnectedTerminal.numOfSynapses > 0) {
+				availableTerminals.add(disconnectedTerminal);
 			} 
 			
-			unsyncNodes.add(localNetwork);	
+			unsyncTerminals.add(disconnectedTerminal);	
 
 			
-		} else if (availableNodes.isEmpty()) {
+		} else if (availableTerminals.isEmpty()) {
 			
-			// Add the local network automatically if the list is empty
-			availableNodes.add(localNetwork);		
-			unsyncNodes.add(localNetwork);	
+			// Add the disconnected terminal automatically if the list is empty
+			availableTerminals.add(disconnectedTerminal);		
+			unsyncTerminals.add(disconnectedTerminal);	
 			  
-		} else if (availableNodes.contains(localNetwork)) {
+		} else if (availableTerminals.contains(disconnectedTerminal)) {
 			
-			// If availableNodes contains the localNetwork it needs only to update its reference
-			availableNodes.set(availableNodes.indexOf(localNetwork), localNetwork);					
-			unsyncNodes.add(localNetwork);	
+			// If availableTerminals contains the disconnectedTerminal it needs only to update its reference
+			availableTerminals.set(availableTerminals.indexOf(disconnectedTerminal), disconnectedTerminal);					
+			unsyncTerminals.add(disconnectedTerminal);	
 			
 		}
 		/* [End of the outer if] */		
 									
-		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), syncNodes.size()));
+		MainFrame.updateMainFrame(new MainFrameInfo(unsyncTerminals.size(), syncTerminals.size()));
 		
 	}
 	
-	public synchronized static void removeNode(com.example.overmind.LocalNetwork removableNode) {
+	public synchronized static void removeTerminal(com.example.overmind.Terminal removableTerminal) {
 		
 		//syncNodes();		
 		
 		// If the method has been called unnecessarily exit without doing anything 
 		// (However this should not happen...)
-		if (!availableNodes.contains(removableNode)) { return; }
+		if (!availableTerminals.contains(removableTerminal)) { return; }
 		
-		unsyncNodes.remove(removableNode);
+		unsyncTerminals.remove(removableTerminal);
 		
-		int index = syncNodes.indexOf(removableNode);
+		int index = syncTerminals.indexOf(removableTerminal);
 		
-		availableNodes.remove(removableNode); 	
+		availableTerminals.remove(removableTerminal); 	
 		
 		/**
 		 * Shutdown the executor of the the spikes monitor 
@@ -312,15 +316,15 @@ public class VirtualLayerManager extends Thread{
 			e1.printStackTrace();
 		}
 		if (!spikesMonitorIsShutdown) {
-			System.out.println("Failed to shutdown spikes monitor for device with ip " + removableNode.ip);	
+			System.out.println("Failed to shutdown spikes monitor for device with ip " + removableTerminal.ip);	
 		} 			
 		
 		/**
 		 * Shutdown the executor of the external stimuli
 		 */
 		
-		syncFrames.get(index).thisNodeRSG.shutdown = true;		
-		syncFrames.get(index).thisNodeRSS.shutdown = true;	
+		syncFrames.get(index).thisTerminalRSG.shutdown = true;		
+		syncFrames.get(index).thisTerminalRSS.shutdown = true;	
 		
 		syncFrames.get(index).stimulusExecutor.shutdown();	
 		
@@ -332,130 +336,130 @@ public class VirtualLayerManager extends Thread{
 			e1.printStackTrace();
 		}
 		if (!stimulusExecIsShutdown) {
-			System.out.println("Failed to close the stimuli executor for device with ip " + removableNode.ip);	
+			System.out.println("Failed to close the stimuli executor for device with ip " + removableTerminal.ip);	
 		}		
 		
 		/**
-		 * Close the frame associated to the node and remove its references from the list of clients
+		 * Close the frame associated to the terminal and remove its references from the list of clients
 		 */
 		
 		syncFrames.get(index).frame.dispose();
 		syncFrames.remove(index);			
 		
-		syncNodes.remove(index);		
+		syncTerminals.remove(index);		
 		
 		nodeClients.get(index).close();
 		nodeClients.remove(index);		
 		
 		/**
-		 * Remove all references to the current node from the other nodes' lists
+		 * Remove all references to the current terminal from the other terminal' lists
 		 */
 		
-		for (int i = 0; i < availableNodes.size(); i++) {
+		for (int i = 0; i < availableTerminals.size(); i++) {
 			
-			boolean nodeIsModified = false;
+			boolean terminalIsModified = false;
 			
-			if (availableNodes.get(i).postsynapticNodes.contains(removableNode)) {
-				availableNodes.get(i).postsynapticNodes.remove(removableNode);
-				availableNodes.get(i).numOfSynapses += removableNode.numOfNeurons;
-				nodeIsModified = true;
+			if (availableTerminals.get(i).postsynapticTerminals.contains(removableTerminal)) {
+				availableTerminals.get(i).postsynapticTerminals.remove(removableTerminal);
+				availableTerminals.get(i).numOfSynapses += removableTerminal.numOfNeurons;
+				terminalIsModified = true;
 			}
 			
-			if (availableNodes.get(i).presynapticNodes.contains(removableNode)) {
-				availableNodes.get(i).presynapticNodes.remove(removableNode);
-				availableNodes.get(i).numOfDendrites += removableNode.numOfNeurons;
-				nodeIsModified = true;
+			if (availableTerminals.get(i).presynapticTerminals.contains(removableTerminal)) {
+				availableTerminals.get(i).presynapticTerminals.remove(removableTerminal);
+				availableTerminals.get(i).numOfDendrites += removableTerminal.numOfNeurons;
+				terminalIsModified = true;
 			}
 			
-			if (nodeIsModified) { unsyncNodes.add(availableNodes.get(i)); }			
+			if (terminalIsModified) { unsyncTerminals.add(availableTerminals.get(i)); }			
 			
 		}	
 		
 		// Sync other nodes that have been eventually modified
-		syncNodes();
+		syncTerminals();
 		
 	}
 
-	public synchronized static void syncNodes() {		
+	public synchronized static void syncTerminals() {		
 		
 		/**
-		 * Sync the GUI with the updated info about the nodes
+		 * Sync the GUI with the updated info about the terminals
 		 */
 		
-		if (!unsyncNodes.isEmpty()) {		
+		if (!unsyncTerminals.isEmpty()) {		
 			
-			for (int i = 0; i < unsyncNodes.size(); i++) {
+			for (int i = 0; i < unsyncTerminals.size(); i++) {
 				
-				LocalNetworkFrame tmp;
+				TerminalFrame tmp;
 				
-				// Branch depending on whether the node is new or not
-				if (!syncNodes.contains(unsyncNodes.get(i))) {					
+				// Branch depending on whether the terminal is new or not
+				if (!syncTerminals.contains(unsyncTerminals.get(i))) {					
 			
-					tmp = new LocalNetworkFrame();
-					tmp.update(unsyncNodes.get(i));
+					tmp = new TerminalFrame();
+					tmp.update(new Node(null, unsyncTerminals.get(i)));
 					
-					// The node is new so a new frame needs to be created
+					// The terminal is new so a new frame needs to be created
 					tmp.display();
 															
 					// Add the new window to the list of frames 
 					syncFrames.add(tmp);
 					
-					// Add the new node to the list of sync nodes
-					syncNodes.add(unsyncNodes.get(i));
+					// Add the new terminal to the list of sync terminals
+					syncTerminals.add(unsyncTerminals.get(i));
 										
 					
 				} else {					
 					
-					int index = syncNodes.indexOf(unsyncNodes.get(i));					
+					int index = syncTerminals.indexOf(unsyncTerminals.get(i));					
 					
-					// Since the node is not new its already existing window must be retrieved from the list
-					// TODO instead of using index to retrieve frame we could write a method with argument the LocalNetwork itself
+					// Since the terminal is not new its already existing window must be retrieved from the list
+					// TODO instead of using index to retrieve frame we could write a method with argument the Terminal itself
 					tmp = syncFrames.get(index);
 					
 					// The retrieved window needs only to be updated 
-					tmp.update(unsyncNodes.get(i));
+					tmp.update(new Node(null, unsyncTerminals.get(i)));
 					
-					// The old node is substituted with the new one in the list of sync nodes
-					syncNodes.set(index, unsyncNodes.get(i));
+					// The old terminal is substituted with the new one in the list of sync terminal
+					syncTerminals.set(index, unsyncTerminals.get(i));
 					
 				}
 				
 				/**
-				 * Updated info regarding the current node are sent back to the physical device
+				 * Updated info regarding the current terminal are sent back to the physical device
 				 */
 					
 				try {
 					
 					// Temporary object holding the info regarding the local network of the current node
-					com.example.overmind.LocalNetwork tmpLN = unsyncNodes.get(i);
+					com.example.overmind.Terminal tmpT = unsyncTerminals.get(i);
 					
 					// Use the indexOf method to retrieve the current node from the nodeClients list
-					int index = nodeClients.indexOf(new Node(tmpLN.ip, null));
+					int index = nodeClients.indexOf(new Node(null, tmpT));
 					
 					// The node whose informations need to be sent back to the physical device
 					Node pendingNode = nodeClients.get(index);	
 					
-					com.example.overmind.LocalNetwork tmpLocalNetwork = new com.example.overmind.LocalNetwork();
-					tmpLocalNetwork.update(unsyncNodes.get(i));
+					com.example.overmind.Terminal tmpTerminal = new com.example.overmind.Terminal();
+					tmpTerminal.update(unsyncTerminals.get(i));
 									
 					// Write the info in the steam
-					pendingNode.output.writeObject(tmpLocalNetwork);						
+					pendingNode.output.writeObject(tmpTerminal);						
 								
 					//pendingNode.output.reset();										
 										
 				} catch (IOException e) {
 		        	e.printStackTrace();
-		        	removeNode(unsyncNodes.get(i));
-				}				
-								
+		        	removeTerminal(unsyncTerminals.get(i));
+				}
+							
 			}				
 			
-			unsyncNodes.clear();	
+			unsyncTerminals.clear();	
 												
 		}
 		
 		SpikesSorter.updateNodeFrames(syncFrames);
-		MainFrame.updateMainFrame(new MainFrameInfo(0, syncNodes.size()));
+		MainFrame.updateMainFrame(new MainFrameInfo(0, syncTerminals.size()));
 		
 	}
 

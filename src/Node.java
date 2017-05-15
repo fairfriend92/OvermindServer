@@ -2,17 +2,16 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-import com.example.overmind.LocalNetwork;
-
 public class Node {
 	
-	public String localNetworkIP;
+	public short layer, level;
 	public Socket thisClient;
 	public ObjectOutputStream output;
-		
-	public Node (String s, Socket s1) {
-		this.localNetworkIP = s;
+	public com.example.overmind.Terminal terminal;
+	
+	public Node (Socket s1, com.example.overmind.Terminal t) {
 		this.thisClient = s1;
+		this.terminal = t;
 	}
 	
 	public void initialize() {
@@ -23,6 +22,8 @@ public class Node {
 		} catch (IOException e) {
 			System.out.println(e);
 		}
+		layer = 0;
+		level = 0;
 	}
 	
 	public void close() {
@@ -32,11 +33,19 @@ public class Node {
 			e.printStackTrace();
 		}
 	}
+	
+	@Override
+	public int hashCode() {
+	    return terminal.ip.hashCode();
+	}
 
 	@Override
-    public boolean equals(Object obj) {
-        if (obj == null || obj.getClass() != this.getClass()) { return false; }
-        Node compare = (Node) obj;
-        return compare.localNetworkIP.equals(this.localNetworkIP);
+    public boolean equals(Object obj) {		
+       
+		if (obj == null || obj.getClass() != this.getClass()) { return false; }
+		Node compare = (Node) obj;
+    	return compare.terminal.ip.equals(this.terminal.ip);
+    	
     }
+	
 }

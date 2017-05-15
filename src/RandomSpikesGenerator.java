@@ -17,10 +17,10 @@ public class RandomSpikesGenerator implements Runnable {
 	public final static int UDP_CLIENT_PORT = 4194;	
 	private final static int IPTOS_THROUGHPUT = 0x08;
 	
-	private com.example.overmind.LocalNetwork targetDevice;
-	private LocalNetworkFrame parentFrame;
+	private com.example.overmind.Terminal targetTerminal;
+	private TerminalFrame parentFrame;
 	
-	RandomSpikesGenerator(LocalNetworkFrame l) {
+	RandomSpikesGenerator(TerminalFrame l) {
 		this.parentFrame = l;
 	}
 	
@@ -29,45 +29,45 @@ public class RandomSpikesGenerator implements Runnable {
 	@Override 
 	public void run() {	
 		
-		targetDevice = parentFrame.localUpdatedNode;
+		targetTerminal = parentFrame.localUpdatedTerminal;
 		
 		Random rand = new Random();
         long lastTime = 0, newTime = 0, sendTime = 0;   
-        int[] waitARP = new int[targetDevice.numOfDendrites];
-        short dataBytes = targetDevice.numOfDendrites % 8 == 0 ? 
-        		(short) (targetDevice.numOfDendrites / 8) : (short) (targetDevice.numOfDendrites / 8 + 1);
+        int[] waitARP = new int[targetTerminal.numOfDendrites];
+        short dataBytes = targetTerminal.numOfDendrites % 8 == 0 ? 
+        		(short) (targetTerminal.numOfDendrites / 8) : (short) (targetTerminal.numOfDendrites / 8 + 1);
         
-        com.example.overmind.LocalNetwork targetDeviceOld = new com.example.overmind.LocalNetwork();        
+        com.example.overmind.Terminal targetTerminalOld = new com.example.overmind.Terminal();        
                 
         /**
-         * Procedure to set external stimulus and update local network info
+         * Procedure to set external stimulus and update Terminal info
          */
         		
-        // Store locally the info of the target device before sending the stimulus       
-        targetDeviceOld.update(targetDevice);   
+        // Store locally the info of the target terminal before sending the stimulus       
+        targetTerminalOld.update(targetTerminal);   
         
-        // Update the info of the targetDevice according to the chosen stimulus
-        targetDevice.numOfDendrites = 0;
+        // Update the info of the targetTerminal according to the chosen stimulus
+        targetTerminal.numOfDendrites = 0;
         
-        // Create a local network representing this server
-        com.example.overmind.LocalNetwork server = new com.example.overmind.LocalNetwork();
-        server.postsynapticNodes = new ArrayList<>();
-        server.presynapticNodes = new ArrayList<>();
+        // Create a Terminal representing this server
+        com.example.overmind.Terminal server = new com.example.overmind.Terminal();
+        server.postsynapticTerminals = new ArrayList<>();
+        server.presynapticTerminals = new ArrayList<>();
         server.ip = VirtualLayerManager.serverIP;
         //server.ip = "192.168.1.213";
         
         // TODO Some of these fields are unnecessary
-        server.postsynapticNodes.add(targetDevice);
+        server.postsynapticTerminals.add(targetTerminal);
         server.numOfNeurons = 1024;
-        server.numOfSynapses = (short)(1024 - targetDevice.numOfNeurons);
+        server.numOfSynapses = (short)(1024 - targetTerminal.numOfNeurons);
         server.numOfDendrites = 1024;
         server.natPort = VirtualLayerManager.SERVER_PORT_UDP;
         
         // Add the server to the list of presynaptic devices connected to the target device
-        targetDevice.presynapticNodes.add(server);
+        targetTerminal.presynapticTerminals.add(server);
         
-        VirtualLayerManager.connectDevices(targetDevice);    
-        VirtualLayerManager.syncNodes();          
+        VirtualLayerManager.connectTerminals(new Node(null, targetTerminal));    
+        VirtualLayerManager.syncTerminals();          
                 
         /**
          * Open the socket for sending the spikes and build the InetAddress of the target device
@@ -87,7 +87,7 @@ public class RandomSpikesGenerator implements Runnable {
         InetAddress targetDeviceAddr = null;
         		
         try {
-			targetDeviceAddr = InetAddress.getByName(targetDeviceOld.ip);
+			targetDeviceAddr = InetAddress.getByName(targetTerminalOld.ip);
 		} catch (UnknownHostException e) {
         	e.printStackTrace();
 		}
@@ -105,7 +105,7 @@ public class RandomSpikesGenerator implements Runnable {
         	
         	byte[] outputSpikes = new byte[dataBytes];       	      	
         	
-        	for (int index = 0; index < targetDeviceOld.numOfDendrites; index++) {  
+        	for (int index = 0; index < targetTerminalOld.numOfDendrites; index++) {  
         		
         		int byteIndex = (int) index / 8;
         		
@@ -139,7 +139,7 @@ public class RandomSpikesGenerator implements Runnable {
         	}          	                 	   
         	        	
             try {
-                DatagramPacket outputSpikesPacket = new DatagramPacket(outputSpikes, dataBytes, targetDeviceAddr, targetDeviceOld.natPort);	
+                DatagramPacket outputSpikesPacket = new DatagramPacket(outputSpikes, dataBytes, targetDeviceAddr, targetTerminalOld.natPort);	
 				outputSocket.send(outputSpikesPacket);			
 			} catch (IOException e) {
 				System.out.println(e);
@@ -152,13 +152,13 @@ public class RandomSpikesGenerator implements Runnable {
         
         outputSocket.close();
         
-        // In the meantime the stimulated device may have formed new postsynaptic connections which need to be carried on to the old local network
-        targetDeviceOld.numOfSynapses = targetDevice.numOfSynapses;
-        targetDeviceOld.postsynapticNodes = new ArrayList<>(targetDevice.postsynapticNodes);
+        // In the meantime the stimulated device may have formed new postsynaptic connections which need to be carried on to the old Terminal
+        targetTerminalOld.numOfSynapses = targetTerminal.numOfSynapses;
+        targetTerminalOld.postsynapticTerminals = new ArrayList<>(targetTerminal.postsynapticTerminals);
        
-        if (VirtualLayerManager.availableNodes.contains(targetDeviceOld)) {
-        	VirtualLayerManager.connectDevices(targetDeviceOld);
-        	VirtualLayerManager.syncNodes();
+        if (VirtualLayerManager.availableTerminals.contains(targetTerminalOld)) {
+        	VirtualLayerManager.connectTerminals(new Node(null, targetTerminalOld));
+        	VirtualLayerManager.syncTerminals();
         }
         
         

@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 public class SpikesSorter extends Thread{
 	
-	private static ArrayList<LocalNetworkFrame> localSyncFrames = new ArrayList<>();
+	private static ArrayList<TerminalFrame> localSyncFrames = new ArrayList<>();
 	private final static int IPTOS_THROUGHPUT = 0x08;
 	
 	@Override
@@ -63,7 +63,7 @@ public class SpikesSorter extends Thread{
 	 * Method called externally by VirtualLayerManager to update the list of sync frames
 	 */
 	
-	public static synchronized void updateNodeFrames (ArrayList<LocalNetworkFrame> syncFrames) {
+	public static synchronized void updateNodeFrames (ArrayList<TerminalFrame> syncFrames) {
 		
 		localSyncFrames = new ArrayList<>(syncFrames);
 		
@@ -74,10 +74,10 @@ public class SpikesSorter extends Thread{
 	 * to the frame so that the spikes can be displayed in the raster graph
 	 */
 	
-	private static synchronized void sendSpikesToFrame (ArrayList<LocalNetworkFrame> localSyncFrames, byte[] spikesBuffer, InetAddress senderAddr) {
+	private static synchronized void sendSpikesToFrame (ArrayList<TerminalFrame> localSyncFrames, byte[] spikesBuffer, InetAddress senderAddr) {
 		
 		boolean frameFound = false;
-		LocalNetworkFrame tmpFrame = new LocalNetworkFrame();
+		TerminalFrame tmpFrame = new TerminalFrame();
 		tmpFrame.ip = senderAddr.toString().substring(1);
 		
 		for (int index = 0; (index < localSyncFrames.size()) && !frameFound; index++) {

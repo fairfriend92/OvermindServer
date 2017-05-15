@@ -19,6 +19,8 @@ public class MainFrame {
 	// TODO Make the access of the static variables of the VirtualLayerManager class thread safe (allow to press 
 	// the sync button only when the variables are not being accessed)
 	
+	// TODO Manager application shutdown properly
+	
 	private static JLabel numOfUnsyncNodes = new JLabel("# of unsync nodes is 0");
 	private static JLabel numOfSyncNodes = new JLabel("# of sync nodes is 0");
 	private static JFrame frame = new JFrame();
@@ -36,6 +38,9 @@ public class MainFrame {
 		NodesShutdownPoller nodesShutdownPoller = new NodesShutdownPoller();
 		nodesShutdownPoller.start();
 		
+		VirtualLayerVisualizer VLVisualizer = new VirtualLayerVisualizer();
+		VLVisualizer.start();
+		
 	}
 	
 	private static void displayMainFrame() {
@@ -48,7 +53,7 @@ public class MainFrame {
 		syncButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {							
-				VirtualLayerManager.syncNodes();			
+				VirtualLayerManager.syncTerminals();			
 			}
 		});			
 		

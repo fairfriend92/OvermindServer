@@ -1,5 +1,5 @@
 /**
- * Class which describes the frame used to monitor the activity of a node
+ * Class which describes the frame used to monitor the activity of a terminal
  */
 
 import java.awt.Color;
@@ -29,7 +29,7 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 
-public class LocalNetworkFrame {
+public class TerminalFrame {
 	
 	public boolean shutdown = false;	
 		
@@ -42,17 +42,17 @@ public class LocalNetworkFrame {
 	private JLabel numOfSynapses = new JLabel();
 	private JLabel refreshRate = new JLabel("Clock is: 3 ms");
 	
-	private JButton removeNodeButton = new JButton();
+	private JButton removeTerminalButton = new JButton();
 
 	private DefaultListModel<String> preConnListModel = new DefaultListModel<>();
 	private DefaultListModel<String> postConnListModel = new DefaultListModel<>();
 	
 	public ExecutorService stimulusExecutor = Executors.newSingleThreadExecutor();	
 	
-	public com.example.overmind.LocalNetwork localUpdatedNode = new com.example.overmind.LocalNetwork();
+	public com.example.overmind.Terminal localUpdatedTerminal = new com.example.overmind.Terminal();
 	
-	public RandomSpikesGenerator thisNodeRSG = new RandomSpikesGenerator(this);	
-	public RefreshSignalSender thisNodeRSS = new RefreshSignalSender(this);
+	public RandomSpikesGenerator thisTerminalRSG = new RandomSpikesGenerator(this);	
+	public RefreshSignalSender thisTerminalRSS = new RefreshSignalSender(this);
 
 	public BlockingQueue<byte[]> receivedSpikesQueue = new ArrayBlockingQueue<>(4);
 	public ExecutorService spikesMonitorExecutor = Executors.newSingleThreadExecutor();
@@ -80,18 +80,18 @@ public class LocalNetworkFrame {
 	    }
 
 	    public Dimension getPreferredSize() {
-	        return new Dimension(this.getWidth(), localUpdatedNode.numOfNeurons + 30);
+	        return new Dimension(this.getWidth(), localUpdatedTerminal.numOfNeurons + 30);
 	    }	  	    
 
 	    public void paintComponent(Graphics g) {
 	        super.paintComponent(g); 
 	        
 	        // Draw string in the left corner of the raster graph
-	        g.drawString("Average spikes interval: " + time + " ms", 10, localUpdatedNode.numOfNeurons + 20);
+	        g.drawString("Average spikes interval: " + time + " ms", 10, localUpdatedTerminal.numOfNeurons + 20);
 	    		    	
 	        // Compute the number of bytes of the vector holding the spikes
-	    	short dataBytes = (localUpdatedNode.numOfNeurons % 8) == 0 ? 
-	    			(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);	    		    
+	    	short dataBytes = (localUpdatedTerminal.numOfNeurons % 8) == 0 ? 
+	    			(short) (localUpdatedTerminal.numOfNeurons / 8) : (short)(localUpdatedTerminal.numOfNeurons / 8 + 1);	    		    
 	    	
 	    	// Iterate over the latest # latestSpikes.size() spikes vectors
 			for (int k = 0; k < latestSpikes.size(); k++) {
@@ -158,10 +158,10 @@ public class LocalNetworkFrame {
 		randomSpikesRadioButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (thisNodeRSG.shutdown) {
-					thisNodeRSG.shutdown = false;	
-					thisNodeRSS.shutdown = true;
-					stimulusExecutor.execute(thisNodeRSG);	
+				if (thisTerminalRSG.shutdown) {
+					thisTerminalRSG.shutdown = false;	
+					thisTerminalRSS.shutdown = true;
+					stimulusExecutor.execute(thisTerminalRSG);	
 				}
 			}
 		});	
@@ -170,10 +170,10 @@ public class LocalNetworkFrame {
 		refreshSignalRadioButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (thisNodeRSS.shutdown) {
-					thisNodeRSG.shutdown = true;	
-					thisNodeRSS.shutdown = false;
-					stimulusExecutor.execute(thisNodeRSS);	
+				if (thisTerminalRSS.shutdown) {
+					thisTerminalRSG.shutdown = true;	
+					thisTerminalRSS.shutdown = false;
+					stimulusExecutor.execute(thisTerminalRSS);	
 				}
 			}
 		});
@@ -183,8 +183,8 @@ public class LocalNetworkFrame {
 		noneRadioButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {							
-				thisNodeRSG.shutdown = true;
-				thisNodeRSS.shutdown = true;
+				thisTerminalRSG.shutdown = true;
+				thisTerminalRSS.shutdown = true;
 			}
 		});	
 		
@@ -319,16 +319,16 @@ public class LocalNetworkFrame {
 		commandsPanel.setBorder(BorderFactory.createCompoundBorder(
 					BorderFactory.createTitledBorder("Commands"),
 					BorderFactory.createEmptyBorder(5,5,5,5)));
-		removeNodeButton.setText("Remove this node");
-		removeNodeButton.addActionListener(new ActionListener() {
+		removeTerminalButton.setText("Remove this node");
+		removeTerminalButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				//shutdown = true;		
-				VirtualLayerManager.removeNode(localUpdatedNode);
+				VirtualLayerManager.removeTerminal(localUpdatedTerminal);
 			}
 		});		
-		removeNodeButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-		commandsPanel.add(removeNodeButton);
+		removeTerminalButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+		commandsPanel.add(removeTerminalButton);
 		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
 		commandsPanel.add(refreshRatePanel);
 			
@@ -347,18 +347,19 @@ public class LocalNetworkFrame {
 	 * Method used to update the frame
 	 */
 	
-	public synchronized void update(com.example.overmind.LocalNetwork updatedNode) {
+	public synchronized void update(Node updatedNode) {
 		
-		localUpdatedNode = updatedNode;			
+				
+		localUpdatedTerminal = updatedNode.terminal;			
 						
 		/**
 		 * Update info about local network
 		 */
 		
-		ip = updatedNode.ip;
-		numOfNeurons.setText("# neurons: " + updatedNode.numOfNeurons);
-		numOfDendrites.setText("# available dendrites: " + updatedNode.numOfDendrites);
-		numOfSynapses.setText("# available synapses: " + updatedNode.numOfSynapses);		
+		ip = localUpdatedTerminal.ip;
+		numOfNeurons.setText("# neurons: " + localUpdatedTerminal.numOfNeurons);
+		numOfDendrites.setText("# available dendrites: " + localUpdatedTerminal.numOfDendrites);
+		numOfSynapses.setText("# available synapses: " + localUpdatedTerminal.numOfSynapses);		
 		
 		/**
 		 * Update info about connected devices
@@ -374,8 +375,8 @@ public class LocalNetworkFrame {
 		preConnListModel.clear();
 		postConnListModel.clear();
 				
-		for (int i = 0; i < updatedNode.presynapticNodes.size(); i++) {
-			com.example.overmind.LocalNetwork presynapticNode = updatedNode.presynapticNodes.get(i);
+		for (int i = 0; i < localUpdatedTerminal.presynapticTerminals.size(); i++) {
+			com.example.overmind.Terminal presynapticNode = localUpdatedTerminal.presynapticTerminals.get(i);
 			if (presynapticNode.ip == serverIP) {
 				preConnListModel.addElement("Presynaptic device # " + i + " is this server");
 			} else {
@@ -383,14 +384,14 @@ public class LocalNetworkFrame {
 			}
 		}
 		
-		if (updatedNode.presynapticNodes.size() == 0) {
+		if (localUpdatedTerminal.presynapticTerminals.size() == 0) {
 			preConnListModel.addElement("No presynaptic connection has been established yet");
 		} else if (preConnListModel.contains("No presynaptic connection has been established yet")) {
 			preConnListModel.remove(0);
 		}
 
-		for (int i = 0; i < updatedNode.postsynapticNodes.size(); i++) {
-			com.example.overmind.LocalNetwork postsynapticNode = updatedNode.postsynapticNodes.get(i);
+		for (int i = 0; i < localUpdatedTerminal.postsynapticTerminals.size(); i++) {
+			com.example.overmind.Terminal postsynapticNode = localUpdatedTerminal.postsynapticTerminals.get(i);
 			if (postsynapticNode.ip == serverIP) {
 				postConnListModel.addElement("Postsynaptic device # " + i + " is this server");
 			} else {
@@ -399,7 +400,7 @@ public class LocalNetworkFrame {
 			}
 		}
 		
-		if (updatedNode.postsynapticNodes.size() == 0) {
+		if (localUpdatedTerminal.postsynapticTerminals.size() == 0) {
 			postConnListModel.addElement("No postsynaptic connection has been established yet");
 		} else if (postConnListModel.contains("No postynaptic connection has been established yet")) {
 			preConnListModel.remove(0);
@@ -416,7 +417,7 @@ public class LocalNetworkFrame {
 	@Override
     public synchronized boolean equals(Object obj) {
         if (obj == null || obj.getClass() != this.getClass()) { return false; }
-        LocalNetworkFrame compare = (LocalNetworkFrame) obj;
+        TerminalFrame compare = (TerminalFrame) obj;
         return compare.ip.equals(ip);
     }		
 	
@@ -449,8 +450,8 @@ public class LocalNetworkFrame {
 		     * dataBytes is the number of bytes which make up the vector containing the spikes
 		     */
 			
-		    short dataBytes = (localUpdatedNode.numOfNeurons % 8) == 0 ? 
-		    		(short) (localUpdatedNode.numOfNeurons / 8) : (short)(localUpdatedNode.numOfNeurons / 8 + 1);			
+		    short dataBytes = (localUpdatedTerminal.numOfNeurons % 8) == 0 ? 
+		    		(short) (localUpdatedTerminal.numOfNeurons / 8) : (short)(localUpdatedTerminal.numOfNeurons / 8 + 1);			
 			
 		    // Used to store temporarily the x coordinate of the upper right vertex of the rectangle 
 		    // defining the region of the raster graph that needs to be redrawn
@@ -465,7 +466,7 @@ public class LocalNetworkFrame {
 				
 				// The vector containing the spikes is put in this queue by the SpikesSorter class
 				try {
-					spikesReceived = spikesReceivedQueue.poll(1000, TimeUnit.MILLISECONDS);
+					spikesReceived = spikesReceivedQueue.poll(5000, TimeUnit.MILLISECONDS);
 				} catch (InterruptedException e ) {
 					e.printStackTrace();
 				} 
@@ -493,13 +494,13 @@ public class LocalNetworkFrame {
 							rastergraphPanel.xCoordinate  = tmpXCoordinate;
 							
 							// Update the height 
-							int stringHeight = rastergraphPanel.getHeight() - localUpdatedNode.numOfNeurons;
+							int stringHeight = rastergraphPanel.getHeight() - localUpdatedTerminal.numOfNeurons;
 							
 							// Redraw the region of the raster graph where the new 40 spikes vectors should appear
-							rastergraphPanel.paintImmediately(0, localUpdatedNode.numOfNeurons, rastergraphPanel.getWidth(), stringHeight);
+							rastergraphPanel.paintImmediately(0, localUpdatedTerminal.numOfNeurons, rastergraphPanel.getWidth(), stringHeight);
 							
 							// Redraw the region of the raster graph where the spikes time interval is displayed
-							rastergraphPanel.paintImmediately(rastergraphPanel.xCoordinate, 0, rastergraphPanel.latestSpikes.size(), localUpdatedNode.numOfNeurons);
+							rastergraphPanel.paintImmediately(rastergraphPanel.xCoordinate, 0, rastergraphPanel.latestSpikes.size(), localUpdatedTerminal.numOfNeurons);
 							
 							// Increase the x coordinate
 							tmpXCoordinate += rastergraphPanel.latestSpikes.size();

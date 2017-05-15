@@ -11,10 +11,10 @@ public class RefreshSignalSender implements Runnable {
 	public final static int UDP_CLIENT_PORT = 4194;	
 	private final static int IPTOS_THROUGHPUT = 0x08;
 	
-	private com.example.overmind.LocalNetwork targetDevice;
-	private LocalNetworkFrame parentFrame;
+	private com.example.overmind.Terminal targetTerminal;
+	private TerminalFrame parentFrame;
 	
-	RefreshSignalSender(LocalNetworkFrame l) {
+	RefreshSignalSender(TerminalFrame l) {
 		this.parentFrame = l;
 	}
 	
@@ -22,28 +22,28 @@ public class RefreshSignalSender implements Runnable {
 	
 	@Override public void run() {
 		
-		targetDevice = parentFrame.localUpdatedNode;
+		targetTerminal = parentFrame.localUpdatedTerminal;
 		
         long lastTime = 0, newTime = 0, sendTime = 0;   
         
-        targetDevice.numOfDendrites -= 8;
+        targetTerminal.numOfDendrites -= 8;
         
-        com.example.overmind.LocalNetwork server = new com.example.overmind.LocalNetwork();
-        server.postsynapticNodes = new ArrayList<>();
-        server.presynapticNodes = new ArrayList<>();
+        com.example.overmind.Terminal server = new com.example.overmind.Terminal();
+        server.postsynapticTerminals = new ArrayList<>();
+        server.presynapticTerminals = new ArrayList<>();
         server.ip = VirtualLayerManager.serverIP;
         //server.ip = "192.168.1.213";
         
-        server.postsynapticNodes.add(targetDevice);
+        server.postsynapticTerminals.add(targetTerminal);
         server.numOfNeurons = 8;
-        server.numOfSynapses = (short)(1024 - targetDevice.numOfNeurons);
+        server.numOfSynapses = (short)(1024 - targetTerminal.numOfNeurons);
         server.numOfDendrites = 1024;
         server.natPort = VirtualLayerManager.SERVER_PORT_UDP;
         
-        targetDevice.presynapticNodes.add(server);
+        targetTerminal.presynapticTerminals.add(server);
         
-        VirtualLayerManager.connectDevices(targetDevice);    
-        VirtualLayerManager.syncNodes();
+        VirtualLayerManager.connectTerminals(new Node(null, targetTerminal));    
+        VirtualLayerManager.syncTerminals();
         
         DatagramSocket outputSocket = null;
 
@@ -59,7 +59,7 @@ public class RefreshSignalSender implements Runnable {
         InetAddress targetDeviceAddr = null;
         		
         try {
-			targetDeviceAddr = InetAddress.getByName(targetDevice.ip);
+			targetDeviceAddr = InetAddress.getByName(targetTerminal.ip);
 		} catch (UnknownHostException e) {
         	e.printStackTrace();
 		}
@@ -83,7 +83,7 @@ public class RefreshSignalSender implements Runnable {
         	}          	                 	   
         	        	
             try {
-                DatagramPacket outputSpikesPacket = new DatagramPacket(dummySignal, 1, targetDeviceAddr, targetDevice.natPort);	
+                DatagramPacket outputSpikesPacket = new DatagramPacket(dummySignal, 1, targetDeviceAddr, targetTerminal.natPort);	
 				outputSocket.send(outputSpikesPacket);			
 			} catch (IOException e) {
 				System.out.println(e);
@@ -95,12 +95,12 @@ public class RefreshSignalSender implements Runnable {
         
         outputSocket.close();
        
-        targetDevice.presynapticNodes.remove(server);
-    	targetDevice.numOfDendrites +=  8;
+        targetTerminal.presynapticTerminals.remove(server);
+    	targetTerminal.numOfDendrites +=  8;
         
-        if (VirtualLayerManager.availableNodes.contains(targetDevice)) {        	
-        	VirtualLayerManager.connectDevices(targetDevice);
-        	VirtualLayerManager.syncNodes();
+        if (VirtualLayerManager.availableTerminals.contains(targetTerminal)) {        	
+        	VirtualLayerManager.connectTerminals(new Node(null, targetTerminal));
+        	VirtualLayerManager.syncTerminals();
         }
         
 		
