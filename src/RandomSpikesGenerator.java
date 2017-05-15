@@ -66,7 +66,7 @@ public class RandomSpikesGenerator implements Runnable {
         // Add the server to the list of presynaptic devices connected to the target device
         targetTerminal.presynapticTerminals.add(server);
         
-        VirtualLayerManager.connectTerminals(new Node(null, targetTerminal));    
+        VirtualLayerManager.connectTerminals(targetTerminal);    
         VirtualLayerManager.syncTerminals();          
                 
         /**
@@ -157,7 +157,7 @@ public class RandomSpikesGenerator implements Runnable {
         targetTerminalOld.postsynapticTerminals = new ArrayList<>(targetTerminal.postsynapticTerminals);
        
         if (VirtualLayerManager.availableTerminals.contains(targetTerminalOld)) {
-        	VirtualLayerManager.connectTerminals(new Node(null, targetTerminalOld));
+        	VirtualLayerManager.connectTerminals(targetTerminalOld);
         	VirtualLayerManager.syncTerminals();
         }
         

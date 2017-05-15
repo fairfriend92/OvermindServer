@@ -153,14 +153,14 @@ public class VirtualLayerManager extends Thread{
 			
 			terminal.postsynapticTerminals.add(thisServer);
 				
-			Node newNode = new Node(clientSocket, terminal);
+			Node newNode = new Node(terminal.ip, clientSocket);
 			newNode.initialize();
 			
 			nodeClients.add(newNode);			
 			
 			assert terminal != null;	
 			
-			connectTerminals(newNode);
+			connectTerminals(terminal);
 								
 		}
 		/* [End of while(!shutdown)] */
@@ -168,13 +168,11 @@ public class VirtualLayerManager extends Thread{
 	}
 	/* [End of run() method] */	
 	
-	public synchronized static void connectTerminals(Node disconnectedNode) {	
+	public synchronized static void connectTerminals(com.example.overmind.Terminal disconnectedTerminal) {	
 	
 		/**
 		 * Populate and update the list of terminals available for connection
-		 */
-			
-		com.example.overmind.Terminal disconnectedTerminal = disconnectedNode.terminal;
+		 */			
 		
 		// The algorithm starts only if the list has at least one element
 		if (!availableTerminals.isEmpty() && !availableTerminals.contains(disconnectedTerminal)) {
@@ -396,7 +394,7 @@ public class VirtualLayerManager extends Thread{
 				if (!syncTerminals.contains(unsyncTerminals.get(i))) {					
 			
 					tmp = new TerminalFrame();
-					tmp.update(new Node(null, unsyncTerminals.get(i)));
+					tmp.update(unsyncTerminals.get(i));
 					
 					// The terminal is new so a new frame needs to be created
 					tmp.display();
@@ -417,7 +415,7 @@ public class VirtualLayerManager extends Thread{
 					tmp = syncFrames.get(index);
 					
 					// The retrieved window needs only to be updated 
-					tmp.update(new Node(null, unsyncTerminals.get(i)));
+					tmp.update(unsyncTerminals.get(i));
 					
 					// The old terminal is substituted with the new one in the list of sync terminal
 					syncTerminals.set(index, unsyncTerminals.get(i));
@@ -434,7 +432,7 @@ public class VirtualLayerManager extends Thread{
 					com.example.overmind.Terminal tmpT = unsyncTerminals.get(i);
 					
 					// Use the indexOf method to retrieve the current node from the nodeClients list
-					int index = nodeClients.indexOf(new Node(null, tmpT));
+					int index = nodeClients.indexOf(new Node(tmpT.ip, null));
 					
 					// The node whose informations need to be sent back to the physical device
 					Node pendingNode = nodeClients.get(index);	

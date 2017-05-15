@@ -347,10 +347,10 @@ public class TerminalFrame {
 	 * Method used to update the frame
 	 */
 	
-	public synchronized void update(Node updatedNode) {
+	public synchronized void update(com.example.overmind.Terminal updatedTerminal) {
 		
 				
-		localUpdatedTerminal = updatedNode.terminal;			
+		localUpdatedTerminal = updatedTerminal;			
 						
 		/**
 		 * Update info about local network

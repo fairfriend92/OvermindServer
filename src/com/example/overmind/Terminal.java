@@ -21,13 +21,13 @@ public class Terminal implements Serializable {
         return this;
     }
 
-    public synchronized void update(Terminal updatedLN) {
-        this.numOfNeurons = updatedLN.numOfNeurons;
-        this.numOfDendrites = updatedLN.numOfDendrites;
-        this.numOfSynapses = updatedLN.numOfSynapses;
-        this.ip = updatedLN.ip;
-        this.natPort = updatedLN.natPort;
-        this.presynapticTerminals = new ArrayList<>(updatedLN.presynapticTerminals);
-        this.postsynapticTerminals = new ArrayList<>(updatedLN.postsynapticTerminals);
+    public synchronized void update(Terminal updatedTerminal) {
+        this.numOfNeurons = updatedTerminal.numOfNeurons;
+        this.numOfDendrites = updatedTerminal.numOfDendrites;
+        this.numOfSynapses = updatedTerminal.numOfSynapses;
+        this.ip = updatedTerminal.ip;
+        this.natPort = updatedTerminal.natPort;
+        this.presynapticTerminals = new ArrayList<>(updatedTerminal.presynapticTerminals);
+        this.postsynapticTerminals = new ArrayList<>(updatedTerminal.postsynapticTerminals);
     }
 }

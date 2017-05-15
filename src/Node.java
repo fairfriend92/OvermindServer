@@ -4,14 +4,13 @@ import java.net.Socket;
 
 public class Node {
 	
-	public short layer, level;
+	public String ip;
 	public Socket thisClient;
 	public ObjectOutputStream output;
-	public com.example.overmind.Terminal terminal;
 	
-	public Node (Socket s1, com.example.overmind.Terminal t) {
+	public Node (String s, Socket s1) {
+		this.ip = s;
 		this.thisClient = s1;
-		this.terminal = t;
 	}
 	
 	public void initialize() {
@@ -22,8 +21,6 @@ public class Node {
 		} catch (IOException e) {
 			System.out.println(e);
 		}
-		layer = 0;
-		level = 0;
 	}
 	
 	public void close() {
@@ -36,7 +33,7 @@ public class Node {
 	
 	@Override
 	public int hashCode() {
-	    return terminal.ip.hashCode();
+	    return ip.hashCode();
 	}
 
 	@Override
@@ -44,7 +41,7 @@ public class Node {
        
 		if (obj == null || obj.getClass() != this.getClass()) { return false; }
 		Node compare = (Node) obj;
-    	return compare.terminal.ip.equals(this.terminal.ip);
+    	return compare.ip.equals(this.ip);
     	
     }
 	
