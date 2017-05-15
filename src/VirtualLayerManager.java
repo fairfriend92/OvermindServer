@@ -33,7 +33,7 @@ public class VirtualLayerManager extends Thread{
 	
 	static boolean shutdown = false;	
 	
-	static ArrayList<com.example.overmind.Terminal> unsyncTerminals = new ArrayList<>();
+	static ArrayList<Node> unsyncNodes = new ArrayList<>();
 	static ArrayList<Node> syncNodes = new ArrayList<>();
 	static ArrayList<TerminalFrame> syncFrames = new ArrayList<>();
 	static ArrayList<Node> nodeClients = new ArrayList<>();
@@ -199,10 +199,10 @@ public class VirtualLayerManager extends Thread{
 					disconnectedTerminal.presynapticTerminals.add(currentTerminal);
 
 					// Send to the list of terminals which need to be updated the current terminal
-					if (unsyncTerminals.contains(currentTerminal)) {
-						unsyncTerminals.set(unsyncTerminals.indexOf(currentTerminal), currentTerminal);
+					if (unsyncNodes.contains(new Node(null, currentTerminal))) {
+						unsyncNodes.set(unsyncNodes.indexOf(currentTerminal), new Node(null, currentTerminal));
 					} else {
-						unsyncTerminals.add(currentTerminal);
+						unsyncNodes.add(new Node(null, currentTerminal));
 					}
 					
 					// Update the current terminal in the list availableTerminals
@@ -221,10 +221,10 @@ public class VirtualLayerManager extends Thread{
 					currentTerminal.presynapticTerminals.add(disconnectedTerminal);
 					disconnectedTerminal.postsynapticTerminals.add(currentTerminal);
 
-					if (unsyncTerminals.contains(currentTerminal)) {
-						unsyncTerminals.set(unsyncTerminals.indexOf(currentTerminal), currentTerminal);
+					if (unsyncNodes.contains(new Node(null, currentTerminal))) {
+						unsyncNodes.set(unsyncNodes.indexOf(currentTerminal), new Node(null, currentTerminal));
 					} else {
-						unsyncTerminals.add(currentTerminal);
+						unsyncNodes.add(new Node(null, currentTerminal));
 					}
 					
 					availableTerminals.set(i, currentTerminal);
@@ -242,10 +242,10 @@ public class VirtualLayerManager extends Thread{
 					currentTerminal.postsynapticTerminals.add(disconnectedTerminal);
 					disconnectedTerminal.presynapticTerminals.add(currentTerminal);
 
-					if (unsyncTerminals.contains(currentTerminal)) {
-						unsyncTerminals.set(unsyncTerminals.indexOf(currentTerminal), currentTerminal);
+					if (unsyncNodes.contains(new Node(null, currentTerminal))) {
+						unsyncNodes.set(unsyncNodes.indexOf(currentTerminal), new Node(null, currentTerminal));
 					} else {
-						unsyncTerminals.add(currentTerminal);
+						unsyncNodes.add(new Node(null, currentTerminal));
 					}
 					
 					availableTerminals.set(i, currentTerminal);
@@ -264,25 +264,25 @@ public class VirtualLayerManager extends Thread{
 				availableTerminals.add(disconnectedTerminal);
 			} 
 			
-			unsyncTerminals.add(disconnectedTerminal);	
+			unsyncNodes.add(new Node(null, disconnectedTerminal));	
 
 			
 		} else if (availableTerminals.isEmpty()) {
 			
 			// Add the disconnected terminal automatically if the list is empty
 			availableTerminals.add(disconnectedTerminal);		
-			unsyncTerminals.add(disconnectedTerminal);	
+			unsyncNodes.add(new Node(null, disconnectedTerminal));	
 			  
 		} else if (availableTerminals.contains(disconnectedTerminal)) {
 			
 			// If availableTerminals contains the disconnectedTerminal it needs only to update its reference
 			availableTerminals.set(availableTerminals.indexOf(disconnectedTerminal), disconnectedTerminal);					
-			unsyncTerminals.add(disconnectedTerminal);	
+			unsyncNodes.add(new Node(null, disconnectedTerminal));	
 			
 		}
 		/* [End of the outer if] */		
 									
-		MainFrame.updateMainFrame(new MainFrameInfo(unsyncTerminals.size(), syncNodes.size()));
+		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), syncNodes.size()));
 		
 	}
 	
@@ -294,7 +294,7 @@ public class VirtualLayerManager extends Thread{
 		// (However this should not happen...)
 		if (!availableTerminals.contains(removableTerminal)) { return; }
 		
-		unsyncTerminals.remove(removableTerminal);
+		unsyncNodes.remove(new Node(null, removableTerminal));
 		
 		int index = syncNodes.indexOf(new Node(null, removableTerminal));
 		
@@ -371,7 +371,7 @@ public class VirtualLayerManager extends Thread{
 				terminalIsModified = true;
 			}
 			
-			if (terminalIsModified) { unsyncTerminals.add(availableTerminals.get(i)); }			
+			if (terminalIsModified) { unsyncNodes.add(new Node(null, availableTerminals.get(i))); }			
 			
 		}	
 		
@@ -386,17 +386,17 @@ public class VirtualLayerManager extends Thread{
 		 * Sync the GUI with the updated info about the terminals
 		 */
 		
-		if (!unsyncTerminals.isEmpty()) {		
+		if (!unsyncNodes.isEmpty()) {		
 			
-			for (int i = 0; i < unsyncTerminals.size(); i++) {
+			for (int i = 0; i < unsyncNodes.size(); i++) {
 				
 				TerminalFrame tmp;
 				
 				// Branch depending on whether the terminal is new or not
-				if (!syncNodes.contains(new Node(null, unsyncTerminals.get(i)))) {					
+				if (!syncNodes.contains(unsyncNodes.get(i))) {					
 			
 					tmp = new TerminalFrame();
-					tmp.update(new Node(null, unsyncTerminals.get(i)));
+					tmp.update(unsyncNodes.get(i));
 					
 					// The terminal is new so a new frame needs to be created
 					tmp.display();
@@ -405,22 +405,22 @@ public class VirtualLayerManager extends Thread{
 					syncFrames.add(tmp);
 					
 					// Add the new terminal to the list of sync terminals
-					syncNodes.add(new Node(null, unsyncTerminals.get(i)));
+					syncNodes.add(unsyncNodes.get(i));
 										
 					
 				} else {					
 					
-					int index = syncNodes.indexOf(new Node(null, unsyncTerminals.get(i)));					
+					int index = syncNodes.indexOf(unsyncNodes.get(i));					
 					
 					// Since the terminal is not new its already existing window must be retrieved from the list
 					// TODO instead of using index to retrieve frame we could write a method with argument the Terminal itself
 					tmp = syncFrames.get(index);
 					
 					// The retrieved window needs only to be updated 
-					tmp.update(new Node(null, unsyncTerminals.get(i)));
+					tmp.update(unsyncNodes.get(i));
 					
 					// The old terminal is substituted with the new one in the list of sync terminal
-					syncNodes.set(index, new Node(null, unsyncTerminals.get(i)));
+					syncNodes.set(index, unsyncNodes.get(i));
 					
 				}
 				
@@ -431,7 +431,7 @@ public class VirtualLayerManager extends Thread{
 				try {
 					
 					// Temporary object holding the info regarding the local network of the current node
-					com.example.overmind.Terminal tmpT = unsyncTerminals.get(i);
+					com.example.overmind.Terminal tmpT = unsyncNodes.get(i).terminal;
 					
 					// Use the indexOf method to retrieve the current node from the nodeClients list
 					int index = nodeClients.indexOf(new Node(null, tmpT));
@@ -440,7 +440,7 @@ public class VirtualLayerManager extends Thread{
 					Node pendingNode = nodeClients.get(index);	
 					
 					com.example.overmind.Terminal tmpTerminal = new com.example.overmind.Terminal();
-					tmpTerminal.update(unsyncTerminals.get(i));
+					tmpTerminal.update(unsyncNodes.get(i).terminal);
 									
 					// Write the info in the steam
 					pendingNode.output.writeObject(tmpTerminal);						
@@ -449,12 +449,12 @@ public class VirtualLayerManager extends Thread{
 										
 				} catch (IOException e) {
 		        	e.printStackTrace();
-		        	removeTerminal(unsyncTerminals.get(i));
+		        	removeTerminal(unsyncNodes.get(i).terminal);
 				}
 							
 			}				
 			
-			unsyncTerminals.clear();	
+			unsyncNodes.clear();	
 												
 		}
 		
