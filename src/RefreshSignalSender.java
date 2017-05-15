@@ -22,7 +22,9 @@ public class RefreshSignalSender implements Runnable {
 	
 	@Override public void run() {
 		
-		targetTerminal = parentFrame.localUpdatedTerminal;
+		targetTerminal = parentFrame.localUpdatedNode.terminal;
+		
+		System.out.println("batman");
 		
         long lastTime = 0, newTime = 0, sendTime = 0;   
         
@@ -98,7 +100,7 @@ public class RefreshSignalSender implements Runnable {
         targetTerminal.presynapticTerminals.remove(server);
     	targetTerminal.numOfDendrites +=  8;
         
-        if (VirtualLayerManager.availableTerminals.contains(targetTerminal)) {        	
+        if (VirtualLayerManager.availableNodes.contains(new Node(null, targetTerminal))) {        	
         	VirtualLayerManager.connectTerminals(new Node(null, targetTerminal));
         	VirtualLayerManager.syncTerminals();
         }

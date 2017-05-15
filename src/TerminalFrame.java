@@ -49,7 +49,7 @@ public class TerminalFrame {
 	
 	public ExecutorService stimulusExecutor = Executors.newSingleThreadExecutor();	
 	
-	public com.example.overmind.Terminal localUpdatedTerminal = new com.example.overmind.Terminal();
+	public Node localUpdatedNode;
 	
 	public RandomSpikesGenerator thisTerminalRSG = new RandomSpikesGenerator(this);	
 	public RefreshSignalSender thisTerminalRSS = new RefreshSignalSender(this);
@@ -80,18 +80,18 @@ public class TerminalFrame {
 	    }
 
 	    public Dimension getPreferredSize() {
-	        return new Dimension(this.getWidth(), localUpdatedTerminal.numOfNeurons + 30);
+	        return new Dimension(this.getWidth(), localUpdatedNode.terminal.numOfNeurons + 30);
 	    }	  	    
 
 	    public void paintComponent(Graphics g) {
 	        super.paintComponent(g); 
 	        
 	        // Draw string in the left corner of the raster graph
-	        g.drawString("Average spikes interval: " + time + " ms", 10, localUpdatedTerminal.numOfNeurons + 20);
+	        g.drawString("Average spikes interval: " + time + " ms", 10, localUpdatedNode.terminal.numOfNeurons + 20);
 	    		    	
 	        // Compute the number of bytes of the vector holding the spikes
-	    	short dataBytes = (localUpdatedTerminal.numOfNeurons % 8) == 0 ? 
-	    			(short) (localUpdatedTerminal.numOfNeurons / 8) : (short)(localUpdatedTerminal.numOfNeurons / 8 + 1);	    		    
+	    	short dataBytes = (localUpdatedNode.terminal.numOfNeurons % 8) == 0 ? 
+	    			(short) (localUpdatedNode.terminal.numOfNeurons / 8) : (short)(localUpdatedNode.terminal.numOfNeurons / 8 + 1);	    		    
 	    	
 	    	// Iterate over the latest # latestSpikes.size() spikes vectors
 			for (int k = 0; k < latestSpikes.size(); k++) {
@@ -324,7 +324,7 @@ public class TerminalFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				//shutdown = true;		
-				VirtualLayerManager.removeTerminal(localUpdatedTerminal);
+				VirtualLayerManager.removeTerminal(localUpdatedNode.terminal);
 			}
 		});		
 		removeTerminalButton.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -350,16 +350,17 @@ public class TerminalFrame {
 	public synchronized void update(Node updatedNode) {
 		
 				
-		localUpdatedTerminal = updatedNode.terminal;			
+		localUpdatedNode = updatedNode;
+		localUpdatedNode.terminal = updatedNode.terminal;			
 						
 		/**
 		 * Update info about local network
 		 */
 		
-		ip = localUpdatedTerminal.ip;
-		numOfNeurons.setText("# neurons: " + localUpdatedTerminal.numOfNeurons);
-		numOfDendrites.setText("# available dendrites: " + localUpdatedTerminal.numOfDendrites);
-		numOfSynapses.setText("# available synapses: " + localUpdatedTerminal.numOfSynapses);		
+		ip = localUpdatedNode.terminal.ip;
+		numOfNeurons.setText("# neurons: " + localUpdatedNode.terminal.numOfNeurons);
+		numOfDendrites.setText("# available dendrites: " + localUpdatedNode.terminal.numOfDendrites);
+		numOfSynapses.setText("# available synapses: " + localUpdatedNode.terminal.numOfSynapses);		
 		
 		/**
 		 * Update info about connected devices
@@ -375,8 +376,8 @@ public class TerminalFrame {
 		preConnListModel.clear();
 		postConnListModel.clear();
 				
-		for (int i = 0; i < localUpdatedTerminal.presynapticTerminals.size(); i++) {
-			com.example.overmind.Terminal presynapticNode = localUpdatedTerminal.presynapticTerminals.get(i);
+		for (int i = 0; i < localUpdatedNode.terminal.presynapticTerminals.size(); i++) {
+			com.example.overmind.Terminal presynapticNode = localUpdatedNode.terminal.presynapticTerminals.get(i);
 			if (presynapticNode.ip == serverIP) {
 				preConnListModel.addElement("Presynaptic device # " + i + " is this server");
 			} else {
@@ -384,14 +385,14 @@ public class TerminalFrame {
 			}
 		}
 		
-		if (localUpdatedTerminal.presynapticTerminals.size() == 0) {
+		if (localUpdatedNode.terminal.presynapticTerminals.size() == 0) {
 			preConnListModel.addElement("No presynaptic connection has been established yet");
 		} else if (preConnListModel.contains("No presynaptic connection has been established yet")) {
 			preConnListModel.remove(0);
 		}
 
-		for (int i = 0; i < localUpdatedTerminal.postsynapticTerminals.size(); i++) {
-			com.example.overmind.Terminal postsynapticNode = localUpdatedTerminal.postsynapticTerminals.get(i);
+		for (int i = 0; i < localUpdatedNode.terminal.postsynapticTerminals.size(); i++) {
+			com.example.overmind.Terminal postsynapticNode = localUpdatedNode.terminal.postsynapticTerminals.get(i);
 			if (postsynapticNode.ip == serverIP) {
 				postConnListModel.addElement("Postsynaptic device # " + i + " is this server");
 			} else {
@@ -400,7 +401,7 @@ public class TerminalFrame {
 			}
 		}
 		
-		if (localUpdatedTerminal.postsynapticTerminals.size() == 0) {
+		if (localUpdatedNode.terminal.postsynapticTerminals.size() == 0) {
 			postConnListModel.addElement("No postsynaptic connection has been established yet");
 		} else if (postConnListModel.contains("No postynaptic connection has been established yet")) {
 			preConnListModel.remove(0);
@@ -450,8 +451,8 @@ public class TerminalFrame {
 		     * dataBytes is the number of bytes which make up the vector containing the spikes
 		     */
 			
-		    short dataBytes = (localUpdatedTerminal.numOfNeurons % 8) == 0 ? 
-		    		(short) (localUpdatedTerminal.numOfNeurons / 8) : (short)(localUpdatedTerminal.numOfNeurons / 8 + 1);			
+		    short dataBytes = (localUpdatedNode.terminal.numOfNeurons % 8) == 0 ? 
+		    		(short) (localUpdatedNode.terminal.numOfNeurons / 8) : (short)(localUpdatedNode.terminal.numOfNeurons / 8 + 1);			
 			
 		    // Used to store temporarily the x coordinate of the upper right vertex of the rectangle 
 		    // defining the region of the raster graph that needs to be redrawn
@@ -494,13 +495,13 @@ public class TerminalFrame {
 							rastergraphPanel.xCoordinate  = tmpXCoordinate;
 							
 							// Update the height 
-							int stringHeight = rastergraphPanel.getHeight() - localUpdatedTerminal.numOfNeurons;
+							int stringHeight = rastergraphPanel.getHeight() - localUpdatedNode.terminal.numOfNeurons;
 							
 							// Redraw the region of the raster graph where the new 40 spikes vectors should appear
-							rastergraphPanel.paintImmediately(0, localUpdatedTerminal.numOfNeurons, rastergraphPanel.getWidth(), stringHeight);
+							rastergraphPanel.paintImmediately(0, localUpdatedNode.terminal.numOfNeurons, rastergraphPanel.getWidth(), stringHeight);
 							
 							// Redraw the region of the raster graph where the spikes time interval is displayed
-							rastergraphPanel.paintImmediately(rastergraphPanel.xCoordinate, 0, rastergraphPanel.latestSpikes.size(), localUpdatedTerminal.numOfNeurons);
+							rastergraphPanel.paintImmediately(rastergraphPanel.xCoordinate, 0, rastergraphPanel.latestSpikes.size(), localUpdatedNode.terminal.numOfNeurons);
 							
 							// Increase the x coordinate
 							tmpXCoordinate += rastergraphPanel.latestSpikes.size();

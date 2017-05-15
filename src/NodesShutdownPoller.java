@@ -18,7 +18,7 @@ public class NodesShutdownPoller extends Thread {
 			for (int i = 0; i < VirtualLayerManager.syncFrames.size(); i++) {				
 				
 				if (VirtualLayerManager.syncFrames.get(i).shutdown) {
-					VirtualLayerManager.removeTerminal(VirtualLayerManager.syncFrames.get(i).localUpdatedTerminal);
+					VirtualLayerManager.removeTerminal(VirtualLayerManager.syncFrames.get(i).localUpdatedNode.terminal);
 				}				
 								
 			}

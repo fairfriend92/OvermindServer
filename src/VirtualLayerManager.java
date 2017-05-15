@@ -37,7 +37,7 @@ public class VirtualLayerManager extends Thread{
 	static ArrayList<Node> syncNodes = new ArrayList<>();
 	static ArrayList<TerminalFrame> syncFrames = new ArrayList<>();
 	static ArrayList<Node> nodeClients = new ArrayList<>();
-	static ArrayList<com.example.overmind.Terminal> availableTerminals = new ArrayList<>();	
+	static ArrayList<Node> availableNodes = new ArrayList<>();	
 	
 	static public String serverIP = null;
 			
@@ -172,87 +172,85 @@ public class VirtualLayerManager extends Thread{
 	
 		/**
 		 * Populate and update the list of terminals available for connection
-		 */
-			
-		com.example.overmind.Terminal disconnectedTerminal = disconnectedNode.terminal;
+		 */			
 		
 		// The algorithm starts only if the list has at least one element
-		if (!availableTerminals.isEmpty() && !availableTerminals.contains(disconnectedTerminal)) {
+		if (!availableNodes.isEmpty() && !availableNodes.contains(disconnectedNode)) {
 		
 			// Iterate over all the available terminals
-			for (int i = 0; i < availableTerminals.size()
-					|| (disconnectedTerminal.numOfDendrites == 0 && disconnectedTerminal.numOfSynapses == 0); i++) {
+			for (int i = 0; i < availableNodes.size()
+					|| (disconnectedNode.terminal.numOfDendrites == 0 && disconnectedNode.terminal.numOfSynapses == 0); i++) {
 
-				com.example.overmind.Terminal currentTerminal = availableTerminals.get(i);
+				Node currentNode = availableNodes.get(i);
 				
 				// Branch depending on whether either the synapses or the dendrites of the current terminal are saturated
-				if (currentTerminal.numOfSynapses - disconnectedTerminal.numOfNeurons >= 0
-						&& disconnectedTerminal.numOfDendrites - currentTerminal.numOfNeurons >= 0
-						&& currentTerminal.postsynapticTerminals.size() <= currentTerminal.presynapticTerminals.size()) {
+				if (currentNode.terminal.numOfSynapses - disconnectedNode.terminal.numOfNeurons >= 0
+						&& disconnectedNode.terminal.numOfDendrites - currentNode.terminal.numOfNeurons >= 0
+						&& currentNode.terminal.postsynapticTerminals.size() <= currentNode.terminal.presynapticTerminals.size()) {
 
-					// Update the number of synapses and dendrites for both currentTerminal and disconnectedTerminal
-					currentTerminal.numOfSynapses -= disconnectedTerminal.numOfNeurons;
-					disconnectedTerminal.numOfDendrites -= currentTerminal.numOfNeurons;
+					// Update the number of synapses and dendrites for both currentNode.terminal and disconnectedNode.terminal
+					currentNode.terminal.numOfSynapses -= disconnectedNode.terminal.numOfNeurons;
+					disconnectedNode.terminal.numOfDendrites -= currentNode.terminal.numOfNeurons;
 
 					// Update the list of connected terminals
-					currentTerminal.postsynapticTerminals.add(disconnectedTerminal);
-					disconnectedTerminal.presynapticTerminals.add(currentTerminal);
+					currentNode.terminal.postsynapticTerminals.add(disconnectedNode.terminal);
+					disconnectedNode.terminal.presynapticTerminals.add(currentNode.terminal);
 
 					// Send to the list of terminals which need to be updated the current terminal
-					if (unsyncNodes.contains(new Node(null, currentTerminal))) {
-						unsyncNodes.set(unsyncNodes.indexOf(currentTerminal), new Node(null, currentTerminal));
+					if (unsyncNodes.contains(new Node(null, currentNode.terminal))) {
+						unsyncNodes.set(unsyncNodes.indexOf(currentNode.terminal), new Node(null, currentNode.terminal));
 					} else {
-						unsyncNodes.add(new Node(null, currentTerminal));
+						unsyncNodes.add(new Node(null, currentNode.terminal));
 					}
 					
 					// Update the current terminal in the list availableTerminals
-					availableTerminals.set(i, currentTerminal);
+					availableNodes.set(i, currentNode);
 					
-				} else if (currentTerminal.numOfDendrites - disconnectedTerminal.numOfNeurons >= 0
-						&& disconnectedTerminal.numOfSynapses - currentTerminal.numOfNeurons >= 0) {
+				} else if (currentNode.terminal.numOfDendrites - disconnectedNode.terminal.numOfNeurons >= 0
+						&& disconnectedNode.terminal.numOfSynapses - currentNode.terminal.numOfNeurons >= 0) {
 					
 					/**
 					 * Just as before but now synapses and dendrites are exchanged
 					 */
 
-					currentTerminal.numOfDendrites -= disconnectedTerminal.numOfNeurons;
-					disconnectedTerminal.numOfSynapses -= currentTerminal.numOfNeurons;
+					currentNode.terminal.numOfDendrites -= disconnectedNode.terminal.numOfNeurons;
+					disconnectedNode.terminal.numOfSynapses -= currentNode.terminal.numOfNeurons;
 
-					currentTerminal.presynapticTerminals.add(disconnectedTerminal);
-					disconnectedTerminal.postsynapticTerminals.add(currentTerminal);
+					currentNode.terminal.presynapticTerminals.add(disconnectedNode.terminal);
+					disconnectedNode.terminal.postsynapticTerminals.add(currentNode.terminal);
 
-					if (unsyncNodes.contains(new Node(null, currentTerminal))) {
-						unsyncNodes.set(unsyncNodes.indexOf(currentTerminal), new Node(null, currentTerminal));
+					if (unsyncNodes.contains(currentNode)) {
+						unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
 					} else {
-						unsyncNodes.add(new Node(null, currentTerminal));
+						unsyncNodes.add(currentNode);
 					}
 					
-					availableTerminals.set(i, currentTerminal);
+					availableNodes.set(i, currentNode);
 
-				} else if (currentTerminal.numOfSynapses - disconnectedTerminal.numOfNeurons >= 0
-						&& disconnectedTerminal.numOfDendrites - currentTerminal.numOfNeurons >= 0) {
+				} else if (currentNode.terminal.numOfSynapses - disconnectedNode.terminal.numOfNeurons >= 0
+						&& disconnectedNode.terminal.numOfDendrites - currentNode.terminal.numOfNeurons >= 0) {
 
 					/**
 					 * Just as before but now synapses and dendrites are exchanged
 					 */
 
-					currentTerminal.numOfSynapses -= disconnectedTerminal.numOfNeurons;
-					disconnectedTerminal.numOfDendrites -= currentTerminal.numOfNeurons;
+					currentNode.terminal.numOfSynapses -= disconnectedNode.terminal.numOfNeurons;
+					disconnectedNode.terminal.numOfDendrites -= currentNode.terminal.numOfNeurons;
 
-					currentTerminal.postsynapticTerminals.add(disconnectedTerminal);
-					disconnectedTerminal.presynapticTerminals.add(currentTerminal);
+					currentNode.terminal.postsynapticTerminals.add(disconnectedNode.terminal);
+					disconnectedNode.terminal.presynapticTerminals.add(currentNode.terminal);
 
-					if (unsyncNodes.contains(new Node(null, currentTerminal))) {
-						unsyncNodes.set(unsyncNodes.indexOf(currentTerminal), new Node(null, currentTerminal));
+					if (unsyncNodes.contains(currentNode)) {
+						unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
 					} else {
-						unsyncNodes.add(new Node(null, currentTerminal));
+						unsyncNodes.add(currentNode);
 					}
 					
-					availableTerminals.set(i, currentTerminal);
+					availableNodes.set(i, currentNode);
 
-				} else if (currentTerminal.numOfSynapses == 0 && currentTerminal.numOfDendrites == 0) {
+				} else if (currentNode.terminal.numOfSynapses == 0 && currentNode.terminal.numOfDendrites == 0) {
 					// If BOTH the synapses and the dendrites of the current terminal are saturated it can be removed
-					availableTerminals.remove(i);
+					availableNodes.remove(i);
 				}
 				/* [End of the inner if] */
 
@@ -260,24 +258,24 @@ public class VirtualLayerManager extends Thread{
 			/* [End of for loop] */
 			
 			// If either the dendrites or the synapses of the disconnected terminal are not saturated it can be added to the list
-			if (disconnectedTerminal.numOfDendrites > 0 || disconnectedTerminal.numOfSynapses > 0) {
-				availableTerminals.add(disconnectedTerminal);
+			if (disconnectedNode.terminal.numOfDendrites > 0 || disconnectedNode.terminal.numOfSynapses > 0) {
+				availableNodes.add(disconnectedNode);
 			} 
 			
-			unsyncNodes.add(new Node(null, disconnectedTerminal));	
+			unsyncNodes.add(disconnectedNode);	
 
 			
-		} else if (availableTerminals.isEmpty()) {
+		} else if (availableNodes.isEmpty()) {
 			
 			// Add the disconnected terminal automatically if the list is empty
-			availableTerminals.add(disconnectedTerminal);		
-			unsyncNodes.add(new Node(null, disconnectedTerminal));	
+			availableNodes.add(disconnectedNode);		
+			unsyncNodes.add(disconnectedNode);	
 			  
-		} else if (availableTerminals.contains(disconnectedTerminal)) {
+		} else if (availableNodes.contains(disconnectedNode)) {
 			
-			// If availableTerminals contains the disconnectedTerminal it needs only to update its reference
-			availableTerminals.set(availableTerminals.indexOf(disconnectedTerminal), disconnectedTerminal);					
-			unsyncNodes.add(new Node(null, disconnectedTerminal));	
+			// If availableTerminals contains the disconnectedNode.terminal it needs only to update its reference
+			availableNodes.set(availableNodes.indexOf(disconnectedNode), disconnectedNode);					
+			unsyncNodes.add(disconnectedNode);	
 			
 		}
 		/* [End of the outer if] */		
@@ -292,13 +290,13 @@ public class VirtualLayerManager extends Thread{
 		
 		// If the method has been called unnecessarily exit without doing anything 
 		// (However this should not happen...)
-		if (!availableTerminals.contains(removableTerminal)) { return; }
+		if (!availableNodes.contains(new Node (null, removableTerminal))) { return; }
 		
 		unsyncNodes.remove(new Node(null, removableTerminal));
 		
 		int index = syncNodes.indexOf(new Node(null, removableTerminal));
 		
-		availableTerminals.remove(removableTerminal); 	
+		availableNodes.remove(new Node(null, removableTerminal)); 	
 		
 		/**
 		 * Shutdown the executor of the the spikes monitor 
@@ -355,23 +353,23 @@ public class VirtualLayerManager extends Thread{
 		 * Remove all references to the current terminal from the other terminal' lists
 		 */
 		
-		for (int i = 0; i < availableTerminals.size(); i++) {
+		for (int i = 0; i < availableNodes.size(); i++) {
 			
 			boolean terminalIsModified = false;
 			
-			if (availableTerminals.get(i).postsynapticTerminals.contains(removableTerminal)) {
-				availableTerminals.get(i).postsynapticTerminals.remove(removableTerminal);
-				availableTerminals.get(i).numOfSynapses += removableTerminal.numOfNeurons;
+			if (availableNodes.get(i).terminal.postsynapticTerminals.contains(removableTerminal)) {
+				availableNodes.get(i).terminal.postsynapticTerminals.remove(removableTerminal);
+				availableNodes.get(i).terminal.numOfSynapses += removableTerminal.numOfNeurons;
 				terminalIsModified = true;
 			}
 			
-			if (availableTerminals.get(i).presynapticTerminals.contains(removableTerminal)) {
-				availableTerminals.get(i).presynapticTerminals.remove(removableTerminal);
-				availableTerminals.get(i).numOfDendrites += removableTerminal.numOfNeurons;
+			if (availableNodes.get(i).terminal.presynapticTerminals.contains(removableTerminal)) {
+				availableNodes.get(i).terminal.presynapticTerminals.remove(removableTerminal);
+				availableNodes.get(i).terminal.numOfDendrites += removableTerminal.numOfNeurons;
 				terminalIsModified = true;
 			}
 			
-			if (terminalIsModified) { unsyncNodes.add(new Node(null, availableTerminals.get(i))); }			
+			if (terminalIsModified) { unsyncNodes.add(availableNodes.get(i)); }			
 			
 		}	
 		
@@ -431,10 +429,10 @@ public class VirtualLayerManager extends Thread{
 				try {
 					
 					// Temporary object holding the info regarding the local network of the current node
-					com.example.overmind.Terminal tmpT = unsyncNodes.get(i).terminal;
+					Node tmpNode = unsyncNodes.get(i);
 					
 					// Use the indexOf method to retrieve the current node from the nodeClients list
-					int index = nodeClients.indexOf(new Node(null, tmpT));
+					int index = nodeClients.indexOf(tmpNode);
 					
 					// The node whose informations need to be sent back to the physical device
 					Node pendingNode = nodeClients.get(index);	

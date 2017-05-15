@@ -29,7 +29,7 @@ public class RandomSpikesGenerator implements Runnable {
 	@Override 
 	public void run() {	
 		
-		targetTerminal = parentFrame.localUpdatedTerminal;
+		targetTerminal = parentFrame.localUpdatedNode.terminal;
 		
 		Random rand = new Random();
         long lastTime = 0, newTime = 0, sendTime = 0;   
@@ -156,7 +156,7 @@ public class RandomSpikesGenerator implements Runnable {
         targetTerminalOld.numOfSynapses = targetTerminal.numOfSynapses;
         targetTerminalOld.postsynapticTerminals = new ArrayList<>(targetTerminal.postsynapticTerminals);
        
-        if (VirtualLayerManager.availableTerminals.contains(targetTerminalOld)) {
+        if (VirtualLayerManager.availableNodes.contains(new Node(null, targetTerminalOld))) {
         	VirtualLayerManager.connectTerminals(new Node(null, targetTerminalOld));
         	VirtualLayerManager.syncTerminals();
         }
