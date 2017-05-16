@@ -324,7 +324,7 @@ public class TerminalFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				//shutdown = true;		
-				VirtualLayerManager.removeTerminal(localUpdatedNode.terminal);
+				VirtualLayerManager.removeNode(localUpdatedNode);
 			}
 		});		
 		removeTerminalButton.setAlignmentX(Component.LEFT_ALIGNMENT);

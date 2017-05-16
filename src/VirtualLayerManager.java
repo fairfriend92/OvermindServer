@@ -284,19 +284,19 @@ public class VirtualLayerManager extends Thread{
 		
 	}
 	
-	public synchronized static void removeTerminal(com.example.overmind.Terminal removableTerminal) {
+	public synchronized static void removeNode(Node removableNode) {
 		
 		//syncNodes();		
 		
 		// If the method has been called unnecessarily exit without doing anything 
 		// (However this should not happen...)
-		if (!availableNodes.contains(new Node (null, removableTerminal))) { return; }
+		if (!availableNodes.contains(removableNode)) { return; }
 		
-		unsyncNodes.remove(new Node(null, removableTerminal));
+		unsyncNodes.remove(removableNode);
 		
-		int index = syncNodes.indexOf(new Node(null, removableTerminal));
+		int index = syncNodes.indexOf(removableNode);
 		
-		availableNodes.remove(new Node(null, removableTerminal)); 	
+		availableNodes.remove(removableNode); 	
 		
 		/**
 		 * Shutdown the executor of the the spikes monitor 
@@ -314,7 +314,7 @@ public class VirtualLayerManager extends Thread{
 			e1.printStackTrace();
 		}
 		if (!spikesMonitorIsShutdown) {
-			System.out.println("Failed to shutdown spikes monitor for device with ip " + removableTerminal.ip);	
+			System.out.println("Failed to shutdown spikes monitor for device with ip " + removableNode.terminal.ip);	
 		} 			
 		
 		/**
@@ -334,7 +334,7 @@ public class VirtualLayerManager extends Thread{
 			e1.printStackTrace();
 		}
 		if (!stimulusExecIsShutdown) {
-			System.out.println("Failed to close the stimuli executor for device with ip " + removableTerminal.ip);	
+			System.out.println("Failed to close the stimuli executor for device with ip " + removableNode.terminal.ip);	
 		}		
 		
 		/**
@@ -357,15 +357,15 @@ public class VirtualLayerManager extends Thread{
 			
 			boolean terminalIsModified = false;
 			
-			if (availableNodes.get(i).terminal.postsynapticTerminals.contains(removableTerminal)) {
-				availableNodes.get(i).terminal.postsynapticTerminals.remove(removableTerminal);
-				availableNodes.get(i).terminal.numOfSynapses += removableTerminal.numOfNeurons;
+			if (availableNodes.get(i).terminal.postsynapticTerminals.contains(removableNode)) {
+				availableNodes.get(i).terminal.postsynapticTerminals.remove(removableNode);
+				availableNodes.get(i).terminal.numOfSynapses += removableNode.terminal.numOfNeurons;
 				terminalIsModified = true;
 			}
 			
-			if (availableNodes.get(i).terminal.presynapticTerminals.contains(removableTerminal)) {
-				availableNodes.get(i).terminal.presynapticTerminals.remove(removableTerminal);
-				availableNodes.get(i).terminal.numOfDendrites += removableTerminal.numOfNeurons;
+			if (availableNodes.get(i).terminal.presynapticTerminals.contains(removableNode)) {
+				availableNodes.get(i).terminal.presynapticTerminals.remove(removableNode);
+				availableNodes.get(i).terminal.numOfDendrites += removableNode.terminal.numOfNeurons;
 				terminalIsModified = true;
 			}
 			
@@ -447,7 +447,7 @@ public class VirtualLayerManager extends Thread{
 										
 				} catch (IOException e) {
 		        	e.printStackTrace();
-		        	removeTerminal(unsyncNodes.get(i).terminal);
+		        	removeNode(unsyncNodes.get(i));
 				}
 							
 			}				

@@ -22,9 +22,7 @@ public class RefreshSignalSender implements Runnable {
 	
 	@Override public void run() {
 		
-		targetTerminal = parentFrame.localUpdatedNode.terminal;
-		
-		System.out.println("batman");
+		targetTerminal = parentFrame.localUpdatedNode.terminal;	
 		
         long lastTime = 0, newTime = 0, sendTime = 0;   
         
