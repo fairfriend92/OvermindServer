@@ -324,7 +324,7 @@ public class TerminalFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				//shutdown = true;		
-				VirtualLayerManager.removeNode(localUpdatedNode);
+				VirtualLayerManager.removeTerminal(localUpdatedNode);
 			}
 		});		
 		removeTerminalButton.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -351,7 +351,7 @@ public class TerminalFrame {
 		
 				
 		localUpdatedNode = updatedNode;
-		localUpdatedNode.terminal = updatedNode.terminal;			
+		//localUpdatedNode.terminal = updatedNode.terminal;			
 						
 		/**
 		 * Update info about local network
@@ -419,7 +419,7 @@ public class TerminalFrame {
     public synchronized boolean equals(Object obj) {
         if (obj == null || obj.getClass() != this.getClass()) { return false; }
         TerminalFrame compare = (TerminalFrame) obj;
-        return compare.ip.equals(ip);
+        return compare.ip.equals(this.ip);
     }		
 	
 	public void startSpikesMonitor () {

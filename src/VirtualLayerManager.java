@@ -155,12 +155,19 @@ public class VirtualLayerManager extends Thread{
 				
 			Node newNode = new Node(clientSocket, terminal);
 			newNode.initialize();
+			/*
+			Node node2 = new Node();
+			node2.initialize();
+			node2.update(newNode);
+			node2.terminal.numOfNeurons = 51;
+			System.out.println(newNode.terminal.numOfNeurons);
+			*/
 			
 			nodeClients.add(newNode);			
 			
 			assert terminal != null;	
 			
-			connectTerminals(newNode);
+			connectNodes(newNode);
 								
 		}
 		/* [End of while(!shutdown)] */
@@ -168,7 +175,7 @@ public class VirtualLayerManager extends Thread{
 	}
 	/* [End of run() method] */	
 	
-	public synchronized static void connectTerminals(Node disconnectedNode) {	
+	public synchronized static void connectNodes(Node disconnectedNode) {	
 	
 		/**
 		 * Populate and update the list of terminals available for connection
@@ -197,10 +204,10 @@ public class VirtualLayerManager extends Thread{
 					disconnectedNode.terminal.presynapticTerminals.add(currentNode.terminal);
 
 					// Send to the list of terminals which need to be updated the current terminal
-					if (unsyncNodes.contains(new Node(null, currentNode.terminal))) {
-						unsyncNodes.set(unsyncNodes.indexOf(currentNode.terminal), new Node(null, currentNode.terminal));
+					if (unsyncNodes.contains(currentNode)) {
+						unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
 					} else {
-						unsyncNodes.add(new Node(null, currentNode.terminal));
+						unsyncNodes.add(currentNode);
 					}
 					
 					// Update the current terminal in the list availableTerminals
@@ -226,28 +233,7 @@ public class VirtualLayerManager extends Thread{
 					}
 					
 					availableNodes.set(i, currentNode);
-
-				} else if (currentNode.terminal.numOfSynapses - disconnectedNode.terminal.numOfNeurons >= 0
-						&& disconnectedNode.terminal.numOfDendrites - currentNode.terminal.numOfNeurons >= 0) {
-
-					/**
-					 * Just as before but now synapses and dendrites are exchanged
-					 */
-
-					currentNode.terminal.numOfSynapses -= disconnectedNode.terminal.numOfNeurons;
-					disconnectedNode.terminal.numOfDendrites -= currentNode.terminal.numOfNeurons;
-
-					currentNode.terminal.postsynapticTerminals.add(disconnectedNode.terminal);
-					disconnectedNode.terminal.presynapticTerminals.add(currentNode.terminal);
-
-					if (unsyncNodes.contains(currentNode)) {
-						unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
-					} else {
-						unsyncNodes.add(currentNode);
-					}
-					
-					availableNodes.set(i, currentNode);
-
+				
 				} else if (currentNode.terminal.numOfSynapses == 0 && currentNode.terminal.numOfDendrites == 0) {
 					// If BOTH the synapses and the dendrites of the current terminal are saturated it can be removed
 					availableNodes.remove(i);
@@ -284,7 +270,7 @@ public class VirtualLayerManager extends Thread{
 		
 	}
 	
-	public synchronized static void removeNode(Node removableNode) {
+	public synchronized static void removeTerminal(Node removableNode) {
 		
 		//syncNodes();		
 		
@@ -357,14 +343,14 @@ public class VirtualLayerManager extends Thread{
 			
 			boolean terminalIsModified = false;
 			
-			if (availableNodes.get(i).terminal.postsynapticTerminals.contains(removableNode)) {
-				availableNodes.get(i).terminal.postsynapticTerminals.remove(removableNode);
+			if (availableNodes.get(i).terminal.postsynapticTerminals.contains(removableNode.terminal)) {
+				availableNodes.get(i).terminal.postsynapticTerminals.remove(removableNode.terminal);
 				availableNodes.get(i).terminal.numOfSynapses += removableNode.terminal.numOfNeurons;
 				terminalIsModified = true;
 			}
 			
-			if (availableNodes.get(i).terminal.presynapticTerminals.contains(removableNode)) {
-				availableNodes.get(i).terminal.presynapticTerminals.remove(removableNode);
+			if (availableNodes.get(i).terminal.presynapticTerminals.contains(removableNode.terminal)) {
+				availableNodes.get(i).terminal.presynapticTerminals.remove(removableNode.terminal);
 				availableNodes.get(i).terminal.numOfDendrites += removableNode.terminal.numOfNeurons;
 				terminalIsModified = true;
 			}
@@ -386,25 +372,22 @@ public class VirtualLayerManager extends Thread{
 		
 		if (!unsyncNodes.isEmpty()) {		
 			
-			for (int i = 0; i < unsyncNodes.size(); i++) {
-				
-				TerminalFrame tmp;
+			for (int i = 0; i < unsyncNodes.size(); i++) {				
 				
 				// Branch depending on whether the terminal is new or not
-				if (!syncNodes.contains(unsyncNodes.get(i))) {					
+				if (unsyncNodes.get(i).terminalFrame == null) {					
 			
-					tmp = new TerminalFrame();
-					tmp.update(unsyncNodes.get(i));
+					unsyncNodes.get(i).terminalFrame = new TerminalFrame();
+					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i));
 					
 					// The terminal is new so a new frame needs to be created
-					tmp.display();
+					unsyncNodes.get(i).terminalFrame.display();
 															
 					// Add the new window to the list of frames 
-					syncFrames.add(tmp);
+					syncFrames.add(unsyncNodes.get(i).terminalFrame);
 					
 					// Add the new terminal to the list of sync terminals
-					syncNodes.add(unsyncNodes.get(i));
-										
+					syncNodes.add(unsyncNodes.get(i));															
 					
 				} else {					
 					
@@ -412,13 +395,13 @@ public class VirtualLayerManager extends Thread{
 					
 					// Since the terminal is not new its already existing window must be retrieved from the list
 					// TODO instead of using index to retrieve frame we could write a method with argument the Terminal itself
-					tmp = syncFrames.get(index);
+					unsyncNodes.get(i).terminalFrame = syncFrames.get(index);
 					
 					// The retrieved window needs only to be updated 
-					tmp.update(unsyncNodes.get(i));
+					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i));
 					
 					// The old terminal is substituted with the new one in the list of sync terminal
-					syncNodes.set(index, unsyncNodes.get(i));
+					syncNodes.set(index, unsyncNodes.get(i));					
 					
 				}
 				
@@ -428,26 +411,15 @@ public class VirtualLayerManager extends Thread{
 					
 				try {
 					
-					// Temporary object holding the info regarding the local network of the current node
-					Node tmpNode = unsyncNodes.get(i);
-					
-					// Use the indexOf method to retrieve the current node from the nodeClients list
-					int index = nodeClients.indexOf(tmpNode);
-					
-					// The node whose informations need to be sent back to the physical device
-					Node pendingNode = nodeClients.get(index);	
-					
 					com.example.overmind.Terminal tmpTerminal = new com.example.overmind.Terminal();
 					tmpTerminal.update(unsyncNodes.get(i).terminal);
 									
 					// Write the info in the steam
-					pendingNode.output.writeObject(tmpTerminal);						
-								
-					//pendingNode.output.reset();										
-										
+					unsyncNodes.get(i).output.writeObject(tmpTerminal);					
+																	
 				} catch (IOException e) {
 		        	e.printStackTrace();
-		        	removeNode(unsyncNodes.get(i));
+		        	removeTerminal(unsyncNodes.get(i));
 				}
 							
 			}				

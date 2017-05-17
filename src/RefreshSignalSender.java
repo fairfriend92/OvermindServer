@@ -42,7 +42,7 @@ public class RefreshSignalSender implements Runnable {
         
         targetTerminal.presynapticTerminals.add(server);
         
-        VirtualLayerManager.connectTerminals(new Node(null, targetTerminal));    
+        VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);    
         VirtualLayerManager.syncTerminals();
         
         DatagramSocket outputSocket = null;
@@ -98,8 +98,8 @@ public class RefreshSignalSender implements Runnable {
         targetTerminal.presynapticTerminals.remove(server);
     	targetTerminal.numOfDendrites +=  8;
         
-        if (VirtualLayerManager.availableNodes.contains(new Node(null, targetTerminal))) {        	
-        	VirtualLayerManager.connectTerminals(new Node(null, targetTerminal));
+        if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {        	
+        	VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);
         	VirtualLayerManager.syncTerminals();
         }
         

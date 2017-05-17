@@ -14,7 +14,7 @@ public class Terminal implements Serializable {
     public boolean equals(Object obj) {
         if (obj == null || obj.getClass() != this.getClass()) { return false; }
         Terminal compare = (Terminal) obj;
-        return compare.ip.equals(ip);
+        return compare.ip.equals(this.ip);
     }
 
     public synchronized Terminal get() {
