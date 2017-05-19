@@ -6,6 +6,7 @@ import java.util.ArrayList;
 public class Node {
 	
 	public short layer, level, index;
+	public boolean isActive;
 	public ArrayList<Node> postsynapticNodes;
 	public ArrayList<Node> presynapticNodes;
 	public TerminalFrame terminalFrame;
@@ -35,6 +36,8 @@ public class Node {
 	public void initialize() {
 		this.layer = 0;
 		this.level = 0;
+		this.index = 0;
+		this.isActive = true;
 		this.postsynapticNodes = new ArrayList<>();
 		this.presynapticNodes = new ArrayList<>();
 		this.terminalFrame = new TerminalFrame();		

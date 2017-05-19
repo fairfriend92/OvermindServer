@@ -38,6 +38,7 @@ public class VirtualLayerManager extends Thread{
 	static ArrayList<Node> unsyncNodes = new ArrayList<>();
 	static ArrayList<Node> nodeClients = new ArrayList<>();
 	static ArrayList<Node> availableNodes = new ArrayList<>();	
+	static ArrayList<Short> freeNodes = new ArrayList<>();
 	
 	static public String serverIP = null;
 			
@@ -155,18 +156,19 @@ public class VirtualLayerManager extends Thread{
 				
 			Node newNode = new Node(clientSocket, terminal);
 			newNode.initialize();
+				
+			if (freeNodes.size() != 0) {
+				
+				newNode.index = (short) freeNodes.get(freeNodes.size() - 1);
+				nodeClients.set(newNode.index, newNode);
+				freeNodes.remove(freeNodes.size() - 1);
+				
+			} else {
 			
-			/*
-			Node node2 = new Node();
-			node2.initialize();
-			node2.update(newNode);
-			node2.terminal.numOfNeurons = 51;
-			System.out.println(newNode.terminal.numOfNeurons);
-			*/
+				newNode.index = (short) nodeClients.size();									
+				nodeClients.add(newNode);		
 			
-			newNode.index = (short)nodeClients.size();
-			
-			nodeClients.add(newNode);			
+			}
 			
 			assert terminal != null;	
 			
@@ -289,8 +291,8 @@ public class VirtualLayerManager extends Thread{
 
 		availableNodes.remove(removableNode); 	
 		
-		unsyncNodes.remove(removableNode);		
-		
+		unsyncNodes.remove(removableNode);	
+				
 		
 		/**
 		 * Shutdown the executor of the the spikes monitor 
@@ -338,7 +340,7 @@ public class VirtualLayerManager extends Thread{
 		removableNode.terminalFrame.frame.dispose();
 				
 		nodeClients.get(removableNode.index).close();
-		nodeClients.remove(removableNode.index);		
+		nodeClients.get(removableNode.index).isActive = false;
 		
 		/**
 		 * Remove all references to the current terminal from the other terminal' lists
@@ -374,6 +376,8 @@ public class VirtualLayerManager extends Thread{
 			}
 			
 		}				
+		
+		freeNodes.add(removableNode.index);
 		
 		numberOfSyncNodes--;
 		

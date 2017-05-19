@@ -15,10 +15,14 @@ public class NodesShutdownPoller extends Thread {
 				e.printStackTrace();
 			}
 			
+			Node tmpNode;
+			
 			for (int i = 0; i < VirtualLayerManager.nodeClients.size(); i++) {				
 				
-				if (VirtualLayerManager.nodeClients.get(i).terminalFrame.shutdown) {
-					VirtualLayerManager.removeNode(VirtualLayerManager.nodeClients.get(i).terminalFrame.localUpdatedNode);
+				tmpNode = VirtualLayerManager.nodeClients.get(i);
+				
+				if (tmpNode.terminalFrame.shutdown && tmpNode.isActive) {
+					VirtualLayerManager.removeNode(tmpNode.terminalFrame.localUpdatedNode);
 				}				
 								
 			}
