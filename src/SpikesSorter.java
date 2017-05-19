@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 public class SpikesSorter extends Thread{
 	
-	private static ArrayList<TerminalFrame> localSyncFrames = new ArrayList<>();
+	private static ArrayList<Node> localNodeClients = new ArrayList<>();
 	private final static int IPTOS_THROUGHPUT = 0x08;
 	
 	@Override
@@ -46,7 +46,7 @@ public class SpikesSorter extends Thread{
 				
 				InetAddress senderAddr = spikesPacket.getAddress();	
 								
-				sendSpikesToFrame(localSyncFrames, spikesBuffer, senderAddr);
+				sendSpikesToFrame(localNodeClients, spikesBuffer, senderAddr);
 				
 			} catch (IOException e) {
 	        	e.printStackTrace();
@@ -63,9 +63,9 @@ public class SpikesSorter extends Thread{
 	 * Method called externally by VirtualLayerManager to update the list of sync frames
 	 */
 	
-	public static synchronized void updateNodeFrames (ArrayList<TerminalFrame> syncFrames) {
+	public static synchronized void updateNodeFrames (ArrayList<Node> nodeClients) {
 		
-		localSyncFrames = new ArrayList<>(syncFrames);
+		localNodeClients = new ArrayList<>(nodeClients);
 		
 	}
 	
@@ -74,28 +74,28 @@ public class SpikesSorter extends Thread{
 	 * to the frame so that the spikes can be displayed in the raster graph
 	 */
 	
-	private static synchronized void sendSpikesToFrame (ArrayList<TerminalFrame> localSyncFrames, byte[] spikesBuffer, InetAddress senderAddr) {
+	private static synchronized void sendSpikesToFrame (ArrayList<Node> localNodeClients, byte[] spikesBuffer, InetAddress senderAddr) {
 		
 		boolean frameFound = false;
 		TerminalFrame tmpFrame = new TerminalFrame();
 		tmpFrame.ip = senderAddr.toString().substring(1);
 		
-		for (int index = 0; (index < localSyncFrames.size()) && !frameFound; index++) {
+		for (int index = 0; (index < localNodeClients.size()) && !frameFound; index++) {
 			
-			if (localSyncFrames.get(index).equals(tmpFrame)) {
+			if (localNodeClients.get(index).terminalFrame.equals(tmpFrame)) {
 				
 				frameFound = true;				
 								
 				try {
 					if (spikesBuffer != null) {
-						localSyncFrames.get(index).receivedSpikesQueue.offer(spikesBuffer, 100, TimeUnit.MILLISECONDS);
+						localNodeClients.get(index).terminalFrame.receivedSpikesQueue.offer(spikesBuffer, 100, TimeUnit.MILLISECONDS);
 					}
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 				
-				if (!localSyncFrames.get(index).spikesMonitorIsActive) {
-					localSyncFrames.get(index).startSpikesMonitor();
+				if (!localNodeClients.get(index).terminalFrame.spikesMonitorIsActive) {
+					localNodeClients.get(index).terminalFrame.startSpikesMonitor();
 				}
 				
 			}

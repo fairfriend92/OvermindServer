@@ -36,7 +36,6 @@ public class VirtualLayerManager extends Thread{
 	static int numberOfSyncNodes = 0;
 	
 	static ArrayList<Node> unsyncNodes = new ArrayList<>();
-	static ArrayList<TerminalFrame> syncFrames = new ArrayList<>();
 	static ArrayList<Node> nodeClients = new ArrayList<>();
 	static ArrayList<Node> availableNodes = new ArrayList<>();	
 	
@@ -280,17 +279,18 @@ public class VirtualLayerManager extends Thread{
 		
 	}
 	
-	public synchronized static void removeTerminal(Node removableNode) {
+	public synchronized static void removeNode(Node removableNode) {
 		
 		//syncNodes();		
 		
 		// If the method has been called unnecessarily exit without doing anything 
 		// (However this should not happen...)
-		//if (!availableNodes.contains(removableNode)) { return; }	
-	
+		//if (!availableNodes.contains(removableNode)) { return; }			
+
+		availableNodes.remove(removableNode); 	
+		
 		unsyncNodes.remove(removableNode);		
 		
-		availableNodes.remove(removableNode); 	
 		
 		/**
 		 * Shutdown the executor of the the spikes monitor 
@@ -336,7 +336,6 @@ public class VirtualLayerManager extends Thread{
 		 */
 		
 		removableNode.terminalFrame.frame.dispose();
-		syncFrames.remove(removableNode.index);		
 				
 		nodeClients.get(removableNode.index).close();
 		nodeClients.remove(removableNode.index);		
@@ -394,24 +393,20 @@ public class VirtualLayerManager extends Thread{
 			for (int i = 0; i < unsyncNodes.size(); i++) {				
 				
 				// Branch depending on whether the terminal is new or not
-				if (unsyncNodes.get(i).terminalFrame == null) {					
+				if (unsyncNodes.get(i).terminalFrame.localUpdatedNode == null) {					
 			
-					unsyncNodes.get(i).terminalFrame = new TerminalFrame();
 					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i));
 					
 					// The terminal is new so a new frame needs to be created
-					unsyncNodes.get(i).terminalFrame.display();
-															
-					// Add the new window to the list of frames 
-					syncFrames.add(unsyncNodes.get(i).terminalFrame);
-					
+					unsyncNodes.get(i).terminalFrame.display();															
+										
 					numberOfSyncNodes++;																				
 					
 				} else {				
 					
 					// Since the terminal is not new its already existing window must be retrieved from the list
 					// TODO instead of using index to retrieve frame we could write a method with argument the Terminal itself
-					unsyncNodes.get(i).terminalFrame = syncFrames.get(unsyncNodes.get(i).index);
+					//unsyncNodes.get(i).terminalFrame = syncFrames.get(unsyncNodes.get(i).index);
 					
 					// The retrieved window needs only to be updated 
 					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i));									
@@ -434,7 +429,7 @@ public class VirtualLayerManager extends Thread{
 																	
 				} catch (IOException e) {
 		        	e.printStackTrace();
-		        	removeTerminal(unsyncNodes.get(i));
+		        	removeNode(unsyncNodes.get(i));
 				}
 							
 			}				
@@ -443,7 +438,7 @@ public class VirtualLayerManager extends Thread{
 												
 		}
 		
-		SpikesSorter.updateNodeFrames(syncFrames);
+		SpikesSorter.updateNodeFrames(nodeClients);
 		MainFrame.updateMainFrame(new MainFrameInfo(0, numberOfSyncNodes));
 		
 	}

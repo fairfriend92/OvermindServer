@@ -37,7 +37,7 @@ public class Node {
 		this.level = 0;
 		this.postsynapticNodes = new ArrayList<>();
 		this.presynapticNodes = new ArrayList<>();
-		this.terminalFrame = null;		
+		this.terminalFrame = new TerminalFrame();		
 		if (this.client != null) {
 			try {
 				this.output = new ObjectOutputStream(client.getOutputStream());
