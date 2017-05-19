@@ -67,7 +67,7 @@ public class RandomSpikesGenerator implements Runnable {
         targetTerminal.presynapticTerminals.add(server);
         
         VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);    
-        VirtualLayerManager.syncTerminals();          
+        VirtualLayerManager.syncNodes();          
                 
         /**
          * Open the socket for sending the spikes and build the InetAddress of the target device
@@ -159,7 +159,7 @@ public class RandomSpikesGenerator implements Runnable {
        
         if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {
         	VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);
-        	VirtualLayerManager.syncTerminals();
+        	VirtualLayerManager.syncNodes();
         }
         
         

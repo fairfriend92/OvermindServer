@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 public class Node {
 	
-	public short layer, level;
+	public short layer, level, index;
 	public ArrayList<Node> postsynapticNodes;
 	public ArrayList<Node> presynapticNodes;
 	public TerminalFrame terminalFrame;

@@ -43,7 +43,7 @@ public class RefreshSignalSender implements Runnable {
         targetTerminal.presynapticTerminals.add(server);
         
         VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);    
-        VirtualLayerManager.syncTerminals();
+        VirtualLayerManager.syncNodes();
         
         DatagramSocket outputSocket = null;
 
@@ -100,7 +100,7 @@ public class RefreshSignalSender implements Runnable {
         
         if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {        	
         	VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);
-        	VirtualLayerManager.syncTerminals();
+        	VirtualLayerManager.syncNodes();
         }
         
 		

@@ -53,7 +53,7 @@ public class MainFrame {
 		syncButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {							
-				VirtualLayerManager.syncTerminals();			
+				VirtualLayerManager.syncNodes();			
 			}
 		});			
 		

@@ -33,8 +33,9 @@ public class VirtualLayerManager extends Thread{
 	
 	static boolean shutdown = false;	
 	
+	static int numberOfSyncNodes = 0;
+	
 	static ArrayList<Node> unsyncNodes = new ArrayList<>();
-	static ArrayList<Node> syncNodes = new ArrayList<>();
 	static ArrayList<TerminalFrame> syncFrames = new ArrayList<>();
 	static ArrayList<Node> nodeClients = new ArrayList<>();
 	static ArrayList<Node> availableNodes = new ArrayList<>();	
@@ -155,6 +156,7 @@ public class VirtualLayerManager extends Thread{
 				
 			Node newNode = new Node(clientSocket, terminal);
 			newNode.initialize();
+			
 			/*
 			Node node2 = new Node();
 			node2.initialize();
@@ -162,6 +164,8 @@ public class VirtualLayerManager extends Thread{
 			node2.terminal.numOfNeurons = 51;
 			System.out.println(newNode.terminal.numOfNeurons);
 			*/
+			
+			newNode.index = (short)nodeClients.size();
 			
 			nodeClients.add(newNode);			
 			
@@ -202,6 +206,9 @@ public class VirtualLayerManager extends Thread{
 					// Update the list of connected terminals
 					currentNode.terminal.postsynapticTerminals.add(disconnectedNode.terminal);
 					disconnectedNode.terminal.presynapticTerminals.add(currentNode.terminal);
+					
+					currentNode.postsynapticNodes.add(disconnectedNode);
+					disconnectedNode.presynapticNodes.add(currentNode);
 
 					// Send to the list of terminals which need to be updated the current terminal
 					if (unsyncNodes.contains(currentNode)) {
@@ -225,6 +232,9 @@ public class VirtualLayerManager extends Thread{
 
 					currentNode.terminal.presynapticTerminals.add(disconnectedNode.terminal);
 					disconnectedNode.terminal.postsynapticTerminals.add(currentNode.terminal);
+					
+					currentNode.presynapticNodes.add(disconnectedNode);
+					disconnectedNode.postsynapticNodes.add(currentNode);
 
 					if (unsyncNodes.contains(currentNode)) {
 						unsyncNodes.set(unsyncNodes.indexOf(currentNode), currentNode);
@@ -266,7 +276,7 @@ public class VirtualLayerManager extends Thread{
 		}
 		/* [End of the outer if] */		
 									
-		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), syncNodes.size()));
+		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes));
 		
 	}
 	
@@ -276,11 +286,9 @@ public class VirtualLayerManager extends Thread{
 		
 		// If the method has been called unnecessarily exit without doing anything 
 		// (However this should not happen...)
-		if (!availableNodes.contains(removableNode)) { return; }
-		
-		unsyncNodes.remove(removableNode);
-		
-		int index = syncNodes.indexOf(removableNode);
+		//if (!availableNodes.contains(removableNode)) { return; }	
+	
+		unsyncNodes.remove(removableNode);		
 		
 		availableNodes.remove(removableNode); 	
 		
@@ -290,12 +298,12 @@ public class VirtualLayerManager extends Thread{
 		
 		boolean spikesMonitorIsShutdown = false;	
 		
-		syncFrames.get(index).shutdown = true;
+		removableNode.terminalFrame.shutdown = true;
 	
-		syncFrames.get(index).spikesMonitorExecutor.shutdown();	
+		removableNode.terminalFrame.spikesMonitorExecutor.shutdown();	
 		
 		try {
-			spikesMonitorIsShutdown = syncFrames.get(index).spikesMonitorExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+			spikesMonitorIsShutdown = removableNode.terminalFrame.spikesMonitorExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
@@ -307,15 +315,15 @@ public class VirtualLayerManager extends Thread{
 		 * Shutdown the executor of the external stimuli
 		 */
 		
-		syncFrames.get(index).thisTerminalRSG.shutdown = true;		
-		syncFrames.get(index).thisTerminalRSS.shutdown = true;	
+		removableNode.terminalFrame.thisTerminalRSG.shutdown = true;		
+		removableNode.terminalFrame.thisTerminalRSS.shutdown = true;	
 		
-		syncFrames.get(index).stimulusExecutor.shutdown();	
+		removableNode.terminalFrame.stimulusExecutor.shutdown();	
 		
 		boolean stimulusExecIsShutdown = false;
 		
 		try {
-			stimulusExecIsShutdown = syncFrames.get(index).stimulusExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+			stimulusExecIsShutdown = removableNode.terminalFrame.stimulusExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
@@ -327,44 +335,55 @@ public class VirtualLayerManager extends Thread{
 		 * Close the frame associated to the terminal and remove its references from the list of clients
 		 */
 		
-		syncFrames.get(index).frame.dispose();
-		syncFrames.remove(index);			
-		
-		syncNodes.remove(index);		
-		
-		nodeClients.get(index).close();
-		nodeClients.remove(index);		
+		removableNode.terminalFrame.frame.dispose();
+		syncFrames.remove(removableNode.index);		
+				
+		nodeClients.get(removableNode.index).close();
+		nodeClients.remove(removableNode.index);		
 		
 		/**
 		 * Remove all references to the current terminal from the other terminal' lists
 		 */
 		
-		for (int i = 0; i < availableNodes.size(); i++) {
+		boolean nodeHasBeenModified = false;
+		Node tmpNode;
+		
+		for (int i = 0; i < removableNode.presynapticNodes.size(); i++) {
 			
-			boolean terminalIsModified = false;
+			tmpNode = removableNode.presynapticNodes.get(i);
 			
-			if (availableNodes.get(i).terminal.postsynapticTerminals.contains(removableNode.terminal)) {
-				availableNodes.get(i).terminal.postsynapticTerminals.remove(removableNode.terminal);
-				availableNodes.get(i).terminal.numOfSynapses += removableNode.terminal.numOfNeurons;
-				terminalIsModified = true;
+			nodeHasBeenModified = tmpNode.postsynapticNodes.remove(removableNode);
+			tmpNode.terminal.postsynapticTerminals.remove(removableNode.terminal);
+			
+			if (nodeHasBeenModified) {
+				unsyncNodes.add(tmpNode);
+				nodeHasBeenModified = false;
 			}
 			
-			if (availableNodes.get(i).terminal.presynapticTerminals.contains(removableNode.terminal)) {
-				availableNodes.get(i).terminal.presynapticTerminals.remove(removableNode.terminal);
-				availableNodes.get(i).terminal.numOfDendrites += removableNode.terminal.numOfNeurons;
-				terminalIsModified = true;
+		}
+						
+		for (int i = 0; i < removableNode.postsynapticNodes.size(); i++) {
+			
+			tmpNode = removableNode.postsynapticNodes.get(i);
+			
+			nodeHasBeenModified = tmpNode.presynapticNodes.remove(removableNode);
+			tmpNode.terminal.presynapticTerminals.remove(removableNode.terminal);
+			
+			if (nodeHasBeenModified) {
+				unsyncNodes.add(tmpNode);
+				nodeHasBeenModified = false;
 			}
 			
-			if (terminalIsModified) { unsyncNodes.add(availableNodes.get(i)); }			
-			
-		}	
+		}				
+		
+		numberOfSyncNodes--;
 		
 		// Sync other nodes that have been eventually modified
-		syncTerminals();
+		syncNodes();
 		
 	}
 
-	public synchronized static void syncTerminals() {		
+	public synchronized static void syncNodes() {		
 		
 		/**
 		 * Sync the GUI with the updated info about the terminals
@@ -386,22 +405,16 @@ public class VirtualLayerManager extends Thread{
 					// Add the new window to the list of frames 
 					syncFrames.add(unsyncNodes.get(i).terminalFrame);
 					
-					// Add the new terminal to the list of sync terminals
-					syncNodes.add(unsyncNodes.get(i));															
+					numberOfSyncNodes++;																				
 					
-				} else {					
-					
-					int index = syncNodes.indexOf(unsyncNodes.get(i));					
+				} else {				
 					
 					// Since the terminal is not new its already existing window must be retrieved from the list
 					// TODO instead of using index to retrieve frame we could write a method with argument the Terminal itself
-					unsyncNodes.get(i).terminalFrame = syncFrames.get(index);
+					unsyncNodes.get(i).terminalFrame = syncFrames.get(unsyncNodes.get(i).index);
 					
 					// The retrieved window needs only to be updated 
-					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i));
-					
-					// The old terminal is substituted with the new one in the list of sync terminal
-					syncNodes.set(index, unsyncNodes.get(i));					
+					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i));									
 					
 				}
 				
@@ -415,7 +428,9 @@ public class VirtualLayerManager extends Thread{
 					tmpTerminal.update(unsyncNodes.get(i).terminal);
 									
 					// Write the info in the steam
-					unsyncNodes.get(i).output.writeObject(tmpTerminal);					
+					unsyncNodes.get(i).output.writeObject(tmpTerminal);				
+
+					System.out.println("Terminal with ip " + unsyncNodes.get(i).terminal.ip + " has been updated.");
 																	
 				} catch (IOException e) {
 		        	e.printStackTrace();
@@ -429,7 +444,7 @@ public class VirtualLayerManager extends Thread{
 		}
 		
 		SpikesSorter.updateNodeFrames(syncFrames);
-		MainFrame.updateMainFrame(new MainFrameInfo(0, syncNodes.size()));
+		MainFrame.updateMainFrame(new MainFrameInfo(0, numberOfSyncNodes));
 		
 	}
 
