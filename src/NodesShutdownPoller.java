@@ -1,31 +1,28 @@
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 public class NodesShutdownPoller extends Thread {
 	
 	static boolean shutdown = false;
+	
+	static BlockingQueue<Node> nodesToBeRemoved = new ArrayBlockingQueue<>(4);
+
 
 	@Override
 	public void run() {		
 		super.run();
 		
 		while (!shutdown) {			
+
+			Node tmpNode = new Node();
 			
 			try {
-				NodesShutdownPoller.sleep(1000);
+				tmpNode = nodesToBeRemoved.take();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 			
-			Node tmpNode;
-			
-			for (int i = 0; i < VirtualLayerManager.nodeClients.size(); i++) {				
-				
-				tmpNode = VirtualLayerManager.nodeClients.get(i);
-				
-				if (tmpNode.terminalFrame.shutdown && tmpNode.isActive) {
-					VirtualLayerManager.removeNode(tmpNode.terminalFrame.localUpdatedNode);
-				}				
-								
-			}
+			VirtualLayerManager.removeNode(tmpNode);			
 			
 		}
 		

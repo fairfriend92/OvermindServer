@@ -291,8 +291,7 @@ public class VirtualLayerManager extends Thread{
 
 		availableNodes.remove(removableNode); 	
 		
-		unsyncNodes.remove(removableNode);	
-				
+		unsyncNodes.remove(removableNode);					
 		
 		/**
 		 * Shutdown the executor of the the spikes monitor 
@@ -338,9 +337,9 @@ public class VirtualLayerManager extends Thread{
 		 */
 		
 		removableNode.terminalFrame.frame.dispose();
-				
-		nodeClients.get(removableNode.index).close();
-		nodeClients.get(removableNode.index).isActive = false;
+		
+		removableNode.close();
+		removableNode.isActive = false;
 		
 		/**
 		 * Remove all references to the current terminal from the other terminal' lists
@@ -433,7 +432,7 @@ public class VirtualLayerManager extends Thread{
 																	
 				} catch (IOException e) {
 		        	e.printStackTrace();
-		        	removeNode(unsyncNodes.get(i));
+		        	//removeNode(unsyncNodes.get(i));
 				}
 							
 			}				

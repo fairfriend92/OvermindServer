@@ -521,6 +521,7 @@ public class TerminalFrame {
 				
 				} else {
 
+					NodesShutdownPoller.nodesToBeRemoved.add(localUpdatedNode);
 					shutdown = true; 	
 										
 				} 
