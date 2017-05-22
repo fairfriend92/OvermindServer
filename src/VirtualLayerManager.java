@@ -21,7 +21,10 @@ import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class VirtualLayerManager extends Thread{
@@ -35,8 +38,8 @@ public class VirtualLayerManager extends Thread{
 	
 	static int numberOfSyncNodes = 0;
 	
+	static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>();
 	static ArrayList<Node> unsyncNodes = new ArrayList<>();
-	static ArrayList<Node> nodeClients = new ArrayList<>();
 	static ArrayList<Node> availableNodes = new ArrayList<>();	
 	static ArrayList<Short> freeNodes = new ArrayList<>();
 	
@@ -133,6 +136,8 @@ public class VirtualLayerManager extends Thread{
 			 * Retrieve nat port of the current device 
 			 */			
 			
+			int ipHashCode = 0;
+			
 			try {				
 						
 				byte[] testPacketBuffer = new byte[1];
@@ -141,7 +146,9 @@ public class VirtualLayerManager extends Thread{
 			
 				inputSocket.receive(testPacket);				
 				
-				terminal.natPort = testPacket.getPort();
+				terminal.natPort = testPacket.getPort();			
+				
+				ipHashCode = testPacket.getAddress().hashCode();
 				
 				terminal.ip = testPacket.getAddress().toString().substring(1);
 			
@@ -155,21 +162,11 @@ public class VirtualLayerManager extends Thread{
 			terminal.postsynapticTerminals.add(thisServer);
 				
 			Node newNode = new Node(clientSocket, terminal);
-			newNode.initialize();
-				
-			if (freeNodes.size() != 0) {
-				
-				newNode.index = (short) freeNodes.get(freeNodes.size() - 1);
-				nodeClients.set(newNode.index, newNode);
-				freeNodes.remove(freeNodes.size() - 1);
-				
-			} else {
-			
-				newNode.index = (short) nodeClients.size();									
-				nodeClients.add(newNode);		
-			
-			}
-			
+			newNode.initialize();		
+			newNode.ipHashCode = ipHashCode;
+		
+			nodesTable.put(ipHashCode, newNode);		
+		
 			assert terminal != null;	
 			
 			connectNodes(newNode);
@@ -376,7 +373,7 @@ public class VirtualLayerManager extends Thread{
 			
 		}				
 		
-		freeNodes.add(removableNode.index);
+		nodesTable.remove(removableNode.ipHashCode);
 		
 		numberOfSyncNodes--;
 		
@@ -441,7 +438,6 @@ public class VirtualLayerManager extends Thread{
 												
 		}
 		
-		SpikesSorter.updateNodeFrames(nodeClients);
 		MainFrame.updateMainFrame(new MainFrameInfo(0, numberOfSyncNodes));
 		
 	}

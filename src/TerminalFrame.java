@@ -349,7 +349,11 @@ public class TerminalFrame {
 	
 	public synchronized void update(Node updatedNode) {
 		
-				
+		if (!spikesMonitorIsActive) {
+			spikesMonitorExecutor.execute(new SpikesMonitor(receivedSpikesQueue));
+			spikesMonitorIsActive = true;
+		}
+						
 		localUpdatedNode = updatedNode;
 		//localUpdatedNode.terminal = updatedNode.terminal;			
 						
@@ -421,13 +425,6 @@ public class TerminalFrame {
         TerminalFrame compare = (TerminalFrame) obj;
         return compare.ip.equals(this.ip);
     }		
-	
-	public void startSpikesMonitor () {
-		
-		spikesMonitorExecutor.execute(new SpikesMonitor(receivedSpikesQueue));
-		spikesMonitorIsActive = true;
-		
-	}
 			
 	/**
 	 * Method which reads the incoming spikes and pass them to the raster graph panel

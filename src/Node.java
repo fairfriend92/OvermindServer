@@ -5,7 +5,8 @@ import java.util.ArrayList;
 
 public class Node {
 	
-	public short layer, level, index;
+	public short layer, level;
+	public int ipHashCode;
 	public boolean isActive;
 	public ArrayList<Node> postsynapticNodes;
 	public ArrayList<Node> presynapticNodes;
@@ -23,7 +24,8 @@ public class Node {
 	
 	public void update(Node updatedNode) {
 		this.layer = updatedNode.layer;
-		this.level = updatedNode.level;		
+		this.level = updatedNode.level;	
+		this.ipHashCode = updatedNode.ipHashCode;
 		this.postsynapticNodes = new ArrayList<>(updatedNode.postsynapticNodes);
 		this.presynapticNodes = new ArrayList<>(updatedNode.presynapticNodes);
 		if (this.terminalFrame == null) { this.terminalFrame = new TerminalFrame(); }
@@ -36,7 +38,7 @@ public class Node {
 	public void initialize() {
 		this.layer = 0;
 		this.level = 0;
-		this.index = 0;
+		this.ipHashCode = 0;
 		this.isActive = true;
 		this.postsynapticNodes = new ArrayList<>();
 		this.presynapticNodes = new ArrayList<>();
@@ -71,7 +73,7 @@ public class Node {
        
 		if (obj == null || obj.getClass() != this.getClass()) { return false; }
 		Node compare = (Node) obj;
-    	return compare.terminal.ip.equals(this.terminal.ip);
+    	return (compare.terminal.ip.equals(this.terminal.ip) && compare.terminal.natPort == this.terminal.natPort);
     	
     }
 	
