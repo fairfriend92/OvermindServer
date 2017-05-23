@@ -10,11 +10,15 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public class SpikesSorter extends Thread{
+public class SpikesReceiver extends Thread{
 	
 	private final static int IPTOS_THROUGHPUT = 0x08;
+	
+	private ExecutorService spikesSorterExecutor = Executors.newCachedThreadPool();	
 	
 	@Override
 	public void run() {
@@ -32,9 +36,9 @@ public class SpikesSorter extends Thread{
         
         assert spikesReceiver != null;
        
-		int ipHashCode = 0;
-		Node tmpNode = new Node();
-        
+		int ipHashCode = 0;     
+		long lastTime = 0;
+		
         while (true) {
         	
 			try {				
@@ -47,18 +51,15 @@ public class SpikesSorter extends Thread{
 								
 				spikesBuffer = spikesPacket.getData();			
 			
-				ipHashCode = spikesPacket.getAddress().hashCode();			
+				ipHashCode = spikesPacket.getAddress().hashCode();					
 				
-				tmpNode = VirtualLayerManager.nodesTable.get(ipHashCode);					
-	
-				try {
-					if (spikesBuffer != null) {
-						tmpNode.terminalFrame.receivedSpikesQueue.offer(spikesBuffer, 100, TimeUnit.MILLISECONDS);
-					}
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+				if ((System.nanoTime() - lastTime) / 1000000 > MainFrame.rasterGraphRefresh) {
+				
+				spikesSorterExecutor.execute(new SpikesSorter(spikesBuffer, ipHashCode));
+				lastTime = System.nanoTime();
+				System.out.println(MainFrame.rasterGraphRefresh);
+				
 				}
-																
 				
 			} catch (IOException e) {
 	        	e.printStackTrace();
@@ -73,6 +74,31 @@ public class SpikesSorter extends Thread{
 
 	}
 	
+	private class SpikesSorter implements Runnable {
+		
+		private byte[] spikesBuffer = new byte[128];
+		private int ipHashCode = 0;
+		
+		SpikesSorter(byte[] b, int i) {
+			
+			this.spikesBuffer = b;
+			this.ipHashCode = i;
+			
+		}
+		
+		@Override
+		public void run() {				
+		
+			try {	
+				VirtualLayerManager.nodesTable.get(ipHashCode).terminalFrame.receivedSpikesQueue.offer(spikesBuffer, 1, TimeUnit.MILLISECONDS);				
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+			//System.out.println(Thread.activeCount());
+			
+		}
 
+	}
 
 }

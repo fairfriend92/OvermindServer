@@ -54,7 +54,7 @@ public class TerminalFrame {
 	public RandomSpikesGenerator thisTerminalRSG = new RandomSpikesGenerator(this);	
 	public RefreshSignalSender thisTerminalRSS = new RefreshSignalSender(this);
 
-	public BlockingQueue<byte[]> receivedSpikesQueue = new ArrayBlockingQueue<>(4);
+	public BlockingQueue<byte[]> receivedSpikesQueue = new ArrayBlockingQueue<>(16);
 	public ExecutorService spikesMonitorExecutor = Executors.newSingleThreadExecutor();
 	public boolean spikesMonitorIsActive = false;
 	
@@ -464,13 +464,13 @@ public class TerminalFrame {
 				
 				// The vector containing the spikes is put in this queue by the SpikesSorter class
 				try {
-					spikesReceived = spikesReceivedQueue.poll(5000, TimeUnit.MILLISECONDS);
+					spikesReceived = spikesReceivedQueue.poll(5, TimeUnit.SECONDS);
 				} catch (InterruptedException e ) {
 					e.printStackTrace();
 				} 
 				
 				// Proceed only if the vector contains meaningful info
-				if (spikesReceived != null) {						
+				if (spikesReceived != null || rastergraphPanel.time == 0) {						
 																		
 					// The raster graph is updated every 40 iterations of the simulation to prevent screen flickering 
 					if (localLatestSpikes.size() < 40) {

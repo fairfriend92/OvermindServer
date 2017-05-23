@@ -4,10 +4,14 @@
  * that need to be displayed in the raster graph portion of the frame associated with the sending device
  */
 
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -24,6 +28,8 @@ public class MainFrame {
 	private static JLabel numOfUnsyncNodes = new JLabel("# of unsync nodes is 0");
 	private static JLabel numOfSyncNodes = new JLabel("# of sync nodes is 0");
 	private static JFrame frame = new JFrame();
+	
+	static long rasterGraphRefresh = 0;
 
 	public static void main(String[] args) {		
 		
@@ -32,30 +38,31 @@ public class MainFrame {
 		VirtualLayerManager VLManager = new VirtualLayerManager();		
 		VLManager.start();				
 		
-		SpikesSorter spikesSorter = new SpikesSorter();
+		SpikesReceiver spikesSorter = new SpikesReceiver();
 		spikesSorter.start();
 		
 		NodesShutdownPoller nodesShutdownPoller = new NodesShutdownPoller();
 		nodesShutdownPoller.start();
 		
-		VirtualLayerVisualizer VLVisualizer = new VirtualLayerVisualizer();
-		VLVisualizer.start();
+		//VirtualLayerVisualizer VLVisualizer = new VirtualLayerVisualizer();
+		//VLVisualizer.start();
 		
 	}
 	
 	private static void displayMainFrame() {
 		
 		JPanel mainPanel = new JPanel();
-		JPanel nodesInfoPanel = new JPanel();		
+		JPanel nodesInfoPanel = new JPanel();	
+		JPanel commandsPanel = new JPanel();
+		JPanel rasterGraphPanel = new JPanel();
 		
+		JLabel refreshRate = new JLabel("Raster graph fhz undefined");
+		
+		JButton increaseRate = new JButton("+");
+		JButton decreaseRate = new JButton("-");		
 		JButton syncButton = new JButton();
-		syncButton.setText("Sync nodes");
-		syncButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {							
-				VirtualLayerManager.syncNodes();			
-			}
-		});			
+		
+			
 		
 		/**
 		 * Nodes info panel layout
@@ -67,14 +74,66 @@ public class MainFrame {
                 BorderFactory.createEmptyBorder(5,5,5,5)));
 		nodesInfoPanel.add(numOfUnsyncNodes);
 		nodesInfoPanel.add(numOfSyncNodes);
+		
+		
+		rasterGraphPanel.setLayout(new BoxLayout(rasterGraphPanel, BoxLayout.X_AXIS));
+		rasterGraphPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		
+		increaseRate.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				rasterGraphRefresh++;
+				refreshRate.setText("Raster graph fhz is: " + rasterGraphRefresh + " ms");
+				refreshRate.revalidate();
+				refreshRate.repaint();
+			}
+		});		
+		decreaseRate.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (rasterGraphRefresh > 1) {
+					rasterGraphRefresh--;
+					refreshRate.setText("Raster graph fhz is " + rasterGraphRefresh + " ms");
+					refreshRate.revalidate();
+					refreshRate.repaint();
+				}
+			}
+		});		
+		
+		refreshRate.setBorder(BorderFactory.createLineBorder(Color.black));
+		refreshRate.setOpaque(true);
+		refreshRate.setBackground(Color.white);
+		
+		rasterGraphPanel.add(refreshRate);
+		rasterGraphPanel.add(Box.createRigidArea(new Dimension(5,0)));
+		rasterGraphPanel.add(increaseRate);
+		rasterGraphPanel.add(Box.createRigidArea(new Dimension(5,0)));
+		rasterGraphPanel.add(decreaseRate);
+		
+		
+		commandsPanel.setLayout(new BoxLayout(commandsPanel, BoxLayout.Y_AXIS));
+		commandsPanel.setBorder(BorderFactory.createCompoundBorder(
+					BorderFactory.createTitledBorder("Commands"),
+					BorderFactory.createEmptyBorder(5,5,5,5)));
+		syncButton.setText("Sync nodes");
+		syncButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {							
+				VirtualLayerManager.syncNodes();			
+			}
+		});		
+		syncButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+		commandsPanel.add(syncButton);
+		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		commandsPanel.add(rasterGraphPanel);
 					
 		/**
 		 * Main panel layout
 		 */
 		
 		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.X_AXIS));
-		mainPanel.add(syncButton);	
 		mainPanel.add(nodesInfoPanel);
+		mainPanel.add(commandsPanel);
 		
 		/**
 		 * Frame composition
