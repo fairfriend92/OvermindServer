@@ -1,6 +1,6 @@
 /**
- * Called by a particular instance of LocalNetworkFrame to generate random spikes to be sent to the 
- * device whose frame is managed by that instance
+ * Called by a particular instance of TerminalFrame to generate random spikes to be sent to the 
+ * terminal whose frame is managed by that instance
  */
 
 import java.io.IOException;
@@ -56,7 +56,6 @@ public class RandomSpikesGenerator implements Runnable {
         server.ip = VirtualLayerManager.serverIP;
         //server.ip = "192.168.1.213";
         
-        // TODO Some of these fields are unnecessary
         server.postsynapticTerminals.add(targetTerminal);
         server.numOfNeurons = 1024;
         server.numOfSynapses = (short)(1024 - targetTerminal.numOfNeurons);
@@ -155,12 +154,18 @@ public class RandomSpikesGenerator implements Runnable {
         // In the meantime the stimulated device may have formed new postsynaptic connections which need to be carried on to the old Terminal
         targetTerminalOld.numOfSynapses = targetTerminal.numOfSynapses;
         targetTerminalOld.postsynapticTerminals = new ArrayList<>(targetTerminal.postsynapticTerminals);
+        
+        // The update method must be used because we can't reference targetTerminalOld since it is
+        // a local variable that gets destroyed the moment this runnable ends
         parentFrame.localUpdatedNode.terminal.update(targetTerminalOld);
        
+        // The old node is substituted to the one connected with the server
+        // TODO: in reality we should check the hashmap with the parentFrame.localUpdatedNode hashkey
         if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {
-        	VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);
-        	VirtualLayerManager.syncNodes();
-        }
+			VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);
+			VirtualLayerManager.syncNodes();
+		}
+      
         
         
 	}

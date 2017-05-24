@@ -1,3 +1,9 @@
+/**
+ * This class sends to the target terminal a single byte containing no information.
+ * The packet sent has the only purpose of unlocking the blocking buffer of the target terminal,
+ * so that a minimal sampling rate is guaranteed. 
+ */
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -97,12 +103,11 @@ public class RefreshSignalSender implements Runnable {
        
         targetTerminal.presynapticTerminals.remove(server);
     	targetTerminal.numOfDendrites +=  8;
-        
-        if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {        	
-        	VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);
-        	VirtualLayerManager.syncNodes();
-        }
-        
+                
+        if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {
+			VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);
+			VirtualLayerManager.syncNodes();
+		}        
 		
 	}
 

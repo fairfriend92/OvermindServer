@@ -14,7 +14,7 @@ public class NodesShutdownPoller extends Thread {
 		
 		while (!shutdown) {			
 
-			Node tmpNode = new Node();
+			Node tmpNode = new Node(null, null);
 			
 			try {
 				tmpNode = nodesToBeRemoved.take();

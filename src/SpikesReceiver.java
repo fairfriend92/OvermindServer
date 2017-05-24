@@ -1,6 +1,9 @@
 /**
- * Thread executed by MainFram to listen for spikes sent by the clients. The spikes are then passed to the
- * appropriate frame to be displayed in the raster graph
+ * Thread executed by MainFrame to listen for spikes sent by the clients. The spikes,
+ * together with an hashcode identifying the sending terminal, are passed to a separate thread.
+ * This thread uses the hashcode to retrieve from a concurrent hashmap the node associated 
+ * with the terminal that has sent the spikes, so that its raster graph can be updated with
+ * the new spikes. 
  */
 
 import java.io.IOException;
@@ -37,7 +40,6 @@ public class SpikesReceiver extends Thread{
         assert spikesReceiver != null;
        
 		int ipHashCode = 0;     
-		long lastTime = 0;
 		
         while (true) {
         	
@@ -51,15 +53,9 @@ public class SpikesReceiver extends Thread{
 								
 				spikesBuffer = spikesPacket.getData();			
 			
-				ipHashCode = spikesPacket.getAddress().hashCode();					
-				
-				if ((System.nanoTime() - lastTime) / 1000000 > MainFrame.rasterGraphRefresh) {
-				
+				ipHashCode = spikesPacket.getAddress().hashCode();			
+												
 				spikesSorterExecutor.execute(new SpikesSorter(spikesBuffer, ipHashCode));
-				lastTime = System.nanoTime();
-				System.out.println(MainFrame.rasterGraphRefresh);
-				
-				}
 				
 			} catch (IOException e) {
 	        	e.printStackTrace();
@@ -87,12 +83,16 @@ public class SpikesReceiver extends Thread{
 		}
 		
 		@Override
-		public void run() {				
+		public void run() {		
+			
+			Node tmpNode = VirtualLayerManager.nodesTable.get(ipHashCode);
 		
-			try {	
-				VirtualLayerManager.nodesTable.get(ipHashCode).terminalFrame.receivedSpikesQueue.offer(spikesBuffer, 1, TimeUnit.MILLISECONDS);				
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+			if (tmpNode != null) {
+				try {
+					tmpNode.terminalFrame.receivedSpikesQueue.offer(spikesBuffer, 1, TimeUnit.MILLISECONDS);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				} 
 			}
 			
 			//System.out.println(Thread.activeCount());

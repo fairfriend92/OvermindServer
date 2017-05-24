@@ -38,7 +38,7 @@ public class VirtualLayerManager extends Thread{
 	
 	static int numberOfSyncNodes = 0;
 	
-	static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>();
+	static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>(8);
 	static ArrayList<Node> unsyncNodes = new ArrayList<>();
 	static ArrayList<Node> availableNodes = new ArrayList<>();	
 	static ArrayList<Short> freeNodes = new ArrayList<>();
@@ -148,6 +148,7 @@ public class VirtualLayerManager extends Thread{
 				
 				terminal.natPort = testPacket.getPort();			
 				
+				// Use the InetAddress hashcode to identify the node
 				ipHashCode = testPacket.getAddress().hashCode();
 				
 				terminal.ip = testPacket.getAddress().toString().substring(1);
@@ -162,9 +163,10 @@ public class VirtualLayerManager extends Thread{
 			terminal.postsynapticTerminals.add(thisServer);
 				
 			Node newNode = new Node(clientSocket, terminal);
-			newNode.initialize();		
 			newNode.ipHashCode = ipHashCode;
 		
+			// Put the new node in the hashmap using the hashcode of the
+			// InetAddress of the terminal contained in the node as key
 			nodesTable.put(ipHashCode, newNode);		
 		
 			assert terminal != null;	
@@ -186,7 +188,7 @@ public class VirtualLayerManager extends Thread{
 		// The algorithm starts only if the list has at least one element
 		if (!availableNodes.isEmpty() && !availableNodes.contains(disconnectedNode)) {
 		
-			// Iterate over all the available terminals
+			// Iterate over all the available terminals or until the connections of the new terminal are saturated
 			for (int i = 0; i < availableNodes.size()
 					|| (disconnectedNode.terminal.numOfDendrites == 0 && disconnectedNode.terminal.numOfSynapses == 0); i++) {
 
@@ -205,6 +207,7 @@ public class VirtualLayerManager extends Thread{
 					currentNode.terminal.postsynapticTerminals.add(disconnectedNode.terminal);
 					disconnectedNode.terminal.presynapticTerminals.add(currentNode.terminal);
 					
+					// Update the info of the new node regarding the connections established by the associated terminal
 					currentNode.postsynapticNodes.add(disconnectedNode);
 					disconnectedNode.presynapticNodes.add(currentNode);
 
@@ -279,12 +282,7 @@ public class VirtualLayerManager extends Thread{
 	}
 	
 	public synchronized static void removeNode(Node removableNode) {
-		
-		//syncNodes();		
-		
-		// If the method has been called unnecessarily exit without doing anything 
-		// (However this should not happen...)
-		//if (!availableNodes.contains(removableNode)) { return; }			
+
 
 		availableNodes.remove(removableNode); 	
 		
@@ -336,7 +334,6 @@ public class VirtualLayerManager extends Thread{
 		removableNode.terminalFrame.frame.dispose();
 		
 		removableNode.close();
-		removableNode.isActive = false;
 		
 		/**
 		 * Remove all references to the current terminal from the other terminal' lists
@@ -374,7 +371,7 @@ public class VirtualLayerManager extends Thread{
 		}				
 		
 		nodesTable.remove(removableNode.ipHashCode);
-		
+				
 		numberOfSyncNodes--;
 		
 		// Sync other nodes that have been eventually modified
@@ -390,28 +387,22 @@ public class VirtualLayerManager extends Thread{
 		
 		if (!unsyncNodes.isEmpty()) {		
 			
-			for (int i = 0; i < unsyncNodes.size(); i++) {				
-				
+			// Iterate over all the nodes that need to be sync
+			for (int i = 0; i < unsyncNodes.size(); i++) {					
+																
 				// Branch depending on whether the terminal is new or not
-				if (unsyncNodes.get(i).terminalFrame.localUpdatedNode == null) {					
-			
+				if (unsyncNodes.get(i).terminalFrame.localUpdatedNode == null) {		
+					
+					// Update the info of the frame associated to the terminal
 					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i));
-					
-					// The terminal is new so a new frame needs to be created
+								
+					// The terminal is new so its frame must be sent to the screen
 					unsyncNodes.get(i).terminalFrame.display();															
-										
-					numberOfSyncNodes++;																				
+						
+					// Since the terminal is new the number of sync nodes must be increased
+					numberOfSyncNodes++;																			
 					
-				} else {				
-					
-					// Since the terminal is not new its already existing window must be retrieved from the list
-					// TODO instead of using index to retrieve frame we could write a method with argument the Terminal itself
-					//unsyncNodes.get(i).terminalFrame = syncFrames.get(unsyncNodes.get(i).index);
-					
-					// The retrieved window needs only to be updated 
-					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i));									
-					
-				}
+				} else { unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i)); }
 				
 				/**
 				 * Updated info regarding the current terminal are sent back to the physical device
@@ -419,7 +410,10 @@ public class VirtualLayerManager extends Thread{
 					
 				try {
 					
+					// A dummy terminal is required to send the updated info to the physical device
 					com.example.overmind.Terminal tmpTerminal = new com.example.overmind.Terminal();
+					
+					// The terminal acting as holder of the new info is updated
 					tmpTerminal.update(unsyncNodes.get(i).terminal);
 									
 					// Write the info in the steam

@@ -1,7 +1,13 @@
 /**
- * Main class which displays the main panel and executes the two main threads: 1) the VirtualLayerManager and the 
- * 2) SpikesSorter. The first manages incoming connections and routes the peers, the second constantly listen for inbounds spikes
- * that need to be displayed in the raster graph portion of the frame associated with the sending device
+ * Main class which displays the main panel and executes the main threads: 
+ * 
+ * 1) VirtualLayerManager: manages incoming connections and routes the peers.
+ * 
+ * 2) SpikesReceiver: listens for inbounds spikes that need to be displayed in the raster graph portion 
+ * 		of the frame associated with the sending device.
+ * 
+ * 3) NodesShutdownPoller: polls the TerminalFrame's to know whether some have raised the
+ * 		shutdown flags and eventually send to VirtualLayerManager.removeNodes the associated node
  */
 
 import java.awt.Color;
@@ -19,11 +25,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 public class MainFrame {
-	
-	// TODO Make the access of the static variables of the VirtualLayerManager class thread safe (allow to press 
-	// the sync button only when the variables are not being accessed)
-	
-	// TODO Manager application shutdown properly
+
+	// TODO Manage application shutdown properly
 	
 	private static JLabel numOfUnsyncNodes = new JLabel("# of unsync nodes is 0");
 	private static JLabel numOfSyncNodes = new JLabel("# of sync nodes is 0");
@@ -35,12 +38,17 @@ public class MainFrame {
 		
 		displayMainFrame();
 					
+		// Class that connects, removes and updates the nodes that make up the network
 		VirtualLayerManager VLManager = new VirtualLayerManager();		
 		VLManager.start();				
 		
+		// Class that receives the spikes from the terminals and distribute them to the
+		// raster graph threads
 		SpikesReceiver spikesSorter = new SpikesReceiver();
 		spikesSorter.start();
 		
+		// Class that polls shutdown signals of raster graph threads associated with an
+		// inactive node
 		NodesShutdownPoller nodesShutdownPoller = new NodesShutdownPoller();
 		nodesShutdownPoller.start();
 		
@@ -61,9 +69,7 @@ public class MainFrame {
 		JButton increaseRate = new JButton("+");
 		JButton decreaseRate = new JButton("-");		
 		JButton syncButton = new JButton();
-		
-			
-		
+				
 		/**
 		 * Nodes info panel layout
 		 */
@@ -75,10 +81,12 @@ public class MainFrame {
 		nodesInfoPanel.add(numOfUnsyncNodes);
 		nodesInfoPanel.add(numOfSyncNodes);
 		
+		/**
+		 * Raster graph panel layout
+		 */
 		
 		rasterGraphPanel.setLayout(new BoxLayout(rasterGraphPanel, BoxLayout.X_AXIS));
-		rasterGraphPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-		
+		rasterGraphPanel.setAlignmentX(Component.LEFT_ALIGNMENT);		
 		increaseRate.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -98,18 +106,19 @@ public class MainFrame {
 					refreshRate.repaint();
 				}
 			}
-		});		
-		
+		});	
 		refreshRate.setBorder(BorderFactory.createLineBorder(Color.black));
 		refreshRate.setOpaque(true);
-		refreshRate.setBackground(Color.white);
-		
+		refreshRate.setBackground(Color.white);		
 		rasterGraphPanel.add(refreshRate);
 		rasterGraphPanel.add(Box.createRigidArea(new Dimension(5,0)));
 		rasterGraphPanel.add(increaseRate);
 		rasterGraphPanel.add(Box.createRigidArea(new Dimension(5,0)));
 		rasterGraphPanel.add(decreaseRate);
 		
+		/**
+		 * Commands panel layout		
+		 */
 		
 		commandsPanel.setLayout(new BoxLayout(commandsPanel, BoxLayout.Y_AXIS));
 		commandsPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -125,7 +134,7 @@ public class MainFrame {
 		syncButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 		commandsPanel.add(syncButton);
 		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
-		commandsPanel.add(rasterGraphPanel);
+		//commandsPanel.add(rasterGraphPanel);
 					
 		/**
 		 * Main panel layout

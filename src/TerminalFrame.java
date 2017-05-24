@@ -349,13 +349,14 @@ public class TerminalFrame {
 	
 	public synchronized void update(Node updatedNode) {
 		
+		// Launches the thread that updates the raster graph using the spikes gathered by
+		// SpikesReceiver
 		if (!spikesMonitorIsActive) {
 			spikesMonitorExecutor.execute(new SpikesMonitor(receivedSpikesQueue));
 			spikesMonitorIsActive = true;
 		}
 						
 		localUpdatedNode = updatedNode;
-		//localUpdatedNode.terminal = updatedNode.terminal;			
 						
 		/**
 		 * Update info about local network

@@ -5,9 +5,7 @@ import java.util.ArrayList;
 
 public class Node {
 	
-	public short layer, level;
 	public int ipHashCode;
-	public boolean isActive;
 	public ArrayList<Node> postsynapticNodes;
 	public ArrayList<Node> presynapticNodes;
 	public TerminalFrame terminalFrame;
@@ -18,28 +16,7 @@ public class Node {
 	public Node(Socket s1, com.example.overmind.Terminal t) {
 		this.client = s1;
 		this.terminal = t;
-	}
-	
-	public Node() { }
-	
-	public void update(Node updatedNode) {
-		this.layer = updatedNode.layer;
-		this.level = updatedNode.level;	
-		this.ipHashCode = updatedNode.ipHashCode;
-		this.postsynapticNodes = new ArrayList<>(updatedNode.postsynapticNodes);
-		this.presynapticNodes = new ArrayList<>(updatedNode.presynapticNodes);
-		if (this.terminalFrame == null) { this.terminalFrame = new TerminalFrame(); }
-		this.terminalFrame.update(updatedNode);
-		this.client = updatedNode.client;
-		this.output = updatedNode.output;
-		this.terminal.update(updatedNode.terminal);
-	}
-	
-	public void initialize() {
-		this.layer = 0;
-		this.level = 0;
 		this.ipHashCode = 0;
-		this.isActive = true;
 		this.postsynapticNodes = new ArrayList<>();
 		this.presynapticNodes = new ArrayList<>();
 		this.terminalFrame = new TerminalFrame();		
@@ -53,8 +30,18 @@ public class Node {
 			} 
 		} 
 		if (this.terminal == null) { this.terminal = new com.example.overmind.Terminal(); }
-	}
+	}	
 	
+	public void update(Node updatedNode) {
+		this.ipHashCode = updatedNode.ipHashCode;
+		this.postsynapticNodes = new ArrayList<>(updatedNode.postsynapticNodes);
+		this.presynapticNodes = new ArrayList<>(updatedNode.presynapticNodes);
+		this.terminalFrame.update(updatedNode);
+		this.client = updatedNode.client;
+		this.output = updatedNode.output;
+		this.terminal.update(updatedNode.terminal);
+	}
+
 	public void close() {
 		try {
 			this.client.close();
