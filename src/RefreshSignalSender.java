@@ -30,7 +30,8 @@ public class RefreshSignalSender implements Runnable {
 		
 		targetTerminal = parentFrame.localUpdatedNode.terminal;	
 		
-        long lastTime = 0, newTime = 0, sendTime = 0;   
+        long lastTime = 0, staticRefresh = parentFrame.rateMultiplier * 1000000, 
+        		dynamicRefresh = 0, rasterGraphRefresh;   
         
         targetTerminal.numOfDendrites -= 8;
         
@@ -77,20 +78,20 @@ public class RefreshSignalSender implements Runnable {
         for (int index = 0; index < 8; index++) {
         	dummySignal[0] &= ~(1 << index);
         }
-        
-        short rateMultiplier = parentFrame.rateMultiplier;
-        
+                 
         while (!shutdown) {
         	
-        	newTime = System.nanoTime();              
-	        	
-        	while (newTime - lastTime < rateMultiplier * 1000000 - sendTime) {
-        		newTime = System.nanoTime();         
-        	}          	                 	   
-        	        	
+        	rasterGraphRefresh = (parentFrame.rastergraphPanel.time) * 1000000;  
+    		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;
+        	        	        	    
+        	while ((System.nanoTime() - lastTime) < dynamicRefresh) {
+            	//rasterGraphRefresh = parentFrame.rastergraphPanel.time * 1000000;   	
+        		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;
+        	}   
+                      	        	        	
             try {
                 DatagramPacket outputSpikesPacket = new DatagramPacket(dummySignal, 1, targetDeviceAddr, targetTerminal.natPort);	
-				outputSocket.send(outputSpikesPacket);			
+				outputSocket.send(outputSpikesPacket);		
 			} catch (IOException e) {
 				System.out.println(e);
 			}		

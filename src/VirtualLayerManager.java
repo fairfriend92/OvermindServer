@@ -369,10 +369,12 @@ public class VirtualLayerManager extends Thread{
 			}
 			
 		}				
-		
-		nodesTable.remove(removableNode.ipHashCode);
+						
+		Node removedNode = nodesTable.remove(removableNode.ipHashCode);
 				
-		numberOfSyncNodes--;
+		if (removedNode != null) {
+			numberOfSyncNodes--;
+		}
 		
 		// Sync other nodes that have been eventually modified
 		syncNodes();

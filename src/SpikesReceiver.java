@@ -85,7 +85,7 @@ public class SpikesReceiver extends Thread{
 		@Override
 		public void run() {		
 			
-			Node tmpNode = VirtualLayerManager.nodesTable.get(ipHashCode);
+			Node tmpNode = VirtualLayerManager.nodesTable.get(ipHashCode);		
 		
 			if (tmpNode != null) {
 				try {

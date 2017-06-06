@@ -32,7 +32,8 @@ public class RandomSpikesGenerator implements Runnable {
 		targetTerminal = parentFrame.localUpdatedNode.terminal;
 		
 		Random rand = new Random();
-        long lastTime = 0, newTime = 0, sendTime = 0;   
+        long lastTime = 0, staticRefresh = parentFrame.rateMultiplier * 1000000, 
+        		dynamicRefresh = 0, rasterGraphRefresh;   
         int[] waitARP = new int[targetTerminal.numOfDendrites];
         short dataBytes = targetTerminal.numOfDendrites % 8 == 0 ? 
         		(short) (targetTerminal.numOfDendrites / 8) : (short) (targetTerminal.numOfDendrites / 8 + 1);
@@ -131,12 +132,18 @@ public class RandomSpikesGenerator implements Runnable {
         		
         	}       	
         	
-        	newTime = System.nanoTime();              
-       	        	
-        	while (newTime - lastTime < rateMultiplier * 1000000 - sendTime) {
-        		newTime = System.nanoTime();         
-        	}          	                 	   
-        	        	
+        	// Retrieve the average refresh rate of the raster graph
+        	rasterGraphRefresh = (parentFrame.rastergraphPanel.time) * 1000000;  
+        	
+        	// Use the raster graph rr or the one chosen by the user depending on which is slower
+    		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;
+        	        	        	    
+    		// Send a signal to the terge terminal every 1 / dynamicRefresh
+        	while ((System.nanoTime() - lastTime) < dynamicRefresh) {
+            	//rasterGraphRefresh = parentFrame.rastergraphPanel.time * 1000000;   	
+        		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;
+        	}          	
+
             try {
                 DatagramPacket outputSpikesPacket = new DatagramPacket(outputSpikes, dataBytes, targetDeviceAddr, targetTerminalOld.natPort);	
 				outputSocket.send(outputSpikesPacket);			

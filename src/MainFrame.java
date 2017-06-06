@@ -20,9 +20,11 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 
 public class MainFrame {
 
@@ -96,6 +98,7 @@ public class MainFrame {
 				refreshRate.repaint();
 			}
 		});		
+		
 		decreaseRate.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -107,6 +110,7 @@ public class MainFrame {
 				}
 			}
 		});	
+		
 		refreshRate.setBorder(BorderFactory.createLineBorder(Color.black));
 		refreshRate.setOpaque(true);
 		refreshRate.setBackground(Color.white);		
@@ -131,6 +135,9 @@ public class MainFrame {
 				VirtualLayerManager.syncNodes();			
 			}
 		});		
+		
+		
+		
 		syncButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 		commandsPanel.add(syncButton);
 		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));

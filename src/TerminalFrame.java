@@ -21,6 +21,7 @@ import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -63,6 +64,8 @@ public class TerminalFrame {
 	public JPanel mainPanel = new JPanel(); 
 	
 	public short rateMultiplier = 3;
+	
+	public volatile boolean waitForLatestPacket = false;
 
 	/**
 	 * Custom panel to display the raster graph
@@ -71,7 +74,7 @@ public class TerminalFrame {
 	class MyPanel extends JPanel {		
 		
 		public short xCoordinate = 0;
-		public long time = 0;
+		public volatile long time = 0;
 		public ArrayList<byte[]> latestSpikes = new ArrayList<>();
 		
 	    public MyPanel() {
@@ -148,8 +151,44 @@ public class TerminalFrame {
 		JScrollPane postConnScrollPanel = new JScrollPane();
 		
 		JList<String> presynapticConnections = new JList<>();
-		JList<String> postsynapticConnections = new JList<>();		
-	
+		JList<String> postsynapticConnections = new JList<>();
+		
+		JCheckBox refreshAfterSpike = new JCheckBox("Dynamic refresh rate", false);
+		refreshAfterSpike.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {							
+				JCheckBox cb = (JCheckBox) e.getSource();
+		        if (cb.isSelected()) {
+		        	increaseRate.setEnabled(false);
+		        	decreaseRate.setEnabled(false);
+		        	waitForLatestPacket = true;
+		        } else {
+		        	increaseRate.setEnabled(true);
+		        	decreaseRate.setEnabled(true);
+		        	waitForLatestPacket = false;
+		        }
+			}
+		});	
+		
+		refreshAfterSpike.setEnabled(true);
+		
+		JCheckBox showRasterGraph = new JCheckBox("Show the raster graph", true);
+		showRasterGraph.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {							
+				JCheckBox cb = (JCheckBox) e.getSource();
+		        if (cb.isSelected()) {		        	
+		        	rastergraphPanel.setVisible(true);
+		        	frame.pack();
+		        } else {
+		        	rastergraphPanel.setVisible(false);		    
+		        	frame.pack();
+		        }
+			}
+		});	
+		
+		showRasterGraph.setEnabled(true);
+			
 		/**
 		 * Radio buttons used to select the external stimulus
 		 */
@@ -182,7 +221,7 @@ public class TerminalFrame {
 		noneRadioButton.setSelected(true);
 		noneRadioButton.addActionListener(new ActionListener() {
 			@Override
-			public void actionPerformed(ActionEvent e) {							
+			public void actionPerformed(ActionEvent e) {
 				thisTerminalRSG.shutdown = true;
 				thisTerminalRSS.shutdown = true;
 			}
@@ -326,11 +365,16 @@ public class TerminalFrame {
 				//shutdown = true;		
 				VirtualLayerManager.removeNode(localUpdatedNode);
 			}
-		});		
+		});	
+				
 		removeTerminalButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+		refreshAfterSpike.setAlignmentX(Component.LEFT_ALIGNMENT);
+		showRasterGraph.setAlignmentX(Component.LEFT_ALIGNMENT);
 		commandsPanel.add(removeTerminalButton);
 		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
 		commandsPanel.add(refreshRatePanel);
+		commandsPanel.add(refreshAfterSpike);
+		commandsPanel.add(showRasterGraph);
 			
 		/**
 		 * Frame composition
@@ -472,7 +516,7 @@ public class TerminalFrame {
 				
 				// Proceed only if the vector contains meaningful info
 				if (spikesReceived != null || rastergraphPanel.time == 0) {						
-																		
+																							
 					// The raster graph is updated every 40 iterations of the simulation to prevent screen flickering 
 					if (localLatestSpikes.size() < 40) {
 						
