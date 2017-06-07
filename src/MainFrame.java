@@ -64,12 +64,6 @@ public class MainFrame {
 		JPanel mainPanel = new JPanel();
 		JPanel nodesInfoPanel = new JPanel();	
 		JPanel commandsPanel = new JPanel();
-		JPanel rasterGraphPanel = new JPanel();
-		
-		JLabel refreshRate = new JLabel("Raster graph fhz undefined");
-		
-		JButton increaseRate = new JButton("+");
-		JButton decreaseRate = new JButton("-");		
 		JButton syncButton = new JButton();
 				
 		/**
@@ -82,43 +76,7 @@ public class MainFrame {
                 BorderFactory.createEmptyBorder(5,5,5,5)));
 		nodesInfoPanel.add(numOfUnsyncNodes);
 		nodesInfoPanel.add(numOfSyncNodes);
-		
-		/**
-		 * Raster graph panel layout
-		 */
-		
-		rasterGraphPanel.setLayout(new BoxLayout(rasterGraphPanel, BoxLayout.X_AXIS));
-		rasterGraphPanel.setAlignmentX(Component.LEFT_ALIGNMENT);		
-		increaseRate.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				rasterGraphRefresh++;
-				refreshRate.setText("Raster graph fhz is: " + rasterGraphRefresh + " ms");
-				refreshRate.revalidate();
-				refreshRate.repaint();
-			}
-		});		
-		
-		decreaseRate.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (rasterGraphRefresh > 1) {
-					rasterGraphRefresh--;
-					refreshRate.setText("Raster graph fhz is " + rasterGraphRefresh + " ms");
-					refreshRate.revalidate();
-					refreshRate.repaint();
-				}
-			}
-		});	
-		
-		refreshRate.setBorder(BorderFactory.createLineBorder(Color.black));
-		refreshRate.setOpaque(true);
-		refreshRate.setBackground(Color.white);		
-		rasterGraphPanel.add(refreshRate);
-		rasterGraphPanel.add(Box.createRigidArea(new Dimension(5,0)));
-		rasterGraphPanel.add(increaseRate);
-		rasterGraphPanel.add(Box.createRigidArea(new Dimension(5,0)));
-		rasterGraphPanel.add(decreaseRate);
+
 		
 		/**
 		 * Commands panel layout		
@@ -136,7 +94,7 @@ public class MainFrame {
 			}
 		});		
 		
-		JCheckBox hideVLV = new JCheckBox("Hide Virtual Layer Visualizer", false);
+		JCheckBox hideVLV = new JCheckBox("Hide Virtual Layer", false);
 		hideVLV.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {							
