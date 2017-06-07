@@ -367,13 +367,18 @@ public class TerminalFrame {
 			}
 		});	
 				
-		removeTerminalButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-		refreshAfterSpike.setAlignmentX(Component.LEFT_ALIGNMENT);
-		showRasterGraph.setAlignmentX(Component.LEFT_ALIGNMENT);
+		removeTerminalButton.setAlignmentX(Component.LEFT_ALIGNMENT);		
 		commandsPanel.add(removeTerminalButton);
 		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		
 		commandsPanel.add(refreshRatePanel);
-		commandsPanel.add(refreshAfterSpike);
+		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		
+		refreshAfterSpike.setAlignmentX(Component.LEFT_ALIGNMENT);
+		commandsPanel.add(refreshAfterSpike);		
+		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		
+		showRasterGraph.setAlignmentX(Component.LEFT_ALIGNMENT);
 		commandsPanel.add(showRasterGraph);
 			
 		/**

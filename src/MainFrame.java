@@ -54,8 +54,8 @@ public class MainFrame {
 		NodesShutdownPoller nodesShutdownPoller = new NodesShutdownPoller();
 		nodesShutdownPoller.start();
 		
-		//VirtualLayerVisualizer VLVisualizer = new VirtualLayerVisualizer();
-		//VLVisualizer.start();
+		VirtualLayerVisualizer VLVisualizer = new VirtualLayerVisualizer();
+		VLVisualizer.start();
 		
 	}
 	
@@ -136,12 +136,28 @@ public class MainFrame {
 			}
 		});		
 		
+		JCheckBox hideVLV = new JCheckBox("Hide Virtual Layer Visualizer", false);
+		hideVLV.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {							
+				JCheckBox cb = (JCheckBox) e.getSource();
+		        if (cb.isSelected()) {	
+		        	VirtualLayerVisualizer.VLVFrame.setVisible(false);
+		        } else {
+		        	VirtualLayerVisualizer.VLVFrame.setVisible(true);
+		        }
+			}
+		});	
 		
+		hideVLV.setEnabled(true);
 		
 		syncButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 		commandsPanel.add(syncButton);
 		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
-		//commandsPanel.add(rasterGraphPanel);
+		
+		hideVLV.setAlignmentX(Component.LEFT_ALIGNMENT);
+		commandsPanel.add(hideVLV);
+		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
 					
 		/**
 		 * Main panel layout

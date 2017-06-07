@@ -14,6 +14,7 @@
  * 		        a representation of the PL
  */
 
+import java.util.List;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.DatagramPacket;
@@ -21,9 +22,8 @@ import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -36,12 +36,11 @@ public class VirtualLayerManager extends Thread{
 	
 	static boolean shutdown = false;	
 	
-	static int numberOfSyncNodes = 0;
-	
+	static int numberOfSyncNodes = 0;	
 	static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>(8);
-	static ArrayList<Node> unsyncNodes = new ArrayList<>();
-	static ArrayList<Node> availableNodes = new ArrayList<>();	
-	static ArrayList<Short> freeNodes = new ArrayList<>();
+	static List<Node> unsyncNodes = Collections.synchronizedList(new ArrayList<Node>());
+	static List<Node> availableNodes = Collections.synchronizedList(new ArrayList<Node>());	
+	static List<Short> freeNodes = Collections.synchronizedList(new ArrayList<Short>());
 	
 	static public String serverIP = null;
 			
