@@ -170,7 +170,7 @@ public class RandomSpikesGenerator implements Runnable {
         // TODO: in reality we should check the hashmap with the parentFrame.localUpdatedNode hashkey
         if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {
 			VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);
-			VirtualLayerManager.syncNodes();
+			//VirtualLayerManager.syncNodes();
 		}
       
         

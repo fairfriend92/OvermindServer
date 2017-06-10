@@ -6,7 +6,7 @@ import java.util.ArrayList;
 public class Node {
 	
 	public int ipHashCode;
-	public long X, Y;
+	public int[] VLCoordinates;
 	public ArrayList<Node> postsynapticNodes;
 	public ArrayList<Node> presynapticNodes;
 	public TerminalFrame terminalFrame;
@@ -17,8 +17,7 @@ public class Node {
 	public Node(Socket s1, com.example.overmind.Terminal t) {
 		this.client = s1;
 		this.terminal = t;
-		this.X = 0;
-		this.Y = 0;
+		this.VLCoordinates = new int[]{0, 0};
 		this.ipHashCode = 0;
 		this.postsynapticNodes = new ArrayList<>();
 		this.presynapticNodes = new ArrayList<>();
@@ -36,15 +35,15 @@ public class Node {
 	}	
 	
 	public void update(Node updatedNode) {
-		this.ipHashCode = updatedNode.ipHashCode;
-		this.X = updatedNode.X;
-		this.Y = updatedNode.Y;
+		this.ipHashCode = updatedNode.ipHashCode;		
 		this.postsynapticNodes = new ArrayList<>(updatedNode.postsynapticNodes);
 		this.presynapticNodes = new ArrayList<>(updatedNode.presynapticNodes);
 		this.terminalFrame.update(updatedNode);
 		this.client = updatedNode.client;
 		this.output = updatedNode.output;
 		this.terminal.update(updatedNode.terminal);
+		
+		System.arraycopy(updatedNode.VLCoordinates, 0, this.VLCoordinates, 0, 2);
 	}
 
 	public void close() {

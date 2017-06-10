@@ -43,10 +43,14 @@ public class VirtualLayerManager extends Thread{
 	static List<Short> freeNodes = Collections.synchronizedList(new ArrayList<Short>());
 	
 	static public String serverIP = null;
+	
+	static VirtualLayerVisualizer VLVisualizer = new VirtualLayerVisualizer();
 			
 	@Override
 	public void run() {
 		super.run();
+		
+		VLVisualizer.start();
 		
         try (java.util.Scanner s = new java.util.Scanner(new java.net.URL("https://api.ipify.org").openStream(), "UTF-8").useDelimiter("\\A")) {
             serverIP = s.next();
@@ -182,8 +186,8 @@ public class VirtualLayerManager extends Thread{
 	
 		/**
 		 * Populate and update the list of terminals available for connection
-		 */			
-		
+		 */		
+	
 		// The algorithm starts only if the list has at least one element
 		if (!availableNodes.isEmpty() && !availableNodes.contains(disconnectedNode)) {
 		
@@ -201,7 +205,7 @@ public class VirtualLayerManager extends Thread{
 					// Update the number of synapses and dendrites for both currentNode.terminal and disconnectedNode.terminal
 					currentNode.terminal.numOfSynapses -= disconnectedNode.terminal.numOfNeurons;
 					disconnectedNode.terminal.numOfDendrites -= currentNode.terminal.numOfNeurons;
-
+	
 					// Update the list of connected terminals
 					currentNode.terminal.postsynapticTerminals.add(disconnectedNode.terminal);
 					disconnectedNode.terminal.presynapticTerminals.add(currentNode.terminal);
@@ -278,10 +282,13 @@ public class VirtualLayerManager extends Thread{
 									
 		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes));
 		
+		syncNodes();
+		
 	}
 	
 	public synchronized static void removeNode(Node removableNode) {
 
+		VLVisualizer.layeredPaneVL.removeNode(removableNode);
 
 		availableNodes.remove(removableNode); 	
 		
@@ -393,6 +400,8 @@ public class VirtualLayerManager extends Thread{
 																
 				// Branch depending on whether the terminal is new or not
 				if (unsyncNodes.get(i).terminalFrame.localUpdatedNode == null) {		
+					
+					VLVisualizer.layeredPaneVL.addNode(unsyncNodes.get(i));
 					
 					// Update the info of the frame associated to the terminal
 					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i));

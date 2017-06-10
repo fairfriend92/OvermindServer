@@ -107,7 +107,7 @@ public class RefreshSignalSender implements Runnable {
                 
         if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {
 			VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);
-			VirtualLayerManager.syncNodes();
+			//VirtualLayerManager.syncNodes();
 		}        
 		
 	}

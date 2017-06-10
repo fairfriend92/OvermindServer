@@ -53,10 +53,7 @@ public class MainFrame {
 		// inactive node
 		NodesShutdownPoller nodesShutdownPoller = new NodesShutdownPoller();
 		nodesShutdownPoller.start();
-		
-		VirtualLayerVisualizer VLVisualizer = new VirtualLayerVisualizer();
-		VLVisualizer.start();
-		
+			
 	}
 	
 	private static void displayMainFrame() {
