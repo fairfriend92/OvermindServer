@@ -1,10 +1,15 @@
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -17,17 +22,25 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
 
 public class VirtualLayerVisualizer extends Thread{
 	
 	static JFrame VLVFrame = new JFrame();
 	LayeredPaneVL layeredPaneVL = new LayeredPaneVL();
+	
+	JToggleButton showTerminalFrame = new JToggleButton();
+
+
 	boolean shutdown = false;
+	boolean resizeSelected = false;
 	Node selectedNode;
 	private HashMap<Integer, JLabelVL> nodeIconsTable = new HashMap<>();
 	private JPanel infoPanel = new JPanel();
@@ -38,13 +51,16 @@ public class VirtualLayerVisualizer extends Thread{
 		
 		String frameTitle = new String("Virtual Layer Visualizer");
 		
+		JScrollPane scrollPane = new JScrollPane(layeredPaneVL.connPanel);
+		
 		JPanel totalPanel = new JPanel();
 		JPanel containerPanel = new JPanel();
 		JPanel commandsPanel = new JPanel();
-	
+		
+		JButton resize = new JButton();
 		JToggleButton cutLink = new JToggleButton();
 		JToggleButton createLink = new JToggleButton();
-		JToggleButton getInfo = new JToggleButton();
+
 		
 		GridBagConstraints VLConstraint = new GridBagConstraints(), commandsConstraint = new GridBagConstraints();	
 		
@@ -64,10 +80,42 @@ public class VirtualLayerVisualizer extends Thread{
 		
 		try {
 			Image img = ImageIO.read(new FileInputStream("resources/icons/icons8-Info.png"));
-			getInfo.setIcon(new ImageIcon(img.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
+			showTerminalFrame.setIcon(new ImageIcon(img.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}		
+		
+		try {
+			Image img = ImageIO.read(new FileInputStream("resources/icons/icons8-Width.png"));
+			resize.setIcon(new ImageIcon(img.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}		
+		
+		showTerminalFrame.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent ev) {
+				if(ev.getStateChange()==ItemEvent.SELECTED && selectedNode != null)
+					selectedNode.terminalFrame.frame.setVisible(true);
+				else if(ev.getStateChange()==ItemEvent.DESELECTED && selectedNode != null)
+					selectedNode.terminalFrame.frame.setVisible(false);
+			}
+		});
+		
+		resize.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				Component[] childComp = layeredPaneVL.VLPanel.getComponents();
+				int posX = 640, posY = 480;
+				for (int i = 0; i < childComp.length; i++) {
+					posX = posX > childComp[i].getX() ? posX : childComp[i].getX() + (int)childComp[i].getSize().getWidth();
+					posY = posY > childComp[i].getY() ? posY : childComp[i].getY() + (int)childComp[i].getSize().getHeight();					
+				}
+				layeredPaneVL.setPreferredSize(new Dimension(posX, posY));
+				layeredPaneVL.connPanel.revalidate();
+				layeredPaneVL.connPanel.repaint();
+			}
+		});		
+
 		
 		commandsPanel.setLayout(new GridLayout(2,2));
 		commandsPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -75,7 +123,8 @@ public class VirtualLayerVisualizer extends Thread{
 					BorderFactory.createEmptyBorder(5,5,5,5)));
 		commandsPanel.add(cutLink);
 		commandsPanel.add(createLink);
-		commandsPanel.add(getInfo);
+		commandsPanel.add(showTerminalFrame);
+		commandsPanel.add(resize);
 		
 		infoPanel.setLayout(new GridLayout(3,0));
 		infoPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -100,10 +149,11 @@ public class VirtualLayerVisualizer extends Thread{
 		commandsConstraint.fill = GridBagConstraints.HORIZONTAL;
 					
 		totalPanel.setLayout(new GridBagLayout());
-		totalPanel.add(layeredPaneVL.VLPanel, VLConstraint);
+		totalPanel.add(scrollPane, VLConstraint);
 		totalPanel.add(containerPanel, commandsConstraint);
 				
 		VLVFrame.setTitle(frameTitle);
+		VLVFrame.setResizable(false);
 		VLVFrame.setContentPane(totalPanel);
 		VLVFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);		
 		VLVFrame.pack();
@@ -111,16 +161,44 @@ public class VirtualLayerVisualizer extends Thread{
 				
 	}
 	
+	public class DrawablePanelVL extends JPanel {
+		
+		public DrawablePanelVL () {
+			this.setPreferredSize(new Dimension(640, 480));
+			this.setOpaque(true);
+			this.setBackground(Color.white);
+			this.setBorder(BorderFactory.createLineBorder(Color.black));
+		}
+		
+		public void paintGraphics(Graphics g) {
+	        super.paintComponent(g); 
+
+	        g.drawLine(0, 0, 640, 480);
+	        g.drawLine(20, 30, 64, 480);
+
+	        
+		}
+		
+	}
+		
+	// TODO Resizing of the window should be achieved by implementing Scrollable
+	
 	public class LayeredPaneVL extends JPanel implements MouseMotionListener {
 		
 		public JLayeredPane VLPanel = new JLayeredPane();
+		public DrawablePanelVL connPanel = new DrawablePanelVL();
+		
+		public void setPreferredSize(Dimension d) {
+			super.setPreferredSize(d);			
+			this.connPanel.setPreferredSize(d);	
+			this.VLPanel.setPreferredSize(d);	
+		}
 		
 		public LayeredPaneVL () {
 							
-			VLPanel.setBorder(BorderFactory.createLineBorder(Color.black));
+			connPanel.add(VLPanel);
 			VLPanel.setPreferredSize(new Dimension(640, 480));
-			VLPanel.setOpaque(true);
-			VLPanel.setBackground(Color.white);
+			VLPanel.setOpaque(false);
 			VLPanel.addMouseMotionListener(this);
 									
 		}
@@ -144,8 +222,8 @@ public class VirtualLayerVisualizer extends Thread{
 			}
 				
 			VLPanel.remove(nodeIconsTable.get(node.ipHashCode).nodeLabel);
-			VLPanel.revalidate();
-			VLPanel.repaint();
+			connPanel.revalidate();
+			connPanel.repaint();
 			nodeIconsTable.remove(node.ipHashCode);
 						
 		}
@@ -154,12 +232,17 @@ public class VirtualLayerVisualizer extends Thread{
 				
 		public void mouseDragged(MouseEvent e) {	
 			
-			if (selectedNode != null)
-			nodeIconsTable.get(selectedNode.ipHashCode).nodeLabel.setLocation(e.getX(), e.getY());	
+			if (selectedNode != null) {
+				nodeIconsTable.get(selectedNode.ipHashCode).nodeLabel.setLocation(e.getX(), e.getY());	
+				if (e.getX() > (VLPanel.getWidth() - 10) || e.getY() > (VLPanel.getHeight() - 10)) {
+					this.setPreferredSize(new Dimension(VLPanel.getWidth() + 32, VLPanel.getHeight() + 32));
+					connPanel.revalidate();
+					connPanel.repaint();	
+				}
+			}							
 			
-		} 
-		
-		
+		}
+			
 	}
 	
 	public class JLabelVL extends JLabel implements MouseListener {
@@ -174,8 +257,8 @@ public class VirtualLayerVisualizer extends Thread{
 			
 			this.node = n;
 			
-			this.dimension = (int) ( 10 * n.terminal.numOfNeurons / 1024) * 24;
-			
+			this.dimension = (int) (48.0f - (24.0f / 1023.0f) * (1024.0f - (float)n.terminal.numOfNeurons));
+					
 			try {
 				Image img = ImageIO.read(new FileInputStream("resources/icons/icons8-New Moon.png"));
 				nodeIcon = (new ImageIcon(img.getScaledInstance(this.dimension, this.dimension, Image.SCALE_SMOOTH)));
@@ -186,7 +269,7 @@ public class VirtualLayerVisualizer extends Thread{
 			assert nodeIcon != null;
 			
 			nodeLabel = new JLabel(nodeIcon);
-			nodeLabel.setBounds(0, 0, this.dimension, this.dimension);
+			nodeLabel.setBounds(64, 64, this.dimension, this.dimension);
 			
 			nodeLabel.addMouseListener(this);
 						
@@ -200,6 +283,11 @@ public class VirtualLayerVisualizer extends Thread{
 		public void mouseClicked(MouseEvent e) {
 						
 			if (!mousePressed && selectedNode == null) {
+				
+				if (node.terminalFrame.frame.isVisible())
+					showTerminalFrame.setSelected(true);
+				else
+					showTerminalFrame.setSelected(false);
 				
 				infoPanel.removeAll();
 				infoPanel.add(new JLabel("# neurons " + node.terminal.numOfNeurons));
@@ -216,12 +304,15 @@ public class VirtualLayerVisualizer extends Thread{
 				}
 				
 				assert nodeIcon != null;
-				
+						
 				nodeLabel.setIcon(nodeIcon);
 				mousePressed = true;
 				selectedNode = this.node;
 				
 			} else if (selectedNode == this.node) {
+				
+				selectedNode = null;
+				showTerminalFrame.setSelected(false);
 				
 				infoPanel.removeAll();
 				infoPanel.add(new JLabel("Select a node"));
@@ -239,7 +330,6 @@ public class VirtualLayerVisualizer extends Thread{
 				
 				nodeLabel.setIcon(nodeIcon);
 				mousePressed = false;	
-				selectedNode = null;
 			}
 			
 		}

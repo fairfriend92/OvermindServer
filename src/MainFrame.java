@@ -129,7 +129,6 @@ public class MainFrame {
 		frame.setTitle("OvermindServer");
 		frame.setContentPane(mainPanel);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setAlwaysOnTop(true);
 		frame.pack();
 		frame.setVisible(true);
 		
