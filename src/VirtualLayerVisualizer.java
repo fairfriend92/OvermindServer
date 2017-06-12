@@ -6,6 +6,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -42,6 +43,7 @@ public class VirtualLayerVisualizer extends Thread{
 	boolean shutdown = false;
 	boolean resizeSelected = false;
 	Node selectedNode;
+	JLabel selectedNodeLabel;
 	private HashMap<Integer, JLabelVL> nodeIconsTable = new HashMap<>();
 	private JPanel infoPanel = new JPanel();
 
@@ -57,7 +59,8 @@ public class VirtualLayerVisualizer extends Thread{
 		JPanel containerPanel = new JPanel();
 		JPanel commandsPanel = new JPanel();
 		
-		JButton resize = new JButton();
+		JButton resizeX = new JButton();
+		JButton resizeY = new JButton();
 		JToggleButton cutLink = new JToggleButton();
 		JToggleButton createLink = new JToggleButton();
 
@@ -87,10 +90,17 @@ public class VirtualLayerVisualizer extends Thread{
 		
 		try {
 			Image img = ImageIO.read(new FileInputStream("resources/icons/icons8-Width.png"));
-			resize.setIcon(new ImageIcon(img.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
+			resizeX.setIcon(new ImageIcon(img.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}		
+		
+		try {
+			Image img = ImageIO.read(new FileInputStream("resources/icons/icons8-Height.png"));
+			resizeY.setIcon(new ImageIcon(img.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}	
 		
 		showTerminalFrame.addItemListener(new ItemListener() {
 			public void itemStateChanged(ItemEvent ev) {
@@ -101,30 +111,44 @@ public class VirtualLayerVisualizer extends Thread{
 			}
 		});
 		
-		resize.addActionListener(new ActionListener() {
+		resizeX.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				Component[] childComp = layeredPaneVL.VLPanel.getComponents();
-				int posX = 640, posY = 480;
+				int maxX = 640, maxY = (int) layeredPaneVL.VLPanel.getSize().getHeight();
 				for (int i = 0; i < childComp.length; i++) {
-					posX = posX > childComp[i].getX() ? posX : childComp[i].getX() + (int)childComp[i].getSize().getWidth();
-					posY = posY > childComp[i].getY() ? posY : childComp[i].getY() + (int)childComp[i].getSize().getHeight();					
+					maxX = maxX > childComp[i].getX() ? maxX : childComp[i].getX() + (int)childComp[i].getSize().getWidth();
 				}
-				layeredPaneVL.setPreferredSize(new Dimension(posX, posY));
+				layeredPaneVL.setPreferredSize(new Dimension(maxX, maxY));
 				layeredPaneVL.connPanel.revalidate();
 				layeredPaneVL.connPanel.repaint();
 			}
 		});		
 
+		resizeY.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				Component[] childComp = layeredPaneVL.VLPanel.getComponents();
+				int maxX = (int) layeredPaneVL.VLPanel.getSize().getWidth(), maxY = 480;
+				for (int i = 0; i < childComp.length; i++) {
+					maxY = maxY > childComp[i].getY() ? maxY : childComp[i].getY() + (int)childComp[i].getSize().getHeight();	
+				}
+				layeredPaneVL.setPreferredSize(new Dimension(maxX, maxY));
+				layeredPaneVL.connPanel.revalidate();
+				layeredPaneVL.connPanel.repaint();
+			}
+		});	
 		
-		commandsPanel.setLayout(new GridLayout(2,2));
+		commandsPanel.setLayout(new GridLayout(3,2));
 		commandsPanel.setBorder(BorderFactory.createCompoundBorder(
 					BorderFactory.createTitledBorder("Commands"),
 					BorderFactory.createEmptyBorder(5,5,5,5)));
 		commandsPanel.add(cutLink);
 		commandsPanel.add(createLink);
+		commandsPanel.add(resizeX);
+		commandsPanel.add(resizeY);
 		commandsPanel.add(showTerminalFrame);
-		commandsPanel.add(resize);
+
 		
 		infoPanel.setLayout(new GridLayout(3,0));
 		infoPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -161,8 +185,8 @@ public class VirtualLayerVisualizer extends Thread{
 				
 	}
 	
-	public class DrawablePanelVL extends JPanel {
-		
+	public class DrawablePanelVL extends JPanel {		
+
 		public DrawablePanelVL () {
 			this.setPreferredSize(new Dimension(640, 480));
 			this.setOpaque(true);
@@ -170,12 +194,22 @@ public class VirtualLayerVisualizer extends Thread{
 			this.setBorder(BorderFactory.createLineBorder(Color.black));
 		}
 		
-		public void paintGraphics(Graphics g) {
+		public void paintComponent(Graphics g) {
 	        super.paintComponent(g); 
 
-	        g.drawLine(0, 0, 640, 480);
-	        g.drawLine(20, 30, 64, 480);
-
+	        Point tmpPoint;
+	        int radius;
+	        
+	        if (selectedNode != null) {
+	        	for (int i = 0; i < selectedNode.presynapticNodes.size(); i++) {
+	        		if (selectedNode.presynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP) {
+	        			tmpPoint = nodeIconsTable.get(selectedNode.presynapticNodes.get(i).ipHashCode).nodeLabel.getLocation();
+	        			radius = nodeIconsTable.get(selectedNode.presynapticNodes.get(i).ipHashCode).nodeLabel.getWidth() / 2;
+	        			g.drawLine(selectedNodeLabel.getX() + selectedNodeLabel.getWidth() / 2, selectedNodeLabel.getY() + selectedNodeLabel.getHeight() / 2, 
+	        					tmpPoint.x + radius, tmpPoint.y + radius);
+	        		}
+	        	}
+	        }
 	        
 		}
 		
@@ -215,6 +249,7 @@ public class VirtualLayerVisualizer extends Thread{
 			
 			if (selectedNode == node) {
 				selectedNode = null;
+				selectedNodeLabel = null;
 				infoPanel.removeAll();
 				infoPanel.add(new JLabel("Select a node"));
 				infoPanel.revalidate();
@@ -233,12 +268,12 @@ public class VirtualLayerVisualizer extends Thread{
 		public void mouseDragged(MouseEvent e) {	
 			
 			if (selectedNode != null) {
-				nodeIconsTable.get(selectedNode.ipHashCode).nodeLabel.setLocation(e.getX(), e.getY());	
+				selectedNodeLabel.setLocation(e.getX(), e.getY());	
 				if (e.getX() > (VLPanel.getWidth() - 10) || e.getY() > (VLPanel.getHeight() - 10)) {
 					this.setPreferredSize(new Dimension(VLPanel.getWidth() + 32, VLPanel.getHeight() + 32));
 					connPanel.revalidate();
-					connPanel.repaint();	
 				}
+				connPanel.paintImmediately(connPanel.getVisibleRect());
 			}							
 			
 		}
@@ -308,10 +343,12 @@ public class VirtualLayerVisualizer extends Thread{
 				nodeLabel.setIcon(nodeIcon);
 				mousePressed = true;
 				selectedNode = this.node;
+				selectedNodeLabel = nodeIconsTable.get(selectedNode.ipHashCode).nodeLabel;
 				
 			} else if (selectedNode == this.node) {
 				
 				selectedNode = null;
+				selectedNodeLabel = null;
 				showTerminalFrame.setSelected(false);
 				
 				infoPanel.removeAll();
