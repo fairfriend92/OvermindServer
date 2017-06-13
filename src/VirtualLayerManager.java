@@ -182,6 +182,51 @@ public class VirtualLayerManager extends Thread{
 	}
 	/* [End of run() method] */	
 	
+	public static boolean modifyNode(Node[] nodeToModify) {
+	
+		boolean result = false;	
+		
+		if (VirtualLayerVisualizer.cutLinkFlag) {
+		
+			nodeToModify[0].terminal.numOfSynapses += nodeToModify[1].terminal.numOfNeurons;
+			nodeToModify[1].terminal.numOfDendrites += nodeToModify[0].terminal.numOfNeurons;
+			
+			nodeToModify[0].terminal.postsynapticTerminals.remove(nodeToModify[1].terminal);
+			nodeToModify[1].terminal.presynapticTerminals.remove(nodeToModify[0].terminal);
+			
+			nodeToModify[0].postsynapticNodes.remove(nodeToModify[1]);
+			nodeToModify[1].presynapticNodes.remove(nodeToModify[0]);
+			
+			result = true;
+			
+		}
+		
+		if (VirtualLayerVisualizer.createLinkFlag && 
+				(nodeToModify[0].terminal.numOfSynapses - nodeToModify[1].terminal.numOfNeurons) >= 0 &&
+				(nodeToModify[1].terminal.numOfDendrites - nodeToModify[0].terminal.numOfNeurons) >= 0 &&
+				!nodeToModify[1].presynapticNodes.contains(nodeToModify[0])) {
+			
+			nodeToModify[0].terminal.numOfSynapses -= nodeToModify[1].terminal.numOfNeurons;
+			nodeToModify[1].terminal.numOfDendrites -= nodeToModify[0].terminal.numOfNeurons;
+			
+			nodeToModify[0].terminal.postsynapticTerminals.add(nodeToModify[1].terminal);
+			nodeToModify[1].terminal.presynapticTerminals.add(nodeToModify[0].terminal);
+			
+			nodeToModify[0].postsynapticNodes.add(nodeToModify[1]);
+			nodeToModify[1].presynapticNodes.add(nodeToModify[0]);
+			
+			result = true;
+			
+		}
+		
+		unsyncNodes.add(nodeToModify[0]);
+		unsyncNodes.add(nodeToModify[1]);
+		syncNodes();
+		
+		return result;
+		
+	}
+	
 	public synchronized static void connectNodes(Node disconnectedNode) {	
 	
 		/**
@@ -412,7 +457,11 @@ public class VirtualLayerManager extends Thread{
 					// Since the terminal is new the number of sync nodes must be increased
 					numberOfSyncNodes++;																			
 					
-				} else { unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i)); }
+				} else { 
+					
+					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i)); 
+					
+				}
 				
 				/**
 				 * Updated info regarding the current terminal are sent back to the physical device
