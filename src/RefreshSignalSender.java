@@ -31,9 +31,7 @@ public class RefreshSignalSender implements Runnable {
 		targetTerminal = parentFrame.localUpdatedNode.terminal;	
 		
         long lastTime = 0, staticRefresh = parentFrame.rateMultiplier * 1000000, 
-        		dynamicRefresh = 0, rasterGraphRefresh;   
-        
-        targetTerminal.numOfDendrites -= 8;
+        		dynamicRefresh = 0, rasterGraphRefresh;          
         
         com.example.overmind.Terminal server = new com.example.overmind.Terminal();
         server.postsynapticTerminals = new ArrayList<>();
@@ -42,14 +40,16 @@ public class RefreshSignalSender implements Runnable {
         //server.ip = "192.168.1.213";
         
         server.postsynapticTerminals.add(targetTerminal);
-        server.numOfNeurons = 8;
+        server.numOfNeurons = 8 < targetTerminal.numOfDendrites ? 8 : targetTerminal.numOfDendrites;
         server.numOfSynapses = (short)(1024 - targetTerminal.numOfNeurons);
         server.numOfDendrites = 1024;
         server.natPort = VirtualLayerManager.SERVER_PORT_UDP;
         
+        targetTerminal.numOfDendrites -= server.numOfNeurons;
+        
         targetTerminal.presynapticTerminals.add(server);
         
-        VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);    
+        VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});    
         VirtualLayerManager.syncNodes();
         
         DatagramSocket outputSocket = null;
@@ -103,10 +103,10 @@ public class RefreshSignalSender implements Runnable {
         outputSocket.close();
        
         targetTerminal.presynapticTerminals.remove(server);
-    	targetTerminal.numOfDendrites +=  8;
+    	targetTerminal.numOfDendrites +=  server.numOfNeurons;
                 
         if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {
-			VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);
+			VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});
 			//VirtualLayerManager.syncNodes();
 		}        
 		

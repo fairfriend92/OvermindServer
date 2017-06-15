@@ -45,6 +45,7 @@ public class VirtualLayerVisualizer extends Thread{
 	private JToggleButton showTerminalFrame = new JToggleButton();
 		
 	private boolean shutdown = false;
+	private boolean editingNode = false;
 	private Node selectedNode;
 	private JLabel selectedNodeLabel;
 	private HashMap<Integer, JLabelVL> nodeIconsTable = new HashMap<>();
@@ -124,8 +125,6 @@ public class VirtualLayerVisualizer extends Thread{
 					cutLinkFlag = true;
 				}
 				else if(ev.getStateChange()==ItemEvent.DESELECTED) {
-					editableNodeLabels[0] = null;
-					editableNodeLabels[1] = null;
 					createLink.setEnabled(true);
 					cutLinkFlag = false;
 				}
@@ -470,8 +469,7 @@ public class VirtualLayerVisualizer extends Thread{
 	public class JLabelVL extends JLabel implements MouseListener {
 		
 		private ImageIcon nodeIcon;
-		private JLabel nodeLabel;
-		private boolean mousePressed = false;
+		public JLabel nodeLabel;
 		private Node node = new Node(null, null);
 		int dimension;
 		
@@ -504,7 +502,51 @@ public class VirtualLayerVisualizer extends Thread{
 		
 		public void mouseClicked(MouseEvent e) {
 						
-			if (!mousePressed && selectedNode == null && !(cutLinkFlag || createLinkFlag)) {
+			if (selectedNode == this.node) {
+				
+				selectedNode = null;
+				selectedNodeLabel = null;
+				showTerminalFrame.setSelected(false);
+				
+				infoPanel.removeAll();
+				infoPanel.add(new JLabel("Select a node"));
+				infoPanel.revalidate();
+				infoPanel.repaint();
+				
+				try {
+					Image img = ImageIO.read(getClass().getResource("/icons/icons8-New Moon.png"));
+					nodeIcon = (new ImageIcon(img.getScaledInstance(this.dimension, this.dimension, Image.SCALE_SMOOTH)));
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				
+				assert nodeIcon != null;
+				
+				nodeLabel.setIcon(nodeIcon);
+				
+				layeredPaneVL.connPanel.revalidate();
+				layeredPaneVL.connPanel.repaint();
+				
+			} else {
+								
+				if (selectedNode != null) {
+					
+					try {
+						Image img = ImageIO.read(getClass().getResource("/icons/icons8-New Moon.png"));
+						nodeIcon = (new ImageIcon(
+								img.getScaledInstance(this.dimension, this.dimension, Image.SCALE_SMOOTH)));
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+					
+					assert nodeIcon != null;
+					
+					selectedNodeLabel.setIcon(nodeIcon);
+					
+				}
+				
+				selectedNode = this.node;
+				selectedNodeLabel = nodeIconsTable.get(selectedNode.ipHashCode).nodeLabel;
 				
 				if (node.terminalFrame.frame.isVisible())
 					showTerminalFrame.setSelected(true);
@@ -527,36 +569,7 @@ public class VirtualLayerVisualizer extends Thread{
 				
 				assert nodeIcon != null;
 						
-				nodeLabel.setIcon(nodeIcon);
-				mousePressed = true;
-				selectedNode = this.node;
-				selectedNodeLabel = nodeIconsTable.get(selectedNode.ipHashCode).nodeLabel;
-				
-				layeredPaneVL.connPanel.revalidate();
-				layeredPaneVL.connPanel.repaint();
-				
-			} else if (selectedNode == this.node && !(cutLinkFlag || createLinkFlag)) {
-				
-				selectedNode = null;
-				selectedNodeLabel = null;
-				showTerminalFrame.setSelected(false);
-				
-				infoPanel.removeAll();
-				infoPanel.add(new JLabel("Select a node"));
-				infoPanel.revalidate();
-				infoPanel.repaint();
-				
-				try {
-					Image img = ImageIO.read(getClass().getResource("/icons/icons8-New Moon.png"));
-					nodeIcon = (new ImageIcon(img.getScaledInstance(this.dimension, this.dimension, Image.SCALE_SMOOTH)));
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
-				
-				assert nodeIcon != null;
-				
-				nodeLabel.setIcon(nodeIcon);
-				mousePressed = false;	
+				nodeLabel.setIcon(nodeIcon);				
 				
 				layeredPaneVL.connPanel.revalidate();
 				layeredPaneVL.connPanel.repaint();
@@ -567,14 +580,17 @@ public class VirtualLayerVisualizer extends Thread{
 				
 				boolean success = false;				
 								
-				if (editableNodeLabels[0] == null) {
+				if (!editingNode) {
 					editableNodeLabels[0] = this;
+					editingNode = true;
 				}
-				else if (editableNodeLabels[1] == null) {
+				else {
 					editableNodeLabels[1] = this;
 					Node[] nodeToModify = {editableNodeLabels[0].node, editableNodeLabels[1].node};
 					success = VirtualLayerManager.modifyNode(nodeToModify);	
-														
+										
+					editingNode = false;
+					
 					if (cutLinkFlag) {
 						cutLinkFlag = false;
 						cutLink.doClick();

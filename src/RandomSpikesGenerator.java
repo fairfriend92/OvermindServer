@@ -58,15 +58,15 @@ public class RandomSpikesGenerator implements Runnable {
         //server.ip = "192.168.1.213";
         
         server.postsynapticTerminals.add(targetTerminal);
-        server.numOfNeurons = 1024;
-        server.numOfSynapses = (short)(1024 - targetTerminal.numOfNeurons);
+        server.numOfNeurons = targetTerminalOld.numOfDendrites;
+        server.numOfSynapses = (short)(1024 - targetTerminalOld.numOfNeurons);
         server.numOfDendrites = 1024;
         server.natPort = VirtualLayerManager.SERVER_PORT_UDP;
         
         // Add the server to the list of presynaptic devices connected to the target device
         targetTerminal.presynapticTerminals.add(server);
         
-        VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);    
+        VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});    
         VirtualLayerManager.syncNodes();          
                 
         /**
@@ -169,7 +169,7 @@ public class RandomSpikesGenerator implements Runnable {
         // The old node is substituted to the one connected with the server
         // TODO: in reality we should check the hashmap with the parentFrame.localUpdatedNode hashkey
         if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {
-			VirtualLayerManager.connectNodes(parentFrame.localUpdatedNode);
+			VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});
 			//VirtualLayerManager.syncNodes();
 		}
       

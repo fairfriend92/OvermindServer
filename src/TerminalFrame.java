@@ -71,6 +71,9 @@ public class TerminalFrame {
 	 * Custom panel to display the raster graph
 	 */
 	
+	JRadioButton randomSpikesRadioButton = new JRadioButton("Random spikes");
+	JRadioButton refreshSignalRadioButton = new JRadioButton("Refresh signal");
+	
 	class MyPanel extends JPanel {		
 		
 		public short xCoordinate = 0;
@@ -193,7 +196,6 @@ public class TerminalFrame {
 		 * Radio buttons used to select the external stimulus
 		 */
 		
-		JRadioButton randomSpikesRadioButton = new JRadioButton("Random spikes");
 		randomSpikesRadioButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -205,7 +207,6 @@ public class TerminalFrame {
 			}
 		});	
 		
-		JRadioButton refreshSignalRadioButton = new JRadioButton("Refresh signal");
 		refreshSignalRadioButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -397,6 +398,14 @@ public class TerminalFrame {
 	 */
 	
 	public synchronized void update(Node updatedNode) {
+		
+		if (updatedNode.terminal.numOfDendrites == 0 && !randomSpikesRadioButton.isSelected()) {
+			refreshSignalRadioButton.setEnabled(false);
+			randomSpikesRadioButton.setEnabled(false);
+		} else {
+			refreshSignalRadioButton.setEnabled(true);
+			randomSpikesRadioButton.setEnabled(true);
+		}
 		
 		// Launches the thread that updates the raster graph using the spikes gathered by
 		// SpikesReceiver
