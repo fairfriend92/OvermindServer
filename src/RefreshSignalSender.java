@@ -26,8 +26,8 @@ public class RefreshSignalSender implements Runnable {
 	
 	public boolean shutdown = true;
 	
-	@Override public void run() {
-		
+	@Override public void run() {	
+				
 		targetTerminal = parentFrame.localUpdatedNode.terminal;	
 		
         long lastTime = 0, staticRefresh = parentFrame.rateMultiplier * 1000000, 
@@ -50,7 +50,7 @@ public class RefreshSignalSender implements Runnable {
         targetTerminal.presynapticTerminals.add(server);
         
         VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});    
-        VirtualLayerManager.syncNodes();
+        //VirtualLayerManager.syncNodes();
         
         DatagramSocket outputSocket = null;
 

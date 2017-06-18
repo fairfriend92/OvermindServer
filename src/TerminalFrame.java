@@ -202,6 +202,7 @@ public class TerminalFrame {
 				if (thisTerminalRSG.shutdown) {
 					thisTerminalRSG.shutdown = false;	
 					thisTerminalRSS.shutdown = true;
+					System.out.println(stimulusExecutor);
 					stimulusExecutor.execute(thisTerminalRSG);	
 				}
 			}
@@ -398,7 +399,7 @@ public class TerminalFrame {
 	 */
 	
 	public synchronized void update(Node updatedNode) {
-		
+			
 		if (updatedNode.terminal.numOfDendrites == 0 && !randomSpikesRadioButton.isSelected()) {
 			refreshSignalRadioButton.setEnabled(false);
 			randomSpikesRadioButton.setEnabled(false);

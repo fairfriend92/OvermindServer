@@ -45,11 +45,13 @@ public class VirtualLayerVisualizer extends Thread{
 	private JToggleButton showTerminalFrame = new JToggleButton();
 		
 	private boolean shutdown = false;
-	private boolean editingNode = false;
+	private int editingNode = 0;
 	private Node selectedNode;
 	private JLabel selectedNodeLabel;
 	private HashMap<Integer, JLabelVL> nodeIconsTable = new HashMap<>();
 	private JPanel infoPanel = new JPanel();
+	private JPanel logPanel = new JPanel();
+
 	
 	JToggleButton cutLink = new JToggleButton();
 	JToggleButton createLink = new JToggleButton();
@@ -121,10 +123,20 @@ public class VirtualLayerVisualizer extends Thread{
 		cutLink.addItemListener(new ItemListener() {
 			public void itemStateChanged(ItemEvent ev) {
 				if(ev.getStateChange()==ItemEvent.SELECTED) {
+					editingNode = 1;
+					logPanel.removeAll();
+					logPanel.add(new JLabel("Please select 1st node. Selection order is irrelevant."));
+					logPanel.revalidate();
 					createLink.setEnabled(false);
 					cutLinkFlag = true;
 				}
 				else if(ev.getStateChange()==ItemEvent.DESELECTED) {
+					if (editingNode != 0) {
+						logPanel.removeAll();
+						logPanel.add(new JLabel("Use the [scissor] & [pencil] to cut and create links"));
+						logPanel.revalidate();
+						editingNode = 0;
+					}
 					createLink.setEnabled(true);
 					cutLinkFlag = false;
 				}
@@ -134,12 +146,20 @@ public class VirtualLayerVisualizer extends Thread{
 		createLink.addItemListener(new ItemListener() {
 			public void itemStateChanged(ItemEvent ev) {
 				if(ev.getStateChange()==ItemEvent.SELECTED) {
+					editingNode = 1;
+					logPanel.removeAll();
+					logPanel.add(new JLabel("Please select 1st node. Selection order determines which node is input."));
+					logPanel.revalidate();
 					cutLink.setEnabled(false);
 					createLinkFlag = true;
 				}
 				else if(ev.getStateChange()==ItemEvent.DESELECTED) {
-					editableNodeLabels[0] = null;
-					editableNodeLabels[1] = null;
+					if (editingNode != 0) {
+						logPanel.removeAll();
+						logPanel.add(new JLabel("Use the [scissor] & [pencil] to cut and create links"));
+						logPanel.revalidate();
+						editingNode = 0;
+					}
 					cutLink.setEnabled(true);
 					createLinkFlag = false;
 				}
@@ -243,7 +263,8 @@ public class VirtualLayerVisualizer extends Thread{
 				
 		// Constraints used for the total panel layout
 		
-		GridBagConstraints VLConstraint = new GridBagConstraints(), commandsConstraint = new GridBagConstraints();	
+		GridBagConstraints VLConstraint = new GridBagConstraints(), commandsConstraint = new GridBagConstraints(), 
+				logConstraint = new GridBagConstraints();	
 		
 		VLConstraint.gridx = 0;
 		VLConstraint.gridy = 0;
@@ -255,7 +276,14 @@ public class VirtualLayerVisualizer extends Thread{
 		commandsConstraint.gridx = GridBagConstraints.RELATIVE;		
 		commandsConstraint.gridy = 0;
 		commandsConstraint.fill = GridBagConstraints.HORIZONTAL;
-					
+		
+		logConstraint.gridx = 0;
+		logConstraint.gridy = 1;
+		
+		/* Log panel */
+		
+		logPanel.add(new JLabel("Use the [scissor] & [pencil] to cut and create links"));
+							
 		/* Total panel */
 		
 		// Total panel is made of the container panel and the main view of the VLV, scroll pane
@@ -263,6 +291,7 @@ public class VirtualLayerVisualizer extends Thread{
 		totalPanel.setLayout(new GridBagLayout());
 		totalPanel.add(scrollPane, VLConstraint);
 		totalPanel.add(containerPanel, commandsConstraint);
+		totalPanel.add(logPanel, logConstraint);
 				
 		VLVFrame.setTitle(frameTitle);
 		VLVFrame.setResizable(false);
@@ -395,11 +424,7 @@ public class VirtualLayerVisualizer extends Thread{
 		/* [End of paint method] */
 		
 	}
-	/* [End of DrawablePanelVL class] */
-		
-	// TODO Resizing of the window should be achieved by implementing Scrollable
-	
-	
+	/* [End of DrawablePanelVL class] */	
 	
 	public class LayeredPaneVL extends JPanel implements MouseMotionListener {
 		
@@ -443,9 +468,9 @@ public class VirtualLayerVisualizer extends Thread{
 			}
 				
 			VLPanel.remove(nodeIconsTable.get(node.ipHashCode).nodeLabel);
+			nodeIconsTable.remove(node.ipHashCode);
 			connPanel.revalidate();
 			connPanel.repaint();
-			nodeIconsTable.remove(node.ipHashCode);
 						
 		}
 		
@@ -470,7 +495,7 @@ public class VirtualLayerVisualizer extends Thread{
 		
 		private ImageIcon nodeIcon;
 		public JLabel nodeLabel;
-		private Node node = new Node(null, null);
+		private Node node;
 		int dimension;
 		
 		public JLabelVL (Node n) {
@@ -576,20 +601,40 @@ public class VirtualLayerVisualizer extends Thread{
 				
 			}
 			
-			if (cutLinkFlag || createLinkFlag) {		
-				
-				boolean success = false;				
+			if (cutLinkFlag || createLinkFlag) {						
 								
-				if (!editingNode) {
+				if (editingNode == 1) {
 					editableNodeLabels[0] = this;
-					editingNode = true;
+					editingNode = 2;
+					logPanel.removeAll();
+					logPanel.add(new JLabel("1st node is: " + node.terminal.ip + " please select 2nd node"));
+					logPanel.revalidate();
+					logPanel.repaint();
 				}
 				else {
+					
 					editableNodeLabels[1] = this;
 					Node[] nodeToModify = {editableNodeLabels[0].node, editableNodeLabels[1].node};
-					success = VirtualLayerManager.modifyNode(nodeToModify);	
-										
-					editingNode = false;
+					short successFlag = VirtualLayerManager.modifyNode(nodeToModify);	
+					
+					logPanel.removeAll();
+					JLabel errorText = new JLabel();
+					errorText.setForeground(Color.red);
+					
+					if (successFlag == 0) 
+						logPanel.add(new JLabel("Operation succesfull!"));
+					else if (successFlag == 1) {
+						errorText.setText("Error: nodes are not connected in any way");
+						logPanel.add(errorText);
+					} else {
+						errorText.setText("Error: nodes are already connected");
+						logPanel.add(errorText);
+					}
+					
+					editingNode = 0;
+
+					logPanel.revalidate();
+					//logPanel.repaint();									
 					
 					if (cutLinkFlag) {
 						cutLinkFlag = false;

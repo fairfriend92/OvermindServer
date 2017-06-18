@@ -14,19 +14,18 @@ public class Node {
 	public ObjectOutputStream output;
 	public com.example.overmind.Terminal terminal;
 	
-	public Node(Socket s1, com.example.overmind.Terminal t) {
+	public Node(Socket s1, com.example.overmind.Terminal t, ObjectOutputStream o) {
 		this.client = s1;
+		this.output = o;
 		this.terminal = t;
 		this.VLCoordinates = new int[]{0, 0};
 		this.ipHashCode = 0;
 		this.postsynapticNodes = new ArrayList<>();
 		this.presynapticNodes = new ArrayList<>();
 		this.terminalFrame = new TerminalFrame();		
-		if (this.client != null) {
+		if (this.client != null && this.output == null) {
 			try {
 				this.output = new ObjectOutputStream(client.getOutputStream());
-				this.client.setTrafficClass(0x04);
-				this.client.setTcpNoDelay(true);
 			} catch (IOException e) {
 				System.out.println(e);
 			} 

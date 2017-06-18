@@ -17,6 +17,7 @@
 import java.util.List;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.ServerSocket;
@@ -89,13 +90,7 @@ public class VirtualLayerManager extends Thread{
         }
 
         assert inputSocket != null;
-        
-        /**
-         * Start the worker thread which reads Terminal objects from the streams established by the clients
-         */
-        
-        Socket clientSocket = null;		
-        
+                
         com.example.overmind.Terminal thisServer = new com.example.overmind.Terminal();
         thisServer.ip = serverIP;
         //thisServer.ip = "192.168.1.213";
@@ -109,15 +104,29 @@ public class VirtualLayerManager extends Thread{
 			 * Open new connections with the clients
 			 */
 		
+	        Socket clientSocket = null;		
+			
 			// Accept connections from the clients			
 			try {				
 				clientSocket = serverSocket.accept();
+				clientSocket.setTrafficClass(0x04);
+				clientSocket.setTcpNoDelay(true);
+				//clientSocket.setTcpNoDelay(true);
 			} catch (IOException e) {
 	        	e.printStackTrace();
 			}		
 			
 			com.example.overmind.Terminal terminal = null; 					
 			ObjectInputStream input = null;
+			ObjectOutputStream output = null;
+			
+			// Create the output stream for the client socket			
+			try {
+				output = new ObjectOutputStream(clientSocket.getOutputStream());				
+			} catch (IOException e) {
+				System.out.println(e);
+			} 
+		
 			
 			// Receive data stream from the client
 			try {					
@@ -167,7 +176,7 @@ public class VirtualLayerManager extends Thread{
 			
 			terminal.postsynapticTerminals.add(thisServer);
 				
-			Node newNode = new Node(clientSocket, terminal);
+			Node newNode = new Node(clientSocket, terminal, output);
 			newNode.ipHashCode = ipHashCode;
 		
 			// Put the new node in the hashmap using the hashcode of the
@@ -186,50 +195,53 @@ public class VirtualLayerManager extends Thread{
 	}
 	/* [End of run() method] */	
 	
-	public static boolean modifyNode(Node[] nodeToModify) {
-	
-		boolean result = false;	
+	public synchronized static short modifyNode(Node[] nodeToModify) {			
 		
 		if (VirtualLayerVisualizer.cutLinkFlag) {
 		
-			nodeToModify[0].terminal.numOfSynapses += nodeToModify[1].terminal.numOfNeurons;
-			nodeToModify[1].terminal.numOfDendrites += nodeToModify[0].terminal.numOfNeurons;
-			
-			nodeToModify[0].terminal.postsynapticTerminals.remove(nodeToModify[1].terminal);
-			nodeToModify[1].terminal.presynapticTerminals.remove(nodeToModify[0].terminal);
-			
-			nodeToModify[0].postsynapticNodes.remove(nodeToModify[1]);
-			nodeToModify[1].presynapticNodes.remove(nodeToModify[0]);
-			
-			result = true;
-			
+			if (nodeToModify[0].postsynapticNodes.contains(nodeToModify[1])) {
+				nodeToModify[0].terminal.numOfSynapses += nodeToModify[1].terminal.numOfNeurons;
+				nodeToModify[1].terminal.numOfDendrites += nodeToModify[0].terminal.numOfNeurons;
+				nodeToModify[0].terminal.postsynapticTerminals.remove(nodeToModify[1].terminal);
+				nodeToModify[1].terminal.presynapticTerminals.remove(nodeToModify[0].terminal);
+				nodeToModify[0].postsynapticNodes.remove(nodeToModify[1]);
+				nodeToModify[1].presynapticNodes.remove(nodeToModify[0]);
+			} else if (nodeToModify[1].postsynapticNodes.contains(nodeToModify[0])) {
+				nodeToModify[1].terminal.numOfSynapses += nodeToModify[0].terminal.numOfNeurons;
+				nodeToModify[0].terminal.numOfDendrites += nodeToModify[1].terminal.numOfNeurons;
+				nodeToModify[1].terminal.postsynapticTerminals.remove(nodeToModify[0].terminal);
+				nodeToModify[0].terminal.presynapticTerminals.remove(nodeToModify[1].terminal);
+				nodeToModify[1].postsynapticNodes.remove(nodeToModify[0]);
+				nodeToModify[0].presynapticNodes.remove(nodeToModify[1]);
+			} else
+				return 1;
+								
 		}
 		
 		if (VirtualLayerVisualizer.createLinkFlag && 
 				(nodeToModify[0].terminal.numOfSynapses - nodeToModify[1].terminal.numOfNeurons) >= 0 &&
-				(nodeToModify[1].terminal.numOfDendrites - nodeToModify[0].terminal.numOfNeurons) >= 0 &&
-				!nodeToModify[1].presynapticNodes.contains(nodeToModify[0])) {
+				(nodeToModify[1].terminal.numOfDendrites - nodeToModify[0].terminal.numOfNeurons) >= 0) {
 			
-			nodeToModify[0].terminal.numOfSynapses -= nodeToModify[1].terminal.numOfNeurons;
-			nodeToModify[1].terminal.numOfDendrites -= nodeToModify[0].terminal.numOfNeurons;
-			
-			nodeToModify[0].terminal.postsynapticTerminals.add(nodeToModify[1].terminal);
-			nodeToModify[1].terminal.presynapticTerminals.add(nodeToModify[0].terminal);
-			
-			nodeToModify[0].postsynapticNodes.add(nodeToModify[1]);
-			nodeToModify[1].presynapticNodes.add(nodeToModify[0]);
-			
-			result = true;
+			if (!nodeToModify[1].presynapticNodes.contains(nodeToModify[0]) && 
+					!nodeToModify[1].postsynapticNodes.contains(nodeToModify[0])) {
+				nodeToModify[0].terminal.numOfSynapses -= nodeToModify[1].terminal.numOfNeurons;
+				nodeToModify[1].terminal.numOfDendrites -= nodeToModify[0].terminal.numOfNeurons;
+				nodeToModify[0].terminal.postsynapticTerminals.add(nodeToModify[1].terminal);
+				nodeToModify[1].terminal.presynapticTerminals.add(nodeToModify[0].terminal);
+				nodeToModify[0].postsynapticNodes.add(nodeToModify[1]);
+				nodeToModify[1].presynapticNodes.add(nodeToModify[0]);
+			} else
+				return 2;
 			
 		}
 		
 		connectNodes(nodeToModify);
 		
-		return result;
+		return 0;
 		
 	}
 	
-	public synchronized static void connectNodes(Node[] disconnectedNodes) {	
+	public synchronized static void connectNodes(Node[] disconnectedNodes) {			
 	
 		/**
 		 * Populate and update the list of terminals available for connection
@@ -446,8 +458,8 @@ public class VirtualLayerManager extends Thread{
 		
 		/**
 		 * Sync the GUI with the updated info about the terminals
-		 */
-		
+		 */		
+	
 		if (!unsyncNodes.isEmpty()) {		
 			
 			// Iterate over all the nodes that need to be sync
@@ -485,10 +497,13 @@ public class VirtualLayerManager extends Thread{
 					// The terminal acting as holder of the new info is updated
 					tmpTerminal.update(unsyncNodes.get(i).terminal);
 									
-					// Write the info in the steam
-					unsyncNodes.get(i).output.writeObject(tmpTerminal);	
+					// Write the info in the steam					
+					unsyncNodes.get(i).output.writeObject(tmpTerminal);		
+					unsyncNodes.get(i).output.flush();
 
 					System.out.println("Terminal with ip " + unsyncNodes.get(i).terminal.ip + " has been updated.");
+					//System.out.println("Socket is closed: " + unsyncNodes.get(i).client.isClosed());
+					//System.out.println("Socket is connected: " + unsyncNodes.get(i).client.isConnected());
 																	
 				} catch (IOException e) {
 		        	e.printStackTrace();
