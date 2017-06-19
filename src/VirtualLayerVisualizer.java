@@ -52,6 +52,7 @@ public class VirtualLayerVisualizer extends Thread{
 	private JPanel infoPanel = new JPanel();
 	private JPanel logPanel = new JPanel();
 
+	public boolean allowBidirectionalConn = false;
 	
 	JToggleButton cutLink = new JToggleButton();
 	JToggleButton createLink = new JToggleButton();
@@ -66,13 +67,16 @@ public class VirtualLayerVisualizer extends Thread{
 		
 		JPanel totalPanel = new JPanel();
 		JPanel containerPanel = new JPanel();
+		JPanel commandsPanelTotal = new JPanel();
 		JPanel commandsPanel = new JPanel();
 		JPanel colorsLegend = new JPanel();
 		
 		JButton resizeX = new JButton();
 		JButton resizeY = new JButton();		
-		JToggleButton paintAll = new JToggleButton();
-
+		JToggleButton paintAll = new JToggleButton();		
+		JCheckBox bidirectionalConn = new JCheckBox("Bidirectional conn.", false);
+		bidirectionalConn.setEnabled(false);
+		showTerminalFrame.setEnabled(false);
 			
 		/* Load icons for the buttons of the commands panel */
 		
@@ -123,45 +127,64 @@ public class VirtualLayerVisualizer extends Thread{
 		cutLink.addItemListener(new ItemListener() {
 			public void itemStateChanged(ItemEvent ev) {
 				if(ev.getStateChange()==ItemEvent.SELECTED) {
+					
+					// The flag editingNode indicates that we are currently editing a node
 					editingNode = 1;
+					
+					// Update the info of the log panel
 					logPanel.removeAll();
-					logPanel.add(new JLabel("Please select 1st node. Selection order is irrelevant."));
+					logPanel.add(new JLabel("Please select 1st node. Selection order is considered in case of bidirectional connection"));
 					logPanel.revalidate();
+					
+					// When using a tool the other one can't be used at the same time
 					createLink.setEnabled(false);
+					
+					// Set the flag that tells which of the two tools is being used
 					cutLinkFlag = true;
+					
 				}
 				else if(ev.getStateChange()==ItemEvent.DESELECTED) {
+					
+					// If an error message is displayed the log panel must not be cleared.
+					// Therefore proceed only if editingNode != 0
 					if (editingNode != 0) {
 						logPanel.removeAll();
-						logPanel.add(new JLabel("Use the [scissor] & [pencil] to cut and create links"));
+						logPanel.add(new JLabel("Use the [scissor] & [pencil] tools to cut and create links"));
 						logPanel.revalidate();
 						editingNode = 0;
 					}
+					
+					// Restore the state of the tool button and the relative flag
 					createLink.setEnabled(true);
 					cutLinkFlag = false;
+					
 				}
 			}
 		});
 		
+		
+		// Create link is similar to cut link
 		createLink.addItemListener(new ItemListener() {
 			public void itemStateChanged(ItemEvent ev) {
 				if(ev.getStateChange()==ItemEvent.SELECTED) {
 					editingNode = 1;
 					logPanel.removeAll();
-					logPanel.add(new JLabel("Please select 1st node. Selection order determines which node is input."));
+					logPanel.add(new JLabel("Please select 1st node. Selection order determines which node is input"));
 					logPanel.revalidate();
 					cutLink.setEnabled(false);
 					createLinkFlag = true;
+					bidirectionalConn.setEnabled(true);
 				}
 				else if(ev.getStateChange()==ItemEvent.DESELECTED) {
 					if (editingNode != 0) {
 						logPanel.removeAll();
-						logPanel.add(new JLabel("Use the [scissor] & [pencil] to cut and create links"));
+						logPanel.add(new JLabel("Use the [scissor] & [pencil] tools to cut and create links"));
 						logPanel.revalidate();
 						editingNode = 0;
 					}
 					cutLink.setEnabled(true);
 					createLinkFlag = false;
+					bidirectionalConn.setEnabled(false);
 				}
 			}
 		});
@@ -214,23 +237,44 @@ public class VirtualLayerVisualizer extends Thread{
 					layeredPaneVL.connPanel.repaint();				
 				}
 			}
-		});
-		
+		});		
+				
 		/* Commands panel */
 		
-		commandsPanel.setLayout(new GridLayout(3,2));
-		commandsPanel.setBorder(BorderFactory.createCompoundBorder(
-					BorderFactory.createTitledBorder("Commands"),
-					BorderFactory.createEmptyBorder(5,5,5,5)));
+		commandsPanel.setLayout(new GridLayout(3,2));		
 		commandsPanel.add(cutLink);
 		commandsPanel.add(createLink);
 		commandsPanel.add(resizeX);
 		commandsPanel.add(resizeY);
 		commandsPanel.add(showTerminalFrame);
 		commandsPanel.add(paintAll);
+		
+		/* Commands panel total */
+		
+		commandsPanelTotal.setAlignmentX(Component.LEFT_ALIGNMENT);
+		commandsPanelTotal.setLayout(new BoxLayout(commandsPanelTotal, BoxLayout.Y_AXIS));		
+		commandsPanelTotal.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createTitledBorder("Commands"),
+				BorderFactory.createEmptyBorder(5,5,5,5)));
+		commandsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		commandsPanelTotal.add(commandsPanel);
+		commandsPanelTotal.add(Box.createRigidArea(new Dimension(0,5)));		
+		bidirectionalConn.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {							
+				JCheckBox cb = (JCheckBox) e.getSource();
+		        if (cb.isSelected()) {
+		        	allowBidirectionalConn = true;
+		        } else {
+		        	allowBidirectionalConn = false;
+		        }
+			}
+		});	
+		commandsPanelTotal.add(bidirectionalConn);
 
 		/* Info panel */
 		
+		infoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		infoPanel.setLayout(new GridLayout(3,0));
 		infoPanel.setBorder(BorderFactory.createCompoundBorder(
 					BorderFactory.createTitledBorder("Node info"),
@@ -239,7 +283,8 @@ public class VirtualLayerVisualizer extends Thread{
 		
 		/* Colors legend panel */
 		
-		colorsLegend.setLayout(new GridLayout(2,0));
+		colorsLegend.setAlignmentX(Component.LEFT_ALIGNMENT);
+		colorsLegend.setLayout(new GridLayout(3,0));
 		colorsLegend.setBorder(BorderFactory.createCompoundBorder(
 				BorderFactory.createTitledBorder("Colors legend"),
 				BorderFactory.createEmptyBorder(5,5,5,5)));
@@ -247,15 +292,18 @@ public class VirtualLayerVisualizer extends Thread{
 		preConn.setForeground(Color.red);
 		JLabel postConn = new JLabel("Postsynaptic conn.");
 		postConn.setForeground(Color.blue);
+		JLabel biConn = new JLabel("Bidirectional conn.");
+		biConn.setForeground(Color.green);
 		colorsLegend.add(preConn);
 		colorsLegend.add(postConn);
+		colorsLegend.add(biConn);
 		
 		/* Container panel */
 		
 		// This panel contains the commands, info and colors legend panels
 		
 		containerPanel.setLayout(new BoxLayout(containerPanel, BoxLayout.Y_AXIS));		
-		containerPanel.add(commandsPanel);
+		containerPanel.add(commandsPanelTotal);
 		containerPanel.add(Box.createRigidArea(new Dimension(0,5)));		
 		containerPanel.add(infoPanel);
 		containerPanel.add(Box.createRigidArea(new Dimension(0,5)));		
@@ -355,22 +403,64 @@ public class VirtualLayerVisualizer extends Thread{
 					// Use different colors for pre and postsynaptic connections only if only those of the selected 
 					// node must be painted, otherwise use black for both
 					
+					ArrayList<Node> tmpPresynapticNodes = new ArrayList<>(node.presynapticNodes);
+					ArrayList<Node> tmpPostsynapticNodes = new ArrayList<>(node.postsynapticNodes);
+										 					
+					if (!paintAll)
+						g.setColor(Color.green); 
+					
+					for (int i = 0; i < tmpPresynapticNodes.size(); i++) {
+						
+						if (tmpPostsynapticNodes.contains(tmpPresynapticNodes.get(i))) {
+							
+							tmpPoint = nodeIconsTable.get(tmpPresynapticNodes.get(i).ipHashCode).nodeLabel
+									.getLocation();
+
+							radius = nodeIconsTable.get(tmpPresynapticNodes.get(i).ipHashCode).nodeLabel
+									.getWidth() / 2;
+
+							g.drawLine(nodeLabel.getX() + nodeLabel.getWidth() / 2,
+									nodeLabel.getY() + nodeLabel.getHeight() / 2, tmpPoint.x + radius,
+									tmpPoint.y + radius);
+
+							if (!paintAll) {
+								g.setColor(Color.blue);							
+								g.drawString(String.valueOf(node.terminal.numOfNeurons),
+										(nodeLabel.getX() + tmpPoint.x) / 2 - 12,
+										(nodeLabel.getY() + tmpPoint.y) / 2);
+							}
+							
+							if (!paintAll) {
+								g.setColor(Color.red);							
+								g.drawString(String.valueOf(tmpPresynapticNodes.get(i).terminal.numOfNeurons),
+										(nodeLabel.getX() + tmpPoint.x) / 2 + 12,
+										(nodeLabel.getY() + tmpPoint.y) / 2);
+							}
+							
+							tmpPresynapticNodes.remove(tmpPresynapticNodes.get(i));
+							tmpPostsynapticNodes.remove(tmpPostsynapticNodes.get(i));
+							
+						}
+						
+					}
+					
+					
 					// Presynaptic connections are drawn in red
 					if (!paintAll)
 						g.setColor(Color.red);
 
 					// Iterate over the presynaptic connections of the node selected
-					for (int i = 0; i < node.presynapticNodes.size(); i++) {
-
+					for (int i = 0; i < tmpPresynapticNodes.size(); i++) {
+					
 						// For the i-th connections, proceeds only if it doesn't belong to the server itself
-						if (node.presynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP) {
+						if (tmpPresynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP) {
 
 							// Store the location of the icon representing the i-th node
-							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).ipHashCode).nodeLabel
+							tmpPoint = nodeIconsTable.get(tmpPresynapticNodes.get(i).ipHashCode).nodeLabel
 									.getLocation();
 
 							// Retrieve the radius of the icon of the i-th node
-							radius = nodeIconsTable.get(node.presynapticNodes.get(i).ipHashCode).nodeLabel
+							radius = nodeIconsTable.get(tmpPresynapticNodes.get(i).ipHashCode).nodeLabel
 									.getWidth() / 2;
 
 							// Draw the line 
@@ -391,21 +481,21 @@ public class VirtualLayerVisualizer extends Thread{
 						g.setColor(Color.blue);
 
 					// Just like the previous for, but this time with post instead of pre connections
-					for (int i = 0; i < node.postsynapticNodes.size(); i++) {
+					for (int i = 0; i < tmpPostsynapticNodes.size(); i++) {
 
-						if (node.postsynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP) {
+						if (tmpPostsynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP) {
 
-							tmpPoint = nodeIconsTable.get(node.postsynapticNodes.get(i).ipHashCode).nodeLabel
+							tmpPoint = nodeIconsTable.get(tmpPostsynapticNodes.get(i).ipHashCode).nodeLabel
 									.getLocation();
 
-							radius = nodeIconsTable.get(node.postsynapticNodes.get(i).ipHashCode).nodeLabel
+							radius = nodeIconsTable.get(tmpPostsynapticNodes.get(i).ipHashCode).nodeLabel
 									.getWidth() / 2;
 
 							g.drawLine(nodeLabel.getX() + nodeLabel.getWidth() / 2,
 									nodeLabel.getY() + nodeLabel.getHeight() / 2, tmpPoint.x + radius,
 									tmpPoint.y + radius);
 
-							g.drawString(String.valueOf(node.postsynapticNodes.get(i).terminal.numOfNeurons),
+							g.drawString(String.valueOf(tmpPostsynapticNodes.get(i).terminal.numOfNeurons),
 									(nodeLabel.getX() + tmpPoint.x) / 2,
 									(nodeLabel.getY() + tmpPoint.y) / 2);
 						}
@@ -426,9 +516,14 @@ public class VirtualLayerVisualizer extends Thread{
 	}
 	/* [End of DrawablePanelVL class] */	
 	
+	/* Class describing the panel on top of which the labels and the connections are drawn */
+	
 	public class LayeredPaneVL extends JPanel implements MouseMotionListener {
 		
+		// The panel containing the nodes labels
 		public JLayeredPane VLPanel = new JLayeredPane();
+		
+		// The panel on which the connections are drawn
 		public DrawablePanelVL connPanel = new DrawablePanelVL();
 		
 		public void setPreferredSize(Dimension d) {
@@ -447,10 +542,13 @@ public class VirtualLayerVisualizer extends Thread{
 		}
 		
 		public void addNode (Node node) {
-					
+			
+			// A new label for the node is created
 			JLabelVL newNodeLabel = new JLabelVL(node);
+			// The node is saved in the hash map
 			nodeIconsTable.put(node.ipHashCode, newNodeLabel);
-			VLPanel.add(newNodeLabel.nodeLabel, new Integer(1), nodeIconsTable.size());
+			// The label is added to the appropriate panel
+			VLPanel.add(newNodeLabel.nodeLabel, new Integer(1), nodeIconsTable.size());			
 			connPanel.revalidate();
 			connPanel.repaint();
 						
@@ -458,16 +556,25 @@ public class VirtualLayerVisualizer extends Thread{
 		
 		public void removeNode (Node node) {
 			
+			// If the selected node is the one to be removed further steps need to be taken
 			if (selectedNode == node) {
+				// Eliminate the reference to the selected node and its label
 				selectedNode = null;
 				selectedNodeLabel = null;
+				// Restore the info panel to its default state
 				infoPanel.removeAll();
 				infoPanel.add(new JLabel("Select a node"));
 				infoPanel.revalidate();
 				infoPanel.repaint();
+				// No matter the status of the button we reset it to be on the safe side
+				showTerminalFrame.setSelected(false);
+				showTerminalFrame.setEnabled(false);
 			}
-				
+			
+			// Remove from the panel the label associated to the node, which must be retrieved
+			// from the hash map
 			VLPanel.remove(nodeIconsTable.get(node.ipHashCode).nodeLabel);
+			// Remove the reference to the label from the hash map and repaint the connection panel
 			nodeIconsTable.remove(node.ipHashCode);
 			connPanel.revalidate();
 			connPanel.repaint();
@@ -478,18 +585,25 @@ public class VirtualLayerVisualizer extends Thread{
 				
 		public void mouseDragged(MouseEvent e) {	
 			
+			// Proceed only if a node has been selected before dragging the mouse
 			if (selectedNode != null) {
+				// Updated the location of the label of the selected node
 				selectedNodeLabel.setLocation(e.getX(), e.getY());	
+				// Proceed in the case the label is dragged close to the window border
 				if (e.getX() > (VLPanel.getWidth() - 10) || e.getY() > (VLPanel.getHeight() - 10)) {
+					// Increase the size of the panel underlying the scrolling panel
 					this.setPreferredSize(new Dimension(VLPanel.getWidth() + 32, VLPanel.getHeight() + 32));
 					connPanel.revalidate();
 				}
+				// Repaint the connections
 				connPanel.paintImmediately(connPanel.getVisibleRect());
 			}							
 			
 		}
 			
 	}
+	
+	/* The class which describes the label representing the nodes */
 	
 	public class JLabelVL extends JLabel implements MouseListener {
 		
@@ -502,8 +616,10 @@ public class VirtualLayerVisualizer extends Thread{
 			
 			this.node = n;
 			
+			// Scale the dimension of the icon so that the node with more neurons appears bigger
 			this.dimension = (int) (48.0f - (24.0f / 1023.0f) * (1024.0f - (float)n.terminal.numOfNeurons));
-					
+			
+			// Get the image for the icon
 			try {
 				Image img = ImageIO.read(getClass().getResource("/icons/icons8-New Moon.png"));
 				nodeIcon = (new ImageIcon(img.getScaledInstance(this.dimension, this.dimension, Image.SCALE_SMOOTH)));
@@ -513,6 +629,7 @@ public class VirtualLayerVisualizer extends Thread{
 			
 			assert nodeIcon != null;
 			
+			// Associate the icon to the label and put it somewhere in the main window
 			nodeLabel = new JLabel(nodeIcon);
 			nodeLabel.setBounds(64, 64, this.dimension, this.dimension);
 			
@@ -527,17 +644,26 @@ public class VirtualLayerVisualizer extends Thread{
 		
 		public void mouseClicked(MouseEvent e) {
 						
+			// If this node had already been selected before...
 			if (selectedNode == this.node) {
-				
+												
+				// ...then it must be deselected
 				selectedNode = null;
 				selectedNodeLabel = null;
+				// If the terminal frame of this node was in focus, then the relative button must be deselected
+				// now that the node itself has been deselected
 				showTerminalFrame.setSelected(false);
 				
+				// When no node is selected the button to show the terminal frame must be grayed out
+				showTerminalFrame.setEnabled(false);
+				
+				// Update the info panel appropriately
 				infoPanel.removeAll();
 				infoPanel.add(new JLabel("Select a node"));
 				infoPanel.revalidate();
 				infoPanel.repaint();
 				
+				// Get the icon representing a deselected node
 				try {
 					Image img = ImageIO.read(getClass().getResource("/icons/icons8-New Moon.png"));
 					nodeIcon = (new ImageIcon(img.getScaledInstance(this.dimension, this.dimension, Image.SCALE_SMOOTH)));
@@ -547,15 +673,18 @@ public class VirtualLayerVisualizer extends Thread{
 				
 				assert nodeIcon != null;
 				
+				// Set the icon and repaint the window
 				nodeLabel.setIcon(nodeIcon);
 				
 				layeredPaneVL.connPanel.revalidate();
 				layeredPaneVL.connPanel.repaint();
 				
 			} else {
-								
+				
+				// If this node was not selected but some other was...
 				if (selectedNode != null) {
 					
+					// ...then that other node must first be deselected
 					try {
 						Image img = ImageIO.read(getClass().getResource("/icons/icons8-New Moon.png"));
 						nodeIcon = (new ImageIcon(
@@ -570,14 +699,20 @@ public class VirtualLayerVisualizer extends Thread{
 					
 				}
 				
+				// Now that a node has been selected it should be possible to toggle its terminal frame
+				showTerminalFrame.setEnabled(true);
+				
+				// Reference to this node and its labe is added to selecetedNode and selectedNodeLabel
 				selectedNode = this.node;
 				selectedNodeLabel = nodeIconsTable.get(selectedNode.ipHashCode).nodeLabel;
 				
+				// Change the status of the info button depending on visibility of the terminal frame of this node
 				if (node.terminalFrame.frame.isVisible())
 					showTerminalFrame.setSelected(true);
 				else
 					showTerminalFrame.setSelected(false);
 				
+				// Update the info panel
 				infoPanel.removeAll();
 				infoPanel.add(new JLabel("# neurons " + node.terminal.numOfNeurons));
 				infoPanel.add(new JLabel("# synapses " + node.terminal.numOfSynapses));
@@ -585,6 +720,7 @@ public class VirtualLayerVisualizer extends Thread{
 				infoPanel.revalidate();
 				infoPanel.repaint();
 				
+				// Get the icon for the now selected node
 				try {
 					Image img = ImageIO.read(getClass().getResource("/icons/icons8-0 Percents.png"));
 					nodeIcon = (new ImageIcon(img.getScaledInstance(this.dimension, this.dimension, Image.SCALE_SMOOTH)));
@@ -594,6 +730,7 @@ public class VirtualLayerVisualizer extends Thread{
 				
 				assert nodeIcon != null;
 						
+				// set the icon and update the panel
 				nodeLabel.setIcon(nodeIcon);				
 				
 				layeredPaneVL.connPanel.revalidate();
@@ -601,11 +738,16 @@ public class VirtualLayerVisualizer extends Thread{
 				
 			}
 			
+			// If one of the two tools has been selected...
 			if (cutLinkFlag || createLinkFlag) {						
-								
+					
+				// If no editable node has been selected...
 				if (editingNode == 1) {
+					// ...then the first node to edit is this one, therefore add it to the array.
 					editableNodeLabels[0] = this;
+					// Change the flag describing the status of the editing operation
 					editingNode = 2;
+					// Update the log panel with the ip of the first editable node
 					logPanel.removeAll();
 					logPanel.add(new JLabel("1st node is: " + node.terminal.ip + " please select 2nd node"));
 					logPanel.revalidate();
@@ -613,7 +755,9 @@ public class VirtualLayerVisualizer extends Thread{
 				}
 				else {
 					
+					// This node is the secon editable node, therefore add it to the array
 					editableNodeLabels[1] = this;
+					// Send the editable node to the appropriate function
 					Node[] nodeToModify = {editableNodeLabels[0].node, editableNodeLabels[1].node};
 					short successFlag = VirtualLayerManager.modifyNode(nodeToModify);	
 					
@@ -621,13 +765,19 @@ public class VirtualLayerVisualizer extends Thread{
 					JLabel errorText = new JLabel();
 					errorText.setForeground(Color.red);
 					
+					// Depending on whether the edit operation was succesfull or not display an error message in 
+					// the log panel
 					if (successFlag == 0) 
 						logPanel.add(new JLabel("Operation succesfull!"));
 					else if (successFlag == 1) {
 						errorText.setText("Error: nodes are not connected in any way");
 						logPanel.add(errorText);
-					} else {
+					} else  if (successFlag == 2) {
 						errorText.setText("Error: nodes are already connected");
+						logPanel.add(errorText);
+					} else if (successFlag == 3) {
+						errorText.setText("Error: " + editableNodeLabels[0].node.terminal.ip + " has insufficient synapses or " + 
+											editableNodeLabels[1].node.terminal.ip + " has insufficient dendrites");
 						logPanel.add(errorText);
 					}
 					

@@ -223,7 +223,7 @@ public class VirtualLayerManager extends Thread{
 				(nodeToModify[1].terminal.numOfDendrites - nodeToModify[0].terminal.numOfNeurons) >= 0) {
 			
 			if (!nodeToModify[1].presynapticNodes.contains(nodeToModify[0]) && 
-					!nodeToModify[1].postsynapticNodes.contains(nodeToModify[0])) {
+					(!nodeToModify[1].postsynapticNodes.contains(nodeToModify[0]) || VLVisualizer.allowBidirectionalConn)) {
 				nodeToModify[0].terminal.numOfSynapses -= nodeToModify[1].terminal.numOfNeurons;
 				nodeToModify[1].terminal.numOfDendrites -= nodeToModify[0].terminal.numOfNeurons;
 				nodeToModify[0].terminal.postsynapticTerminals.add(nodeToModify[1].terminal);
@@ -233,7 +233,7 @@ public class VirtualLayerManager extends Thread{
 			} else
 				return 2;
 			
-		}
+		} else if (VirtualLayerVisualizer.createLinkFlag) return 3;
 		
 		connectNodes(nodeToModify);
 		
