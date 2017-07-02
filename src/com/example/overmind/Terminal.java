@@ -9,6 +9,11 @@ public class Terminal implements Serializable {
     public int natPort;
     public ArrayList<Terminal> presynapticTerminals;
     public ArrayList<Terminal> postsynapticTerminals;
+    
+    public Terminal () {
+        presynapticTerminals = new ArrayList<>();
+        postsynapticTerminals = new ArrayList<>();
+    }
 
     @Override
     public boolean equals(Object obj) {

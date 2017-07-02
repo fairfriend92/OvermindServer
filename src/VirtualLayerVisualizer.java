@@ -437,8 +437,8 @@ public class VirtualLayerVisualizer extends Thread{
 										(nodeLabel.getY() + tmpPoint.y) / 2);
 							}
 							
-							tmpPresynapticNodes.remove(tmpPresynapticNodes.get(i));
-							tmpPostsynapticNodes.remove(tmpPostsynapticNodes.get(i));
+							tmpPostsynapticNodes.remove(tmpPresynapticNodes.get(i));
+							tmpPresynapticNodes.remove(i);
 							
 						}
 						
