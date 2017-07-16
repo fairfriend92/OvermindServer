@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
@@ -401,22 +402,23 @@ public class VirtualLayerVisualizer extends Thread{
 					g.drawString(node.terminal.ip, nodeLabel.getX(), nodeLabel.getY());
 
 					// Use different colors for pre and postsynaptic connections only if only those of the selected 
-					// node must be painted, otherwise use black for both
+					// node must be painted, otherwise use black for both																							 									
 					
-					ArrayList<Node> tmpPresynapticNodes = new ArrayList<>(node.presynapticNodes);
-					ArrayList<Node> tmpPostsynapticNodes = new ArrayList<>(node.postsynapticNodes);
-										 					
-					if (!paintAll)
-						g.setColor(Color.green); 
+					ArrayList<Integer> servedPresynNodesIndexes = new ArrayList<>(node.presynapticNodes.size());
+					ArrayList<Integer> servedPostsynNodesIndexes = new ArrayList<>(node.presynapticNodes.size());
+
 					
-					for (int i = 0; i < tmpPresynapticNodes.size(); i++) {
+					for (int i = 0; i < node.presynapticNodes.size(); i++) {
 						
-						if (tmpPostsynapticNodes.contains(tmpPresynapticNodes.get(i))) {
+						if (!paintAll)
+							g.setColor(Color.green); 
+						
+						if (node.postsynapticNodes.contains(node.presynapticNodes.get(i))) {
 							
-							tmpPoint = nodeIconsTable.get(tmpPresynapticNodes.get(i).ipHashCode).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).ipHashCode).nodeLabel
 									.getLocation();
 
-							radius = nodeIconsTable.get(tmpPresynapticNodes.get(i).ipHashCode).nodeLabel
+							radius = nodeIconsTable.get(node.presynapticNodes.get(i).ipHashCode).nodeLabel
 									.getWidth() / 2;
 
 							g.drawLine(nodeLabel.getX() + nodeLabel.getWidth() / 2,
@@ -432,35 +434,35 @@ public class VirtualLayerVisualizer extends Thread{
 							
 							if (!paintAll) {
 								g.setColor(Color.red);							
-								g.drawString(String.valueOf(tmpPresynapticNodes.get(i).terminal.numOfNeurons),
+								g.drawString(String.valueOf(node.presynapticNodes.get(i).terminal.numOfNeurons),
 										(nodeLabel.getX() + tmpPoint.x) / 2 + 12,
 										(nodeLabel.getY() + tmpPoint.y) / 2);
 							}
 							
-							tmpPostsynapticNodes.remove(tmpPresynapticNodes.get(i));
-							tmpPresynapticNodes.remove(i);
+							servedPresynNodesIndexes.add(i);	
+							servedPostsynNodesIndexes.add(node.postsynapticNodes.indexOf(node.presynapticNodes.get(i)));
 							
 						}
 						
-					}
-					
+					}								
+													
 					
 					// Presynaptic connections are drawn in red
 					if (!paintAll)
 						g.setColor(Color.red);
 
 					// Iterate over the presynaptic connections of the node selected
-					for (int i = 0; i < tmpPresynapticNodes.size(); i++) {
+					for (int i = 0; i < node.presynapticNodes.size(); i++) {
 					
 						// For the i-th connections, proceeds only if it doesn't belong to the server itself
-						if (tmpPresynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP) {
+						if (node.presynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP && !servedPresynNodesIndexes.contains(i)) {
 
 							// Store the location of the icon representing the i-th node
-							tmpPoint = nodeIconsTable.get(tmpPresynapticNodes.get(i).ipHashCode).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).ipHashCode).nodeLabel
 									.getLocation();
 
 							// Retrieve the radius of the icon of the i-th node
-							radius = nodeIconsTable.get(tmpPresynapticNodes.get(i).ipHashCode).nodeLabel
+							radius = nodeIconsTable.get(node.presynapticNodes.get(i).ipHashCode).nodeLabel
 									.getWidth() / 2;
 
 							// Draw the line 
@@ -481,21 +483,21 @@ public class VirtualLayerVisualizer extends Thread{
 						g.setColor(Color.blue);
 
 					// Just like the previous for, but this time with post instead of pre connections
-					for (int i = 0; i < tmpPostsynapticNodes.size(); i++) {
+					for (int i = 0; i < node.postsynapticNodes.size(); i++) {
 
-						if (tmpPostsynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP) {
+						if (node.postsynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP && !servedPostsynNodesIndexes.contains(i)) {
 
-							tmpPoint = nodeIconsTable.get(tmpPostsynapticNodes.get(i).ipHashCode).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.postsynapticNodes.get(i).ipHashCode).nodeLabel
 									.getLocation();
 
-							radius = nodeIconsTable.get(tmpPostsynapticNodes.get(i).ipHashCode).nodeLabel
+							radius = nodeIconsTable.get(node.postsynapticNodes.get(i).ipHashCode).nodeLabel
 									.getWidth() / 2;
 
 							g.drawLine(nodeLabel.getX() + nodeLabel.getWidth() / 2,
 									nodeLabel.getY() + nodeLabel.getHeight() / 2, tmpPoint.x + radius,
 									tmpPoint.y + radius);
 
-							g.drawString(String.valueOf(tmpPostsynapticNodes.get(i).terminal.numOfNeurons),
+							g.drawString(String.valueOf(node.postsynapticNodes.get(i).terminal.numOfNeurons),
 									(nodeLabel.getX() + tmpPoint.x) / 2,
 									(nodeLabel.getY() + tmpPoint.y) / 2);
 						}
@@ -702,7 +704,7 @@ public class VirtualLayerVisualizer extends Thread{
 				// Now that a node has been selected it should be possible to toggle its terminal frame
 				showTerminalFrame.setEnabled(true);
 				
-				// Reference to this node and its labe is added to selecetedNode and selectedNodeLabel
+				// Reference to this node and its label is added to selecetedNode and selectedNodeLabel
 				selectedNode = this.node;
 				selectedNodeLabel = nodeIconsTable.get(selectedNode.ipHashCode).nodeLabel;
 				

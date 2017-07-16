@@ -261,10 +261,13 @@ public class VirtualLayerManager extends Thread{
 					Node currentNode = availableNodes.get(i);
 
 					// Branch depending on whether either the synapses or the dendrites of the current terminal are saturated
+					// Try to increase the number of connections of the type which has the the fewest, but keep in mind
+					// that each terminal must have at least one presynaptic connection
 					if (currentNode.terminal.numOfSynapses - disconnectedNode.terminal.numOfNeurons >= 0
 							&& disconnectedNode.terminal.numOfDendrites - currentNode.terminal.numOfNeurons >= 0
-							&& currentNode.terminal.postsynapticTerminals
-									.size() <= currentNode.terminal.presynapticTerminals.size()) {
+							&& (currentNode.terminal.postsynapticTerminals
+									.size() <= currentNode.terminal.presynapticTerminals.size() 
+									|| disconnectedNode.terminal.presynapticTerminals.size() == 0)) {
 
 						// Update the number of synapses and dendrites for both currentNode.terminal and disconnectedNode.terminal
 						currentNode.terminal.numOfSynapses -= disconnectedNode.terminal.numOfNeurons;
