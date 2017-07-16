@@ -43,7 +43,7 @@ public class RefreshSignalSender implements Runnable {
         server.numOfNeurons = 8 < targetTerminal.numOfDendrites ? 8 : targetTerminal.numOfDendrites;
         server.numOfSynapses = (short)(1024 - targetTerminal.numOfNeurons);
         server.numOfDendrites = 1024;
-        server.natPort = VirtualLayerManager.SERVER_PORT_UDP;
+        server.natPort = Constants.SERVER_PORT_UDP;
         
         targetTerminal.numOfDendrites -= server.numOfNeurons;
         

@@ -1,3 +1,4 @@
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -33,6 +34,7 @@ import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTable;
 import javax.swing.JToggleButton;
 
 public class VirtualLayerVisualizer extends Thread{
@@ -52,18 +54,19 @@ public class VirtualLayerVisualizer extends Thread{
 	private HashMap<Integer, JLabelVL> nodeIconsTable = new HashMap<>();
 	private JPanel infoPanel = new JPanel();
 	private JPanel logPanel = new JPanel();
+	private JPanel weightsPanel = new JPanel();
 
 	public boolean allowBidirectionalConn = false;
 	
 	JToggleButton cutLink = new JToggleButton();
-	JToggleButton createLink = new JToggleButton();
-
+	JToggleButton createLink = new JToggleButton();	
+	
 	@Override
 	public void run () {
 		super.run();
 		
-		String frameTitle = new String("Virtual Layer Visualizer");
-		
+		String frameTitle = new String("Virtual Layer Visualizer");					
+
 		JScrollPane scrollPane = new JScrollPane(layeredPaneVL.connPanel);
 		
 		JPanel totalPanel = new JPanel();
@@ -242,7 +245,7 @@ public class VirtualLayerVisualizer extends Thread{
 				
 		/* Commands panel */
 		
-		commandsPanel.setLayout(new GridLayout(3,2));		
+		commandsPanel.setLayout(new GridLayout(2,3));		
 		commandsPanel.add(cutLink);
 		commandsPanel.add(createLink);
 		commandsPanel.add(resizeX);
@@ -289,15 +292,25 @@ public class VirtualLayerVisualizer extends Thread{
 		colorsLegend.setBorder(BorderFactory.createCompoundBorder(
 				BorderFactory.createTitledBorder("Colors legend"),
 				BorderFactory.createEmptyBorder(5,5,5,5)));
-		JLabel preConn = new JLabel("Presynaptic conn.");
+		JLabel preConn = new JLabel("Presynaptic connections");
 		preConn.setForeground(Color.red);
-		JLabel postConn = new JLabel("Postsynaptic conn.");
+		JLabel postConn = new JLabel("Postsynaptic connections");
 		postConn.setForeground(Color.blue);
-		JLabel biConn = new JLabel("Bidirectional conn.");
+		JLabel biConn = new JLabel("Bidirectional connections");
 		biConn.setForeground(Color.green);
 		colorsLegend.add(preConn);
 		colorsLegend.add(postConn);
 		colorsLegend.add(biConn);
+		
+		/* Weights panel */
+		
+		weightsPanel.setLayout(new BorderLayout());
+		weightsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		weightsPanel.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createTitledBorder("Synaptic weights"),
+				BorderFactory.createEmptyBorder(5,5,5,5)));
+		weightsPanel.add(new JLabel("Select a node"), BorderLayout.CENTER);
+		
 		
 		/* Container panel */
 		
@@ -309,7 +322,9 @@ public class VirtualLayerVisualizer extends Thread{
 		containerPanel.add(infoPanel);
 		containerPanel.add(Box.createRigidArea(new Dimension(0,5)));		
 		containerPanel.add(colorsLegend);
-				
+		containerPanel.add(Box.createRigidArea(new Dimension(0,5)));		
+		containerPanel.add(weightsPanel);
+						
 		// Constraints used for the total panel layout
 		
 		GridBagConstraints VLConstraint = new GridBagConstraints(), commandsConstraint = new GridBagConstraints(), 
@@ -568,6 +583,12 @@ public class VirtualLayerVisualizer extends Thread{
 				infoPanel.add(new JLabel("Select a node"));
 				infoPanel.revalidate();
 				infoPanel.repaint();
+				// Restore the weights panel
+				weightsPanel.removeAll();
+				weightsPanel.add(new JLabel("Select a node"));
+				weightsPanel.revalidate();
+				weightsPanel.repaint();
+				VLVFrame.pack();
 				// No matter the status of the button we reset it to be on the safe side
 				showTerminalFrame.setSelected(false);
 				showTerminalFrame.setEnabled(false);
@@ -665,6 +686,13 @@ public class VirtualLayerVisualizer extends Thread{
 				infoPanel.revalidate();
 				infoPanel.repaint();
 				
+				// Update the weights panel
+				
+				weightsPanel.removeAll();
+				weightsPanel.add(new JLabel("Select a node"));
+				weightsPanel.revalidate();
+				weightsPanel.repaint();
+				
 				// Get the icon representing a deselected node
 				try {
 					Image img = ImageIO.read(getClass().getResource("/icons/icons8-New Moon.png"));
@@ -721,6 +749,22 @@ public class VirtualLayerVisualizer extends Thread{
 				infoPanel.add(new JLabel("# dendrites " + node.terminal.numOfDendrites));
 				infoPanel.revalidate();
 				infoPanel.repaint();
+				
+				// Updated the weight panel
+				
+				WeightsTableModel weightsTableModel = new WeightsTableModel(VirtualLayerManager.weightsTable.get(node.ipHashCode));
+				JTable weightsTable = new JTable(weightsTableModel);				
+				weightsPanel.removeAll();
+				weightsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+				weightsTable.getColumnModel().getColumn(0).setMaxWidth(60);
+				weightsTable.getColumnModel().getColumn(1).setMaxWidth(60);
+				weightsTable.getColumnModel().getColumn(2).setMaxWidth(60);
+				weightsTable.setPreferredScrollableViewportSize(new Dimension(180, 200));
+				JScrollPane weightsScrollPane = new JScrollPane(weightsTable);	
+				weightsPanel.add(weightsScrollPane, BorderLayout.CENTER);
+				weightsPanel.revalidate();
+				weightsPanel.repaint();
+				VLVFrame.pack();
 				
 				// Get the icon for the now selected node
 				try {

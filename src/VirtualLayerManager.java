@@ -28,17 +28,16 @@ import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-public class VirtualLayerManager extends Thread{
-	
-	// TODO put these constants in Constants
-	
-	public final static int SERVER_PORT_TCP = 4195;
-	public final static int SERVER_PORT_UDP = 4196;
+public class VirtualLayerManager extends Thread{			
 	
 	static boolean shutdown = false;	
 	
 	static int numberOfSyncNodes = 0;	
-	static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>(8);
+	static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);
+	
+	// TODO: perhaps weights could be char instead of float?
+	static ConcurrentHashMap<Integer, float[]> weightsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);
+	
 	static List<Node> unsyncNodes = Collections.synchronizedList(new ArrayList<Node>());
 	static List<Node> availableNodes = Collections.synchronizedList(new ArrayList<Node>());	
 	static List<Short> freeNodes = Collections.synchronizedList(new ArrayList<Short>());
@@ -70,7 +69,7 @@ public class VirtualLayerManager extends Thread{
 		ServerSocket serverSocket = null;		
 		
 		try {
-			serverSocket = new ServerSocket(SERVER_PORT_TCP);
+			serverSocket = new ServerSocket(Constants.SERVER_PORT_TCP);
 		} catch (IOException e) {
         	e.printStackTrace();
 		}
@@ -84,7 +83,7 @@ public class VirtualLayerManager extends Thread{
 		DatagramSocket inputSocket = null;
 
         try {
-            inputSocket = new DatagramSocket(SERVER_PORT_UDP);
+            inputSocket = new DatagramSocket(Constants.SERVER_PORT_UDP);
         } catch (SocketException e) {
         	e.printStackTrace();
         }
@@ -181,7 +180,8 @@ public class VirtualLayerManager extends Thread{
 		
 			// Put the new node in the hashmap using the hashcode of the
 			// InetAddress of the terminal contained in the node as key
-			nodesTable.put(ipHashCode, newNode);		
+			nodesTable.put(ipHashCode, newNode);	
+			weightsTable.put(ipHashCode, new float[newNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES]);
 		
 			assert terminal != null;	
 			
