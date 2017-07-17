@@ -9,7 +9,9 @@ public class Terminal implements Serializable {
     public int natPort;
     public ArrayList<Terminal> presynapticTerminals;
     public ArrayList<Terminal> postsynapticTerminals;
-    
+    public float[] newWeights = new float[0];
+    public int[] newWeightsIndexes = new int[0];
+
     public Terminal () {
         presynapticTerminals = new ArrayList<>();
         postsynapticTerminals = new ArrayList<>();
@@ -34,5 +36,10 @@ public class Terminal implements Serializable {
         this.natPort = updatedTerminal.natPort;
         this.presynapticTerminals = new ArrayList<>(updatedTerminal.presynapticTerminals);
         this.postsynapticTerminals = new ArrayList<>(updatedTerminal.postsynapticTerminals);
+        int length = updatedTerminal.newWeights.length;
+        newWeights = new float[length];
+        newWeightsIndexes = new int[length];
+        System.arraycopy(updatedTerminal.newWeights, 0, newWeights, 0, length);
+        System.arraycopy(updatedTerminal.newWeightsIndexes, 0, newWeightsIndexes, 0, length);
     }
 }

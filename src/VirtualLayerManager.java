@@ -499,7 +499,7 @@ public class VirtualLayerManager extends Thread{
 					
 					// The terminal acting as holder of the new info is updated
 					tmpTerminal.update(unsyncNodes.get(i).terminal);
-									
+														
 					// Write the info in the steam					
 					unsyncNodes.get(i).output.writeObject(tmpTerminal);		
 					unsyncNodes.get(i).output.flush();

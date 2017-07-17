@@ -49,7 +49,7 @@ public class VirtualLayerVisualizer extends Thread{
 		
 	private boolean shutdown = false;
 	private int editingNode = 0;
-	private Node selectedNode;
+	static public Node selectedNode;
 	private JLabel selectedNodeLabel;
 	private HashMap<Integer, JLabelVL> nodeIconsTable = new HashMap<>();
 	private JPanel infoPanel = new JPanel();

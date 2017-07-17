@@ -64,10 +64,13 @@ public class WeightsTableModel extends AbstractTableModel {
 
 	@Override
 	public void setValueAt(Object arg0, int arg1, int arg2) {	
-
+		
 		data[arg1] = (float) arg0;
-		System.out.println(" " + data[arg1]);
 		fireTableCellUpdated(arg1, arg2);
+		
+		VirtualLayerVisualizer.selectedNode.terminal.newWeights = new float[] {(float)arg0};
+		VirtualLayerVisualizer.selectedNode.terminal.newWeightsIndexes = new int[] {arg1};
+		VirtualLayerManager.connectNodes(new Node[] {VirtualLayerVisualizer.selectedNode});
 		
 	}
 
