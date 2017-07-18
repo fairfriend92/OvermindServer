@@ -426,6 +426,7 @@ public class VirtualLayerManager extends Thread{
 			tmpNode.terminal.postsynapticTerminals.remove(removableNode.terminal);
 			
 			if (nodeHasBeenModified) {
+				tmpNode.terminal.numOfSynapses += removableNode.terminal.numOfNeurons;
 				unsyncNodes.add(tmpNode);
 				nodeHasBeenModified = false;
 			}
@@ -440,6 +441,7 @@ public class VirtualLayerManager extends Thread{
 			tmpNode.terminal.presynapticTerminals.remove(removableNode.terminal);
 			
 			if (nodeHasBeenModified) {
+				tmpNode.terminal.numOfDendrites += removableNode.terminal.numOfNeurons;
 				unsyncNodes.add(tmpNode);
 				nodeHasBeenModified = false;
 			}
