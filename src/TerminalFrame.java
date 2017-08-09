@@ -78,11 +78,13 @@ public class TerminalFrame {
 		
 		public short xCoordinate = 0;
 		public volatile long time = 0;
-		public ArrayList<byte[]> latestSpikes = new ArrayList<>();
+		public byte[][] latestSpikes = new byte[40][];				
 		
 	    public MyPanel() {
 	        setBorder(BorderFactory.createLineBorder(Color.black));
 			setBackground(Color.white);
+			for (char i = 0; i < 40; i++)
+				latestSpikes[i] = new byte[128]; 
 	    }
 
 	    public Dimension getPreferredSize() {
@@ -99,11 +101,11 @@ public class TerminalFrame {
 	    	short dataBytes = (localUpdatedNode.terminal.numOfNeurons % 8) == 0 ? 
 	    			(short) (localUpdatedNode.terminal.numOfNeurons / 8) : (short)(localUpdatedNode.terminal.numOfNeurons / 8 + 1);	    		    
 	    	
-	    	// Iterate over the latest # latestSpikes.size() spikes vectors
-			for (int k = 0; k < latestSpikes.size(); k++) {
+	    	// Iterate over the latest 40 spikes vectors
+			for (int k = 0; k < 40; k++) {
 				
 				// Get the current spikes vector
-				byte[] spikesData = latestSpikes.get(k);
+				byte[] spikesData = latestSpikes[k];			
 
 				// Iterate over the bytes of the vector
 				for (int i = 0; i < dataBytes; i++) {
@@ -493,11 +495,14 @@ public class TerminalFrame {
 	private class SpikesMonitor implements Runnable {
 		
 		private BlockingQueue<byte[]> spikesReceivedQueue = new ArrayBlockingQueue<>(4);
-		private ArrayList<byte[]> localLatestSpikes = new ArrayList<>(40);
+		private byte[][] localLatestSpikes = new byte[40][]; 
+		private short arrayLength = 0;
 		
 		SpikesMonitor(BlockingQueue<byte[]> b) {
 			
 			this.spikesReceivedQueue = b;
+			for (char i = 0; i < 40; i++)
+				localLatestSpikes[i] = new byte[128];
 			
 		}
 		
@@ -524,26 +529,30 @@ public class TerminalFrame {
 				
 				// The vector containing the spikes is put in this queue by the SpikesSorter class
 				try {
-					spikesReceived = spikesReceivedQueue.poll(5, TimeUnit.SECONDS);
+					spikesReceived = spikesReceivedQueue.poll(10, TimeUnit.SECONDS);
 				} catch (InterruptedException e ) {
 					e.printStackTrace();
 				} 
 				
 				// Proceed only if the vector contains meaningful info
-				if (spikesReceived != null || rastergraphPanel.time == 0) {						
+				if (spikesReceived != null) {						
 																							
 					// The raster graph is updated every 40 iterations of the simulation to prevent screen flickering 
-					if (localLatestSpikes.size() < 40) {
+					if (arrayLength < 40) {
 						
-						localLatestSpikes.add(spikesReceived);
+						System.arraycopy(spikesReceived, 0, localLatestSpikes[arrayLength], 0, 128);
+						arrayLength++;
 						
 					} else {
+						
+						arrayLength = 0;
 						
 						// Update the info regarding the time interval between spikes
 						rastergraphPanel.time = (long)(System.nanoTime() - lastTime) / (40 * 1000000);
 						
 						// Update the list holding the last 40 spikes vectors
-						rastergraphPanel.latestSpikes = new ArrayList<>(localLatestSpikes);													
+						for (char i = 0; i < 40; i++)
+							System.arraycopy(localLatestSpikes[i], 0, rastergraphPanel.latestSpikes[i], 0, localLatestSpikes[i].length);
 						
 						// If there is still room in the raster graph write in the same buffer
 						if (rastergraphPanel.xCoordinate < rastergraphPanel.getWidth()) {
@@ -558,22 +567,21 @@ public class TerminalFrame {
 							rastergraphPanel.paintImmediately(0, localUpdatedNode.terminal.numOfNeurons, rastergraphPanel.getWidth(), stringHeight);
 							
 							// Redraw the region of the raster graph where the spikes time interval is displayed
-							rastergraphPanel.paintImmediately(rastergraphPanel.xCoordinate, 0, rastergraphPanel.latestSpikes.size(), localUpdatedNode.terminal.numOfNeurons);
+							rastergraphPanel.paintImmediately(rastergraphPanel.xCoordinate, 0, 40, localUpdatedNode.terminal.numOfNeurons);
 							
 							// Increase the x coordinate
-							tmpXCoordinate += rastergraphPanel.latestSpikes.size();
+							tmpXCoordinate += 40;
 							
 					    } else {
 					    	
 					    	// If there isn't room in the raster graph the hole graph needs to be refreshed
 					    	rastergraphPanel.xCoordinate = 0;
-					    	tmpXCoordinate = (short)rastergraphPanel.latestSpikes.size();
+					    	tmpXCoordinate = 40;
 					    	rastergraphPanel.repaint();
 					    	
 					    }					
 												
 						lastTime = System.nanoTime();
-						localLatestSpikes.clear();
 					}					
 				
 				} else {

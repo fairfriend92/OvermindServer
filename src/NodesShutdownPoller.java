@@ -5,7 +5,7 @@ public class NodesShutdownPoller extends Thread {
 	
 	static boolean shutdown = false;
 	
-	static BlockingQueue<Node> nodesToBeRemoved = new ArrayBlockingQueue<>(4);
+	static BlockingQueue<Node> nodesToBeRemoved = new ArrayBlockingQueue<>(32);
 
 
 	@Override

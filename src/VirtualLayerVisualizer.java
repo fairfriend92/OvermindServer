@@ -596,7 +596,15 @@ public class VirtualLayerVisualizer extends Thread{
 			
 			// Remove from the panel the label associated to the node, which must be retrieved
 			// from the hash map
-			VLPanel.remove(nodeIconsTable.get(node.ipHashCode).nodeLabel);
+			System.out.println(" " + node.ipHashCode);
+			
+			JLabel test = nodeIconsTable.get(node.ipHashCode).nodeLabel; 
+			
+			if (test == null) {
+				System.out.println("null");
+			} else {	
+				VLPanel.remove(test);
+			}
 			// Remove the reference to the label from the hash map and repaint the connection panel
 			nodeIconsTable.remove(node.ipHashCode);
 			connPanel.revalidate();

@@ -357,8 +357,8 @@ public class VirtualLayerManager extends Thread{
 	}
 	
 	public synchronized static void removeNode(Node removableNode) {
-
-		VLVisualizer.layeredPaneVL.removeNode(removableNode);
+		
+		System.out.println("Node with ip " + removableNode.terminal.ip + " is being removed");
 
 		availableNodes.remove(removableNode); 	
 		
@@ -375,7 +375,7 @@ public class VirtualLayerManager extends Thread{
 		removableNode.terminalFrame.spikesMonitorExecutor.shutdown();	
 		
 		try {
-			spikesMonitorIsShutdown = removableNode.terminalFrame.spikesMonitorExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+			spikesMonitorIsShutdown = removableNode.terminalFrame.spikesMonitorExecutor.awaitTermination(10, TimeUnit.SECONDS);
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
@@ -453,6 +453,8 @@ public class VirtualLayerManager extends Thread{
 		if (removedNode != null) {
 			numberOfSyncNodes--;
 		}
+		
+		VLVisualizer.layeredPaneVL.removeNode(removableNode);
 		
 		// Sync other nodes that have been eventually modified
 		syncNodes();

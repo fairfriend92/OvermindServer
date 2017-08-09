@@ -30,7 +30,7 @@ public class SpikesReceiver extends Thread{
 		DatagramSocket spikesReceiver = null;
 
         try {
-            spikesReceiver = new DatagramSocket(4194);
+            spikesReceiver = new DatagramSocket(Constants.UDP_PORT);
     	    spikesReceiver.setTrafficClass(IPTOS_THROUGHPUT);  
 
         } catch (SocketException e) {
