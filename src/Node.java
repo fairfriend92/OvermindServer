@@ -13,6 +13,7 @@ public class Node {
 	public Socket client;
 	public ObjectOutputStream output;
 	public com.example.overmind.Terminal terminal;
+	private final Object lock = new Object ();
 	
 	public Node(Socket s1, com.example.overmind.Terminal t, ObjectOutputStream o) {
 		this.client = s1;
@@ -66,5 +67,14 @@ public class Node {
     	return (compare.terminal.ip.equals(this.terminal.ip) && compare.terminal.natPort == this.terminal.natPort);
     	
     }
+	
+	public void writeObjectIntoStream (Object obj) throws IOException
+	{			
+		synchronized (lock) {			
+			output.writeObject(obj);		
+			//output.flush();
+			
+		}		
+	}
 	
 }

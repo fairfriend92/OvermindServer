@@ -8,6 +8,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -57,6 +58,7 @@ public class TerminalFrame {
 
 	public BlockingQueue<byte[]> receivedSpikesQueue = new ArrayBlockingQueue<>(16);
 	public ExecutorService spikesMonitorExecutor = Executors.newSingleThreadExecutor();
+	public ExecutorService tcpKeepAliveExecutor = Executors.newSingleThreadExecutor();
 	public boolean spikesMonitorIsActive = false;
 	
 	public MyPanel rastergraphPanel = new MyPanel();	
@@ -66,6 +68,8 @@ public class TerminalFrame {
 	public short rateMultiplier = 3;
 	
 	public volatile boolean waitForLatestPacket = false;
+	
+	public final Object tcpKeepAliveLock = new Object ();
 
 	/**
 	 * Custom panel to display the raster graph
@@ -157,6 +161,8 @@ public class TerminalFrame {
 		
 		JList<String> presynapticConnections = new JList<>();
 		JList<String> postsynapticConnections = new JList<>();
+		
+		tcpKeepAliveExecutor.execute(new tcpKeepAlivePackageSender());
 		
 		JCheckBox refreshAfterSpike = new JCheckBox("Dynamic refresh rate", false);
 		refreshAfterSpike.addActionListener(new ActionListener() {
@@ -593,6 +599,38 @@ public class TerminalFrame {
 				
 			}	
 											
+		}
+		/* [End of run() ] */
+		
+	}
+	/* [End of SpikesMonitor] */
+	
+	private class tcpKeepAlivePackageSender implements Runnable {		
+	
+		@Override
+		public void run() {
+			
+			while (!shutdown) {
+				
+				try {
+					localUpdatedNode.writeObjectIntoStream(new Boolean(true));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				
+				synchronized (tcpKeepAliveLock) {
+					
+					try {
+						tcpKeepAliveLock.wait(30000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					
+				}
+				
+				
+			}
+			
 		}
 		
 	}

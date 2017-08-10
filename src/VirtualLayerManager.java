@@ -137,58 +137,70 @@ public class VirtualLayerManager extends Thread{
 			assert input != null;
 			
 			// Read the Terminal class from the data stream
+			
+			Object obj = null;
+			
 			try {
-				terminal = (com.example.overmind.Terminal) input.readObject();					
+				obj = input.readObject();					
 			} catch (IOException | ClassNotFoundException e) {
 	        	e.printStackTrace();
 			}
 			
-			assert terminal != null;
-				
-			/**
-			 * Retrieve nat port of the current device 
-			 */			
+			assert obj != null;
 			
-			int ipHashCode = 0;
-			
-			try {				
-						
-				byte[] testPacketBuffer = new byte[1];
+			if (obj instanceof com.example.overmind.Terminal) {
 				
-				DatagramPacket testPacket = new DatagramPacket(testPacketBuffer, 1);				
-			
-				inputSocket.receive(testPacket);				
+				terminal = (com.example.overmind.Terminal) obj;				
 				
-				terminal.natPort = testPacket.getPort();			
+				/**
+				 * Retrieve nat port of the current device 
+				 */			
 				
-				// Use the InetAddress hashcode to identify the node
-				ipHashCode = testPacket.getAddress().hashCode();
+				int ipHashCode = 0;
 				
-				terminal.ip = testPacket.getAddress().toString().substring(1);
-			
-				System.out.println("Nat port for device with IP " + terminal.ip + " is " + terminal.natPort);
+				try {				
+							
+					byte[] testPacketBuffer = new byte[1];
+					
+					DatagramPacket testPacket = new DatagramPacket(testPacketBuffer, 1);				
+				
+					inputSocket.receive(testPacket);				
+					
+					terminal.natPort = testPacket.getPort();			
+					
+					// Use the InetAddress hashcode to identify the node
+					ipHashCode = testPacket.getAddress().hashCode();
+					
+					terminal.ip = testPacket.getAddress().toString().substring(1);
+				
+					System.out.println("Nat port for device with IP " + terminal.ip + " is " + terminal.natPort);
 
+					
+				} catch (IOException e) {
+		        	e.printStackTrace();
+				}			
 				
-			} catch (IOException e) {
-	        	e.printStackTrace();
-			}			
+				terminal.postsynapticTerminals.add(thisServer);
+					
+				Node newNode = new Node(clientSocket, terminal, output);
+				newNode.ipHashCode = ipHashCode;
 			
-			terminal.postsynapticTerminals.add(thisServer);
+				// Put the new node in the hashmap using the hashcode of the
+				// InetAddress of the terminal contained in the node as key
+				nodesTable.put(ipHashCode, newNode);	
+				weightsTable.put(ipHashCode, new float[newNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES]);
+			
+				assert terminal != null;	
 				
-			Node newNode = new Node(clientSocket, terminal, output);
-			newNode.ipHashCode = ipHashCode;
-		
-			// Put the new node in the hashmap using the hashcode of the
-			// InetAddress of the terminal contained in the node as key
-			nodesTable.put(ipHashCode, newNode);	
-			weightsTable.put(ipHashCode, new float[newNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES]);
-		
-			assert terminal != null;	
-			
-			disconnectedNode[0] = newNode;
-			
-			connectNodes(disconnectedNode);
-								
+				disconnectedNode[0] = newNode;
+				
+				connectNodes(disconnectedNode);
+				
+			} else {
+				System.out.println("Keep alive packet received");
+			}
+			/* [End of if] */
+											
 		}
 		/* [End of while(!shutdown)] */
 							
@@ -362,7 +374,13 @@ public class VirtualLayerManager extends Thread{
 
 		availableNodes.remove(removableNode); 	
 		
-		unsyncNodes.remove(removableNode);					
+		unsyncNodes.remove(removableNode);	
+		
+		synchronized (removableNode.terminalFrame.tcpKeepAliveLock) {
+		
+			removableNode.terminalFrame.tcpKeepAliveLock.notify();
+		
+		}
 		
 		/**
 		 * Shutdown the executor of the the spikes monitor 
@@ -370,7 +388,7 @@ public class VirtualLayerManager extends Thread{
 		
 		boolean spikesMonitorIsShutdown = false;	
 		
-		removableNode.terminalFrame.shutdown = true;
+		removableNode.terminalFrame.shutdown = true;		
 	
 		removableNode.terminalFrame.spikesMonitorExecutor.shutdown();	
 		
@@ -402,6 +420,23 @@ public class VirtualLayerManager extends Thread{
 		if (!stimulusExecIsShutdown) {
 			System.out.println("Failed to close the stimuli executor for device with ip " + removableNode.terminal.ip);	
 		}		
+		
+		/**
+		 * Shutdown the executor of the tpcKeepAlive package sender
+		 */
+		
+		boolean tcpKeepAliveExecutorIsShutdown = false;
+		
+		removableNode.terminalFrame.tcpKeepAliveExecutor.shutdown();
+		
+		try {
+			tcpKeepAliveExecutorIsShutdown = removableNode.terminalFrame.tcpKeepAliveExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		if (!tcpKeepAliveExecutorIsShutdown) {
+			System.out.println("Failed to shutdown tcpKeepAlive package sender with ip " + removableNode.terminal.ip);	
+		} 	
 		
 		/**
 		 * Close the frame associated to the terminal and remove its references from the list of clients
@@ -505,8 +540,7 @@ public class VirtualLayerManager extends Thread{
 					tmpTerminal.update(unsyncNodes.get(i).terminal);
 														
 					// Write the info in the steam					
-					unsyncNodes.get(i).output.writeObject(tmpTerminal);		
-					unsyncNodes.get(i).output.flush();
+					unsyncNodes.get(i).writeObjectIntoStream(tmpTerminal);	
 
 					System.out.println("Terminal with ip " + unsyncNodes.get(i).terminal.ip + " has been updated.");
 					//System.out.println("Socket is closed: " + unsyncNodes.get(i).client.isClosed());
