@@ -33,6 +33,17 @@ public class RefreshSignalSender implements Runnable {
         long lastTime = 0, staticRefresh = parentFrame.rateMultiplier * 1000000, 
         		dynamicRefresh = 0, rasterGraphRefresh;          
         
+        DatagramSocket outputSocket = null;
+
+        try {
+    	    outputSocket = new DatagramSocket();
+    	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);   
+        } catch (SocketException e) {
+        	e.printStackTrace();
+        }
+        
+        assert outputSocket != null;
+        
         com.example.overmind.Terminal server = new com.example.overmind.Terminal();
         server.postsynapticTerminals = new ArrayList<>();
         server.presynapticTerminals = new ArrayList<>();
@@ -51,18 +62,7 @@ public class RefreshSignalSender implements Runnable {
         
         VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});    
         //VirtualLayerManager.syncNodes();
-        
-        DatagramSocket outputSocket = null;
-
-        try {
-    	    outputSocket = new DatagramSocket();
-    	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);   
-        } catch (SocketException e) {
-        	e.printStackTrace();
-        }
-        
-        assert outputSocket != null;
-        
+                        
         InetAddress targetDeviceAddr = null;
         		
         try {
@@ -105,7 +105,7 @@ public class RefreshSignalSender implements Runnable {
         targetTerminal.presynapticTerminals.remove(server);
     	targetTerminal.numOfDendrites +=  server.numOfNeurons;
                 
-        if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {
+        if (VirtualLayerManager.nodesTable.containsKey(parentFrame.localUpdatedNode.physicalID)) {
 			VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});
 			//VirtualLayerManager.syncNodes();
 		}        

@@ -6,6 +6,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
@@ -16,11 +17,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
@@ -30,6 +33,7 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
+import javax.swing.Timer;
 
 public class TerminalFrame {
 	
@@ -45,6 +49,7 @@ public class TerminalFrame {
 	private JLabel refreshRate = new JLabel("Clock is: 3 ms");
 	
 	private JButton removeTerminalButton = new JButton();
+	private JButton activateNodeButton = new JButton();
 
 	private DefaultListModel<String> preConnListModel = new DefaultListModel<>();
 	private DefaultListModel<String> postConnListModel = new DefaultListModel<>();
@@ -70,13 +75,24 @@ public class TerminalFrame {
 	public volatile boolean waitForLatestPacket = false;
 	
 	public final Object tcpKeepAliveLock = new Object ();
-
+	
+	private Image redLed, greenLed;	
+	private JLabel ledStatus = new JLabel();
+	private Timer ledStatusTimer;
+	private volatile boolean redIsOn = true; 
+	private volatile boolean ledStatusChanged = false;
+	
+	public void TerminalFrame () {
+		tcpKeepAliveExecutor.execute(new tcpKeepAlivePackageSender());		
+	}
+	
 	/**
 	 * Custom panel to display the raster graph
 	 */
 	
 	JRadioButton randomSpikesRadioButton = new JRadioButton("Random spikes");
 	JRadioButton refreshSignalRadioButton = new JRadioButton("Refresh signal");
+	JRadioButton noneRadioButton = new JRadioButton("None");
 	
 	class MyPanel extends JPanel {		
 		
@@ -160,10 +176,8 @@ public class TerminalFrame {
 		JScrollPane postConnScrollPanel = new JScrollPane();
 		
 		JList<String> presynapticConnections = new JList<>();
-		JList<String> postsynapticConnections = new JList<>();
-		
-		tcpKeepAliveExecutor.execute(new tcpKeepAlivePackageSender());
-		
+		JList<String> postsynapticConnections = new JList<>();		
+						
 		JCheckBox refreshAfterSpike = new JCheckBox("Dynamic refresh rate", false);
 		refreshAfterSpike.addActionListener(new ActionListener() {
 			@Override
@@ -198,7 +212,32 @@ public class TerminalFrame {
 			}
 		});	
 		
-		showRasterGraph.setEnabled(true);
+		showRasterGraph.setEnabled(true);		
+		
+		/*
+		 * Timer for the led status
+		 */
+		
+		ActionListener ledTimerActionListener = new ActionListener () {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {				
+				
+				if (redIsOn && ledStatusChanged) 
+					ledStatus.setIcon(new ImageIcon(greenLed.getScaledInstance(12, 12, Image.SCALE_SMOOTH)));				
+				else if (!redIsOn && ledStatusChanged) 
+					ledStatus.setIcon(new ImageIcon(redLed.getScaledInstance(12, 12, Image.SCALE_SMOOTH)));
+								
+				ledStatusChanged = false;
+								
+			}
+			
+		};
+		
+		ledStatusTimer = new Timer(100, ledTimerActionListener);
+		ledStatusTimer.setInitialDelay(0);
+		ledStatusTimer.start();
+		
 			
 		/**
 		 * Radio buttons used to select the external stimulus
@@ -210,7 +249,6 @@ public class TerminalFrame {
 				if (thisTerminalRSG.shutdown) {
 					thisTerminalRSG.shutdown = false;	
 					thisTerminalRSS.shutdown = true;
-					System.out.println(stimulusExecutor);
 					stimulusExecutor.execute(thisTerminalRSG);	
 				}
 			}
@@ -227,7 +265,6 @@ public class TerminalFrame {
 			}
 		});
 		
-		JRadioButton noneRadioButton = new JRadioButton("None");
 		noneRadioButton.setSelected(true);
 		noneRadioButton.addActionListener(new ActionListener() {
 			@Override
@@ -264,7 +301,8 @@ public class TerminalFrame {
 		
 		totalPanel.setLayout(new BoxLayout(totalPanel, BoxLayout.Y_AXIS));
 		totalPanel.add(mainPanel);
-		totalPanel.add(rastergraphPanel);
+		if (!localUpdatedNode.isShadowNode) 
+			totalPanel.add(rastergraphPanel);
 			
 		/**
 		 * Main panel layout
@@ -273,10 +311,13 @@ public class TerminalFrame {
 		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.X_AXIS));
 		infoAndStimulusPanel.setLayout(new BoxLayout(infoAndStimulusPanel, BoxLayout.Y_AXIS));
 		infoAndStimulusPanel.add(infoPanel);
-		infoAndStimulusPanel.add(stimulusPanel);
+		if (!localUpdatedNode.isShadowNode) 
+			infoAndStimulusPanel.add(stimulusPanel);
 		mainPanel.add(infoAndStimulusPanel);
-		mainPanel.add(preConnPanel);
-		mainPanel.add(postConnPanel);	
+		if (!localUpdatedNode.isShadowNode) {
+			mainPanel.add(preConnPanel);
+			mainPanel.add(postConnPanel);	
+		}
 		mainPanel.add(commandsPanel);
 					
 		/**
@@ -287,78 +328,83 @@ public class TerminalFrame {
 		infoPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder("Local network info"),
                 BorderFactory.createEmptyBorder(5,5,5,5)));
+		infoPanel.add(ledStatus);
 		infoPanel.add(numOfDendrites);
 		infoPanel.add(numOfNeurons);		
-		infoPanel.add(numOfSynapses);				
+		infoPanel.add(numOfSynapses);		
 
-		/**
-		 * Stimulus panel layout
-		 */
+		if (!localUpdatedNode.isShadowNode) {
 		
-		stimulusPanel.setLayout(new BoxLayout(stimulusPanel, BoxLayout.Y_AXIS));
-		stimulusPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder("Stimulus selection"),
-                BorderFactory.createEmptyBorder(5,5,5,5)));
-		stimulusPanel.add(noneRadioButton);
-		stimulusPanel.add(randomSpikesRadioButton);
-		stimulusPanel.add(refreshSignalRadioButton);
-		
-		/**
-		 * Presynaptic connections panel layout
-		 */
-		
-		preConnPanel.setLayout(new BoxLayout(preConnPanel, BoxLayout.Y_AXIS));
-		preConnPanel.setBorder(BorderFactory.createCompoundBorder(
-					BorderFactory.createTitledBorder("Presynaptic connections"),
+			/**
+			 * Stimulus panel layout
+			 */
+			
+			stimulusPanel.setLayout(new BoxLayout(stimulusPanel, BoxLayout.Y_AXIS));
+			stimulusPanel.setBorder(BorderFactory.createCompoundBorder(
+	                BorderFactory.createTitledBorder("Stimulus selection"),
+	                BorderFactory.createEmptyBorder(5,5,5,5)));
+			stimulusPanel.add(noneRadioButton);
+			stimulusPanel.add(randomSpikesRadioButton);
+			stimulusPanel.add(refreshSignalRadioButton);
+			
+			/**
+			 * Presynaptic connections panel layout
+			 */
+			
+			preConnPanel.setLayout(new BoxLayout(preConnPanel, BoxLayout.Y_AXIS));
+			preConnPanel.setBorder(BorderFactory.createCompoundBorder(
+						BorderFactory.createTitledBorder("Presynaptic connections"),
+						BorderFactory.createEmptyBorder(5,5,5,5)));
+			preConnPanel.add(preConnScrollPanel);
+			
+			/**
+			 * Postsynaptic connections panel layout
+			 */
+			
+			postConnPanel.setLayout(new BoxLayout(postConnPanel, BoxLayout.Y_AXIS));
+			postConnPanel.setBorder(BorderFactory.createCompoundBorder(
+					BorderFactory.createTitledBorder("Postsynaptic connections"),
 					BorderFactory.createEmptyBorder(5,5,5,5)));
-		preConnPanel.add(preConnScrollPanel);
+			postConnPanel.add(postConnScrollPanel);	
+			
+			/**
+			 * Refresh rate panel layout
+			 */
 		
-		/**
-		 * Postsynaptic connections panel layout
-		 */
-		
-		postConnPanel.setLayout(new BoxLayout(postConnPanel, BoxLayout.Y_AXIS));
-		postConnPanel.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createTitledBorder("Postsynaptic connections"),
-				BorderFactory.createEmptyBorder(5,5,5,5)));
-		postConnPanel.add(postConnScrollPanel);	
-		
-		/**
-		 * Refresh rate panel layout
-		 */
-		
-		refreshRatePanel.setLayout(new BoxLayout(refreshRatePanel, BoxLayout.X_AXIS));
-		refreshRatePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-		
-		increaseRate.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				rateMultiplier++;
-				refreshRate.setText("Clock is: " + rateMultiplier + " ms");
-				refreshRate.revalidate();
-				refreshRate.repaint();
-			}
-		});		
-		decreaseRate.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (rateMultiplier > 1) {
-					rateMultiplier--;
+			refreshRatePanel.setLayout(new BoxLayout(refreshRatePanel, BoxLayout.X_AXIS));
+			refreshRatePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+			
+			increaseRate.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					rateMultiplier++;
 					refreshRate.setText("Clock is: " + rateMultiplier + " ms");
 					refreshRate.revalidate();
 					refreshRate.repaint();
 				}
-			}
-		});		
+			});		
+			decreaseRate.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					if (rateMultiplier > 1) {
+						rateMultiplier--;
+						refreshRate.setText("Clock is: " + rateMultiplier + " ms");
+						refreshRate.revalidate();
+						refreshRate.repaint();
+					}
+				}
+			});		
+			
+			refreshRate.setBorder(BorderFactory.createLineBorder(Color.black));
+			refreshRate.setOpaque(true);
+			refreshRate.setBackground(Color.white);
+			refreshRatePanel.add(refreshRate);
+			refreshRatePanel.add(Box.createRigidArea(new Dimension(5,0)));
+			refreshRatePanel.add(increaseRate);
+			refreshRatePanel.add(Box.createRigidArea(new Dimension(5,0)));
+			refreshRatePanel.add(decreaseRate);
 		
-		refreshRate.setBorder(BorderFactory.createLineBorder(Color.black));
-		refreshRate.setOpaque(true);
-		refreshRate.setBackground(Color.white);
-		refreshRatePanel.add(refreshRate);
-		refreshRatePanel.add(Box.createRigidArea(new Dimension(5,0)));
-		refreshRatePanel.add(increaseRate);
-		refreshRatePanel.add(Box.createRigidArea(new Dimension(5,0)));
-		refreshRatePanel.add(decreaseRate);
+		}
 		
 		/**
 		 * Command panel layout
@@ -372,24 +418,43 @@ public class TerminalFrame {
 		removeTerminalButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				//shutdown = true;		
-				VirtualLayerManager.removeNode(localUpdatedNode);
+				if (!localUpdatedNode.isShadowNode)
+					VirtualLayerManager.removeNode(localUpdatedNode, false);
+				else
+					VirtualLayerManager.removeShadowNode(localUpdatedNode);
 			}
 		});	
 				
 		removeTerminalButton.setAlignmentX(Component.LEFT_ALIGNMENT);		
 		commandsPanel.add(removeTerminalButton);
 		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
-		
-		commandsPanel.add(refreshRatePanel);
+		if (localUpdatedNode.isShadowNode)
+			activateNodeButton.setEnabled(true);
+		else
+			activateNodeButton.setEnabled(false);
+		activateNodeButton.setText("Activate this node");
+		activateNodeButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				VirtualLayerManager.activateNode(localUpdatedNode);
+			}
+		});					
+		activateNodeButton.setAlignmentX(Component.LEFT_ALIGNMENT);		
+		commandsPanel.add(activateNodeButton);
 		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
 		
-		refreshAfterSpike.setAlignmentX(Component.LEFT_ALIGNMENT);
-		commandsPanel.add(refreshAfterSpike);		
-		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		if (!localUpdatedNode.isShadowNode) {
+
+			commandsPanel.add(refreshRatePanel);
+			commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
+			
+			refreshAfterSpike.setAlignmentX(Component.LEFT_ALIGNMENT);
+			commandsPanel.add(refreshAfterSpike);		
+			commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
 		
-		showRasterGraph.setAlignmentX(Component.LEFT_ALIGNMENT);
-		commandsPanel.add(showRasterGraph);
+			showRasterGraph.setAlignmentX(Component.LEFT_ALIGNMENT);
+			commandsPanel.add(showRasterGraph);
+		}
 			
 		/**
 		 * Frame composition
@@ -419,6 +484,13 @@ public class TerminalFrame {
 		// Launches the thread that updates the raster graph using the spikes gathered by
 		// SpikesReceiver
 		if (!spikesMonitorIsActive) {
+			try {
+				redLed = ImageIO.read(getClass().getResource("/icons/red_led.png"));
+				greenLed = ImageIO.read(getClass().getResource("/icons/green_led.png"));
+				ledStatus.setIcon(new ImageIcon(redLed.getScaledInstance(12, 12, Image.SCALE_SMOOTH)));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 			spikesMonitorExecutor.execute(new SpikesMonitor(receivedSpikesQueue));
 			spikesMonitorIsActive = true;
 		}
@@ -513,8 +585,8 @@ public class TerminalFrame {
 		}
 		
 		@Override
-		public void run() {					
-		
+		public void run() {						
+			
 		    /**
 		     * dataBytes is the number of bytes which make up the vector containing the spikes
 		     */
@@ -535,21 +607,30 @@ public class TerminalFrame {
 				
 				// The vector containing the spikes is put in this queue by the SpikesSorter class
 				try {
+					if (!redIsOn && !ledStatusChanged) {
+						redIsOn = true;
+						ledStatusChanged = true;
+					}
 					spikesReceived = spikesReceivedQueue.poll(10, TimeUnit.SECONDS);
 				} catch (InterruptedException e ) {
 					e.printStackTrace();
 				} 
 				
 				// Proceed only if the vector contains meaningful info
-				if (spikesReceived != null) {						
+				if (spikesReceived != null) {				
+					
+					if (redIsOn && !ledStatusChanged) {
+						redIsOn = false;
+						ledStatusChanged = true;
+					}
 																							
 					// The raster graph is updated every 40 iterations of the simulation to prevent screen flickering 
-					if (arrayLength < 40) {
+					if (arrayLength < 40 && !localUpdatedNode.isShadowNode) {
 						
 						System.arraycopy(spikesReceived, 0, localLatestSpikes[arrayLength], 0, 128);
 						arrayLength++;
 						
-					} else {
+					} else if (!localUpdatedNode.isShadowNode) {
 						
 						arrayLength = 0;
 						
@@ -590,7 +671,7 @@ public class TerminalFrame {
 						lastTime = System.nanoTime();
 					}					
 				
-				} else {
+				} else if (VirtualLayerManager.nodesTable.containsKey(localUpdatedNode.physicalID)) { // Check if some other process is not removing the node already
 
 					NodesShutdownPoller.nodesToBeRemoved.add(localUpdatedNode);
 					shutdown = true; 	
@@ -604,6 +685,11 @@ public class TerminalFrame {
 		
 	}
 	/* [End of SpikesMonitor] */
+	
+	/*
+	 * Runnable which periodically sends a TCP keep alive packet to the terminal
+	 * associated with this frame
+	 */
 	
 	private class tcpKeepAlivePackageSender implements Runnable {		
 	
@@ -634,5 +720,6 @@ public class TerminalFrame {
 		}
 		
 	}
+
 	
 }

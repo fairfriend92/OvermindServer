@@ -39,6 +39,20 @@ public class RandomSpikesGenerator implements Runnable {
         		(short) (targetTerminal.numOfDendrites / 8) : (short) (targetTerminal.numOfDendrites / 8 + 1);
         
         com.example.overmind.Terminal targetTerminalOld = new com.example.overmind.Terminal();        
+        
+        /**
+         * Open the socket for sending the spikes and build the InetAddress of the target device
+         */
+        		
+        DatagramSocket outputSocket = null;
+
+        try {
+    	    outputSocket = new DatagramSocket();
+    	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);   
+        } catch (SocketException e) {
+        	e.printStackTrace();
+        }
+        
                 
         /**
          * Procedure to set external stimulus and update Terminal info
@@ -67,20 +81,7 @@ public class RandomSpikesGenerator implements Runnable {
         targetTerminal.presynapticTerminals.add(server);
         
         VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});    
-        //VirtualLayerManager.syncNodes();          
-                
-        /**
-         * Open the socket for sending the spikes and build the InetAddress of the target device
-         */
-        		
-        DatagramSocket outputSocket = null;
-
-        try {
-    	    outputSocket = new DatagramSocket();
-    	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);   
-        } catch (SocketException e) {
-        	e.printStackTrace();
-        }
+        //VirtualLayerManager.syncNodes();                          
         
         assert outputSocket != null;
         
@@ -167,8 +168,7 @@ public class RandomSpikesGenerator implements Runnable {
         parentFrame.localUpdatedNode.terminal.update(targetTerminalOld);
        
         // The old node is substituted to the one connected with the server
-        // TODO: in reality we should check the hashmap with the parentFrame.localUpdatedNode hashkey
-        if (VirtualLayerManager.availableNodes.contains(parentFrame.localUpdatedNode)) {
+        if (VirtualLayerManager.nodesTable.containsKey(parentFrame.localUpdatedNode.physicalID)) {
 			VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});
 			//VirtualLayerManager.syncNodes();
 		}

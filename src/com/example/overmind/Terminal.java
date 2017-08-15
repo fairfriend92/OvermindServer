@@ -5,6 +5,7 @@ import java.util.ArrayList;
 
 public class Terminal implements Serializable {
     public short numOfNeurons, numOfDendrites, numOfSynapses;
+    public String serverIP;
     public String ip;
     public int natPort;
     public ArrayList<Terminal> presynapticTerminals;

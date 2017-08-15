@@ -5,8 +5,9 @@ import java.util.ArrayList;
 
 public class Node {
 	
-	public int ipHashCode;
-	public int[] VLCoordinates;
+	public int physicalID;
+	public int virtualID;
+	public boolean isShadowNode;
 	public ArrayList<Node> postsynapticNodes;
 	public ArrayList<Node> presynapticNodes;
 	public TerminalFrame terminalFrame;
@@ -16,11 +17,12 @@ public class Node {
 	private final Object lock = new Object ();
 	
 	public Node(Socket s1, com.example.overmind.Terminal t, ObjectOutputStream o) {
+		this.physicalID = 0;
+		this.virtualID = 0;
+		this.isShadowNode = false;
 		this.client = s1;
 		this.output = o;
 		this.terminal = t;
-		this.VLCoordinates = new int[]{0, 0};
-		this.ipHashCode = 0;
 		this.postsynapticNodes = new ArrayList<>();
 		this.presynapticNodes = new ArrayList<>();
 		this.terminalFrame = new TerminalFrame();		
@@ -32,18 +34,19 @@ public class Node {
 			} 
 		} 
 		if (this.terminal == null) { this.terminal = new com.example.overmind.Terminal(); }
+
 	}	
 	
 	public void update(Node updatedNode) {
-		this.ipHashCode = updatedNode.ipHashCode;		
+		this.physicalID = updatedNode.physicalID;		
+		this.virtualID = updatedNode.virtualID;
+		this.isShadowNode = updatedNode.isShadowNode;
 		this.postsynapticNodes = new ArrayList<>(updatedNode.postsynapticNodes);
 		this.presynapticNodes = new ArrayList<>(updatedNode.presynapticNodes);
 		this.terminalFrame.update(updatedNode);
 		this.client = updatedNode.client;
 		this.output = updatedNode.output;
-		this.terminal.update(updatedNode.terminal);
-		
-		System.arraycopy(updatedNode.VLCoordinates, 0, this.VLCoordinates, 0, 2);
+		this.terminal.update(updatedNode.terminal);		
 	}
 
 	public void close() {
@@ -56,7 +59,7 @@ public class Node {
 	
 	@Override
 	public int hashCode() {
-	    return this.terminal.ip.hashCode();
+	    return this.physicalID;
 	}
 
 	@Override
@@ -64,15 +67,16 @@ public class Node {
        
 		if (obj == null || obj.getClass() != this.getClass()) { return false; }
 		Node compare = (Node) obj;
-    	return (compare.terminal.ip.equals(this.terminal.ip) && compare.terminal.natPort == this.terminal.natPort);
+    	return (compare.physicalID == this.physicalID);
     	
     }
 	
 	public void writeObjectIntoStream (Object obj) throws IOException
 	{			
-		synchronized (lock) {			
+		synchronized (lock) {	
+			output.reset();
 			output.writeObject(obj);		
-			//output.flush();
+			output.flush();
 			
 		}		
 	}

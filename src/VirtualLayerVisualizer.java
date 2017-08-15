@@ -430,10 +430,10 @@ public class VirtualLayerVisualizer extends Thread{
 						
 						if (node.postsynapticNodes.contains(node.presynapticNodes.get(i))) {
 							
-							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).ipHashCode).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).virtualID).nodeLabel
 									.getLocation();
 
-							radius = nodeIconsTable.get(node.presynapticNodes.get(i).ipHashCode).nodeLabel
+							radius = nodeIconsTable.get(node.presynapticNodes.get(i).virtualID).nodeLabel
 									.getWidth() / 2;
 
 							g.drawLine(nodeLabel.getX() + nodeLabel.getWidth() / 2,
@@ -473,11 +473,11 @@ public class VirtualLayerVisualizer extends Thread{
 						if (node.presynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP && !servedPresynNodesIndexes.contains(i)) {
 
 							// Store the location of the icon representing the i-th node
-							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).ipHashCode).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).virtualID).nodeLabel
 									.getLocation();
 
 							// Retrieve the radius of the icon of the i-th node
-							radius = nodeIconsTable.get(node.presynapticNodes.get(i).ipHashCode).nodeLabel
+							radius = nodeIconsTable.get(node.presynapticNodes.get(i).virtualID).nodeLabel
 									.getWidth() / 2;
 
 							// Draw the line 
@@ -502,10 +502,10 @@ public class VirtualLayerVisualizer extends Thread{
 
 						if (node.postsynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP && !servedPostsynNodesIndexes.contains(i)) {
 
-							tmpPoint = nodeIconsTable.get(node.postsynapticNodes.get(i).ipHashCode).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.postsynapticNodes.get(i).virtualID).nodeLabel
 									.getLocation();
 
-							radius = nodeIconsTable.get(node.postsynapticNodes.get(i).ipHashCode).nodeLabel
+							radius = nodeIconsTable.get(node.postsynapticNodes.get(i).virtualID).nodeLabel
 									.getWidth() / 2;
 
 							g.drawLine(nodeLabel.getX() + nodeLabel.getWidth() / 2,
@@ -563,7 +563,7 @@ public class VirtualLayerVisualizer extends Thread{
 			// A new label for the node is created
 			JLabelVL newNodeLabel = new JLabelVL(node);
 			// The node is saved in the hash map
-			nodeIconsTable.put(node.ipHashCode, newNodeLabel);
+			nodeIconsTable.put(node.virtualID, newNodeLabel);
 			// The label is added to the appropriate panel
 			VLPanel.add(newNodeLabel.nodeLabel, new Integer(1), nodeIconsTable.size());			
 			connPanel.revalidate();
@@ -596,19 +596,13 @@ public class VirtualLayerVisualizer extends Thread{
 			
 			// Remove from the panel the label associated to the node, which must be retrieved
 			// from the hash map
-			System.out.println(" " + node.ipHashCode);
 			
-			JLabel test = nodeIconsTable.get(node.ipHashCode).nodeLabel; 
+			VLPanel.remove(nodeIconsTable.get(node.virtualID).nodeLabel);
 			
-			if (test == null) {
-				System.out.println("null");
-			} else {	
-				VLPanel.remove(test);
-			}
 			// Remove the reference to the label from the hash map and repaint the connection panel
-			nodeIconsTable.remove(node.ipHashCode);
+			nodeIconsTable.remove(node.virtualID);
 			connPanel.revalidate();
-			connPanel.repaint();
+			connPanel.repaint();		
 						
 		}
 		
@@ -742,7 +736,7 @@ public class VirtualLayerVisualizer extends Thread{
 				
 				// Reference to this node and its label is added to selecetedNode and selectedNodeLabel
 				selectedNode = this.node;
-				selectedNodeLabel = nodeIconsTable.get(selectedNode.ipHashCode).nodeLabel;
+				selectedNodeLabel = nodeIconsTable.get(selectedNode.virtualID).nodeLabel;
 				
 				// Change the status of the info button depending on visibility of the terminal frame of this node
 				if (node.terminalFrame.frame.isVisible())
@@ -760,7 +754,7 @@ public class VirtualLayerVisualizer extends Thread{
 				
 				// Updated the weight panel
 				
-				WeightsTableModel weightsTableModel = new WeightsTableModel(VirtualLayerManager.weightsTable.get(node.ipHashCode));
+				WeightsTableModel weightsTableModel = new WeightsTableModel(VirtualLayerManager.weightsTable.get(node.virtualID));
 				JTable weightsTable = new JTable(weightsTableModel);				
 				weightsPanel.removeAll();
 				weightsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);

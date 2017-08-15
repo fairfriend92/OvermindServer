@@ -33,10 +33,14 @@ public class VirtualLayerManager extends Thread{
 	static boolean shutdown = false;	
 	
 	static int numberOfSyncNodes = 0;	
+	static int numberOfShadowNodes = 0;
+	int totalNumberOfDevices = 0;
+	static volatile int activeShadowNodesRatio = 2;
 	static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);
 	
 	// TODO: perhaps weights could be char instead of float?
-	static ConcurrentHashMap<Integer, float[]> weightsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);
+	static ConcurrentHashMap<Integer, float[]> weightsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
+	static ConcurrentHashMap<Integer, ArrayList<Node>> shadowNodesListsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);
 	
 	static List<Node> unsyncNodes = Collections.synchronizedList(new ArrayList<Node>());
 	static List<Node> availableNodes = Collections.synchronizedList(new ArrayList<Node>());	
@@ -62,7 +66,7 @@ public class VirtualLayerManager extends Thread{
         
         System.out.println("This server has IP " + serverIP);		
 		
-		/**
+		/*
 		 * Build the TCP server socket which listens for physical devices ready to connect
 		 */
 		
@@ -76,7 +80,7 @@ public class VirtualLayerManager extends Thread{
 		
 		assert serverSocket != null;
 		
-		/**
+		/*
 		 * Build the datagram input socket which listens for test packets from which the nat port can be retrieved
 		 */
 				
@@ -98,8 +102,8 @@ public class VirtualLayerManager extends Thread{
         Node[] disconnectedNode = new Node[1];
 						
 		while (!shutdown) {
-			
-			/**
+		
+			/*
 			 * Open new connections with the clients
 			 */
 		
@@ -146,60 +150,94 @@ public class VirtualLayerManager extends Thread{
 	        	e.printStackTrace();
 			}
 			
-			assert obj != null;
+			assert obj != null;			
 			
-			if (obj instanceof com.example.overmind.Terminal) {
+			terminal = (com.example.overmind.Terminal) obj;				
+			
+			/*
+			 * Retrieve nat port of the current device 
+			 */			
+			
+			int ipHashCode = 0;
+			
+			try {				
+						
+				byte[] testPacketBuffer = new byte[1];
 				
-				terminal = (com.example.overmind.Terminal) obj;				
+				DatagramPacket testPacket = new DatagramPacket(testPacketBuffer, 1);				
+			
+				inputSocket.receive(testPacket);				
 				
-				/**
-				 * Retrieve nat port of the current device 
-				 */			
+				terminal.natPort = testPacket.getPort();			
 				
-				int ipHashCode = 0;
+				// Use the InetAddress hashcode to identify the node
+				ipHashCode = testPacket.getAddress().hashCode();
 				
-				try {				
-							
-					byte[] testPacketBuffer = new byte[1];
-					
-					DatagramPacket testPacket = new DatagramPacket(testPacketBuffer, 1);				
-				
-					inputSocket.receive(testPacket);				
-					
-					terminal.natPort = testPacket.getPort();			
-					
-					// Use the InetAddress hashcode to identify the node
-					ipHashCode = testPacket.getAddress().hashCode();
-					
-					terminal.ip = testPacket.getAddress().toString().substring(1);
-				
-					System.out.println("Nat port for device with IP " + terminal.ip + " is " + terminal.natPort);
+				terminal.ip = testPacket.getAddress().toString().substring(1);
+			
+				System.out.println("Nat port for device with IP " + terminal.ip + " is " + terminal.natPort);
 
-					
-				} catch (IOException e) {
-		        	e.printStackTrace();
-				}			
 				
-				terminal.postsynapticTerminals.add(thisServer);
-					
-				Node newNode = new Node(clientSocket, terminal, output);
-				newNode.ipHashCode = ipHashCode;
+			} catch (IOException e) {
+	        	e.printStackTrace();
+			}			
 			
-				// Put the new node in the hashmap using the hashcode of the
-				// InetAddress of the terminal contained in the node as key
-				nodesTable.put(ipHashCode, newNode);	
-				weightsTable.put(ipHashCode, new float[newNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES]);
+			terminal.postsynapticTerminals.add(thisServer);
+			terminal.serverIP = serverIP;
+				
+			Node newNode = new Node(clientSocket, terminal, output);
+			newNode.physicalID = ipHashCode;
+			// Use more intelligent hashing for the virtualID 
+			newNode.virtualID = totalNumberOfDevices;
+			totalNumberOfDevices++;
+		
+			// Put the new node in the hashmap using the hashcode of the
+			// InetAddress of the terminal contained in the node as key
+			nodesTable.put(ipHashCode, newNode);	
+		
+			assert terminal != null;				
 			
-				assert terminal != null;	
-				
-				disconnectedNode[0] = newNode;
-				
+			/*
+			 * Connect the new node to the network only if the number of backup Shadow Nodes is sufficient
+			 */
+			
+			if ((numberOfSyncNodes <= activeShadowNodesRatio * numberOfShadowNodes) || !MainFrame.useShadowNodesFlag ) {
+			
+				System.out.println("Active node added");
+				weightsTable.put(newNode.virtualID, new float[newNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES]);
+				disconnectedNode[0] = newNode;				
 				connectNodes(disconnectedNode);
 				
-			} else {
-				System.out.println("Keep alive packet received");
+			
+			} else {				
+				
+				System.out.println("Shadow node added");
+				newNode.isShadowNode = true;
+				numberOfShadowNodes++;
+				MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));
+
+				newNode.terminalFrame = new TerminalFrame();
+				newNode.terminalFrame.update(newNode);
+				newNode.terminalFrame.display();
+				
+				
+				// Retrieve the list of Shadow Nodes with a certain number of neurons, and if it
+				// doesn't exist, create it
+				if (shadowNodesListsTable.get((int)terminal.numOfNeurons) == null) {
+					
+					ArrayList<Node> shadowNodesList = new ArrayList<>(32);
+					shadowNodesList.add(newNode);
+					shadowNodesListsTable.put((int)terminal.numOfNeurons, shadowNodesList);
+					
+				} else {
+					
+					shadowNodesListsTable.get((int)terminal.numOfNeurons).add(newNode);
+					
+				}
+				/* [End of inner if] */
+								
 			}
-			/* [End of if] */
+			/* [End of outer if] */
 											
 		}
 		/* [End of while(!shutdown)] */
@@ -259,7 +297,7 @@ public class VirtualLayerManager extends Thread{
 		 * Populate and update the list of terminals available for connection
 		 */		
 	
-		for (int j = 0; j < disconnectedNodes.length; j++) {
+		for (int j = 0; (j < disconnectedNodes.length) && (disconnectedNodes[j] != null); j++) {
 			
 			Node disconnectedNode = disconnectedNodes[j];
 			
@@ -362,19 +400,103 @@ public class VirtualLayerManager extends Thread{
 		}
 		/* [End of outer for loop] */
 		
-		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes));
+		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));
 		
 		syncNodes();
 		
 	}
 	
-	public synchronized static void removeNode(Node removableNode) {
+	/*
+	 * Activate a shadow node
+	 */
+	
+	public synchronized static void activateNode(Node shadowNode) {
 		
-		System.out.println("Node with ip " + removableNode.terminal.ip + " is being removed");
+		System.out.println("Activating shadow node");
+				
+		weightsTable.put(shadowNode.virtualID, new float[shadowNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES]);
+		numberOfShadowNodes--;
+		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));
+		connectNodes(new Node[]{shadowNode});		
+		
+	}
+	
+	/*
+	 * Remove a shadow node
+	 */
+	
+	public synchronized static void removeShadowNode(Node shadowNode) {
+		
+		System.out.println("Shadow node with ip " + shadowNode.terminal.ip + " is being removed");		
+		
+		ArrayList<Node> shadowNodesList = shadowNodesListsTable.get((int)shadowNode.terminal.numOfNeurons);
+		shadowNodesList.remove(shadowNode);
+		nodesTable.remove(shadowNode.physicalID);
+		numberOfShadowNodes--;
 
-		availableNodes.remove(removableNode); 	
+		synchronized (shadowNode.terminalFrame.tcpKeepAliveLock) {
+			
+			shadowNode.terminalFrame.tcpKeepAliveLock.notify();
 		
+		}
+		
+		boolean sNodeMonitorIsShutdown = false;	
+		
+		shadowNode.terminalFrame.shutdown = true;		
+	
+		shadowNode.terminalFrame.spikesMonitorExecutor.shutdown();	
+		
+		try {
+			sNodeMonitorIsShutdown = shadowNode.terminalFrame.spikesMonitorExecutor.awaitTermination(10, TimeUnit.SECONDS);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		if (!sNodeMonitorIsShutdown) {
+			System.out.println("Failed to shutdown spikes monitor for device with ip " + shadowNode.terminal.ip);	
+		} 			
+		
+		boolean sNodeKeepAliveShutdown = false;
+		
+		shadowNode.terminalFrame.tcpKeepAliveExecutor.shutdown();
+		
+		try {
+			sNodeKeepAliveShutdown = shadowNode.terminalFrame.tcpKeepAliveExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		if (!sNodeKeepAliveShutdown) {
+			System.out.println("Failed to shutdown tcpKeepAlive package sender with ip " + shadowNode.terminal.ip);	
+		} 	
+				
+		shadowNode.terminalFrame.frame.dispose();			
+		shadowNode.terminalFrame.localUpdatedNode = null;
+		shadowNode.terminalFrame = null;
+		shadowNode.close();
+		shadowNode = null;
+		
+		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));
+
+		
+	}
+	
+	/*
+	 * Remove an active node
+	 */
+	
+	// TODO: use syncNodes instead of connectNodes
+	
+	public synchronized static void removeNode(Node removableNode, boolean unwantedDisconnection) {	
+		
+		// If the removable node was in line to be updated, drop its reference
 		unsyncNodes.remove(removableNode);	
+		
+		// Remove the reference to the old node
+		nodesTable.remove(removableNode.physicalID);
+		numberOfSyncNodes--;
+		
+		/*
+		 * Wake up the thread that sends the TCP keep alive packet
+		 */
 		
 		synchronized (removableNode.terminalFrame.tcpKeepAliveLock) {
 		
@@ -382,7 +504,7 @@ public class VirtualLayerManager extends Thread{
 		
 		}
 		
-		/**
+		/*
 		 * Shutdown the executor of the the spikes monitor 
 		 */		
 		
@@ -401,7 +523,7 @@ public class VirtualLayerManager extends Thread{
 			System.out.println("Failed to shutdown spikes monitor for device with ip " + removableNode.terminal.ip);	
 		} 			
 		
-		/**
+		/*
 		 * Shutdown the executor of the external stimuli
 		 */
 		
@@ -421,7 +543,7 @@ public class VirtualLayerManager extends Thread{
 			System.out.println("Failed to close the stimuli executor for device with ip " + removableNode.terminal.ip);	
 		}		
 		
-		/**
+		/*
 		 * Shutdown the executor of the tpcKeepAlive package sender
 		 */
 		
@@ -438,61 +560,196 @@ public class VirtualLayerManager extends Thread{
 			System.out.println("Failed to shutdown tcpKeepAlive package sender with ip " + removableNode.terminal.ip);	
 		} 	
 		
-		/**
-		 * Close the frame associated to the terminal and remove its references from the list of clients
+		/*
+		 * Close the frame associated to the terminal and the socket as well
 		 */
 		
 		removableNode.terminalFrame.frame.dispose();
 		
+		removableNode.terminalFrame.localUpdatedNode = null;	
+		
 		removableNode.close();
 		
-		/**
-		 * Remove all references to the current terminal from the other terminal' lists
-		 */
+		// TODO: accept shadow nodes with number of neurons greater than that of the removed node?
+		ArrayList<Node> shadowNodesList = shadowNodesListsTable.get((int)removableNode.terminal.numOfNeurons);
 		
-		boolean nodeHasBeenModified = false;
-		Node tmpNode;
-		
-		for (int i = 0; i < removableNode.presynapticNodes.size(); i++) {
-			
-			tmpNode = removableNode.presynapticNodes.get(i);
-			
-			nodeHasBeenModified = tmpNode.postsynapticNodes.remove(removableNode);
-			tmpNode.terminal.postsynapticTerminals.remove(removableNode.terminal);
-			
-			if (nodeHasBeenModified) {
-				tmpNode.terminal.numOfSynapses += removableNode.terminal.numOfNeurons;
-				unsyncNodes.add(tmpNode);
-				nodeHasBeenModified = false;
-			}
-			
-		}
+		// If the disconnection is abrupt and there are shadow nodes available
+		if (unwantedDisconnection && shadowNodesList != null && !shadowNodesList.isEmpty()) {			
 						
-		for (int i = 0; i < removableNode.postsynapticNodes.size(); i++) {
+			// Retrieve the first shadow node available 
+			Node shadowNode = shadowNodesList.remove(shadowNodesList.size() - 1);			
 			
-			tmpNode = removableNode.postsynapticNodes.get(i);
+			/*
+			 * Shutdown the partial terminal frame of the shadow node
+			 */
 			
-			nodeHasBeenModified = tmpNode.presynapticNodes.remove(removableNode);
-			tmpNode.terminal.presynapticTerminals.remove(removableNode.terminal);
-			
-			if (nodeHasBeenModified) {
-				tmpNode.terminal.numOfDendrites += removableNode.terminal.numOfNeurons;
-				unsyncNodes.add(tmpNode);
-				nodeHasBeenModified = false;
-			}
-			
-		}				
-						
-		Node removedNode = nodesTable.remove(removableNode.ipHashCode);
+			synchronized (shadowNode.terminalFrame.tcpKeepAliveLock) {
 				
-		if (removedNode != null) {
-			numberOfSyncNodes--;
+				shadowNode.terminalFrame.tcpKeepAliveLock.notify();
+			
+			}
+			
+			boolean sNodeMonitorIsShutdown = false;	
+			
+			shadowNode.terminalFrame.shutdown = true;		
+		
+			shadowNode.terminalFrame.spikesMonitorExecutor.shutdown();	
+			
+			try {
+				sNodeMonitorIsShutdown = shadowNode.terminalFrame.spikesMonitorExecutor.awaitTermination(10, TimeUnit.SECONDS);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+			if (!sNodeMonitorIsShutdown) {
+				System.out.println("Failed to shutdown spikes monitor for device with ip " + shadowNode.terminal.ip);	
+			} 			
+			
+			boolean sNodeKeepAliveShutdown = false;
+			
+			shadowNode.terminalFrame.tcpKeepAliveExecutor.shutdown();
+			
+			try {
+				sNodeKeepAliveShutdown = shadowNode.terminalFrame.tcpKeepAliveExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+			if (!sNodeKeepAliveShutdown) {
+				System.out.println("Failed to shutdown tcpKeepAlive package sender with ip " + shadowNode.terminal.ip);	
+			} 	
+					
+			shadowNode.terminalFrame.frame.dispose();			
+			shadowNode.terminalFrame.localUpdatedNode = null;
+			shadowNode.terminalFrame = null;
+			
+			System.out.println("Node with ip " + removableNode.terminal.ip + " is being substituted with node with ip " + shadowNode.terminal.ip);			
+						
+			// Update the physical ID of the old node
+			removableNode.physicalID = shadowNode.physicalID;
+			
+			// Reinsert the old node using the new physical ID as hash tag
+			nodesTable.put(removableNode.physicalID, removableNode);
+			
+			// Assign the object output stream of the shadow node to the old node
+			removableNode.output = shadowNode.output;
+			
+			// Close the socket which connected the server to the old terminal, since it's not
+			// available anymore
+			removableNode.close();
+			
+			// Assign the socket of the shadow node to the old node
+			removableNode.client = shadowNode.client;
+			
+			// Update the info regarding the physical terminal underlying the old node with that
+			// of the terminal which is part of the shadow node
+			removableNode.terminal.ip = shadowNode.terminal.ip;
+			removableNode.terminal.natPort = shadowNode.terminal.natPort;
+			
+			// Retrieve the weights of the old node
+			float[] weights = weightsTable.get(removableNode.virtualID);
+			
+			// Create the two arrays which represent the sparse array containing only those synaptic 
+			// weights which have been modified
+			float[] newWeights = new float[removableNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES];
+			int[] newWeightsIndexes = new int[removableNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES];
+			int index = 0;
+			
+			// Check which of the retrieve weights are different from the default value (0.0) 
+			// and populate the sparse array consequently
+			for (int i = 0; i < weights.length; i++) {
+				if (weights[i] != 0) {
+					newWeights[index] = weights[i];
+					newWeightsIndexes[index] = i;
+					index++;
+				}					
+			}
+			
+			// Resize the sparse array
+			removableNode.terminal.newWeights = new float[index];
+			System.arraycopy(weights, 0, removableNode.terminal.newWeights, 0, index);
+			removableNode.terminal.newWeightsIndexes = new int[index];
+			System.arraycopy(newWeightsIndexes, 0, removableNode.terminal.newWeightsIndexes, 0, index);		
+			
+			for (Node postsynNode : removableNode.postsynapticNodes) {
+				
+				int removableNodeIndex = postsynNode.presynapticNodes.indexOf(removableNode);
+				System.out.println("test " + postsynNode.presynapticNodes.get(removableNodeIndex).terminal.ip);
+				
+			}
+			
+			unsyncNodes.addAll(removableNode.presynapticNodes);
+			unsyncNodes.addAll(removableNode.postsynapticNodes);
+									
+			// Update the number of shadow nodes
+			numberOfShadowNodes--;
+			
+			//removableNode.terminalFrame.noneRadioButton.doClick();
+			unsyncNodes.add(removableNode);
+			
+			// Prepare shadow node for garbage collection
+			shadowNode = null;
+			
+			syncNodes();
+			
+		} else {
+		
+			System.out.println("Node with ip " + removableNode.terminal.ip + " is being removed");		
+	
+			availableNodes.remove(removableNode); 							
+												
+			/*
+			 * Remove all references to the current terminal from the other terminals' lists.
+			 */
+			
+			boolean nodeHasBeenModified = false;
+			Node tmpNode;
+			
+			int numOfNodesAffected = removableNode.presynapticNodes.size() + removableNode.postsynapticNodes.size();
+			
+			ArrayList<Node> modifiedNodes = new ArrayList<>(numOfNodesAffected);
+			
+			for (int i = 0; i < removableNode.presynapticNodes.size(); i++) {
+				
+				tmpNode = removableNode.presynapticNodes.get(i);
+				
+				nodeHasBeenModified = tmpNode.postsynapticNodes.remove(removableNode);
+				tmpNode.terminal.postsynapticTerminals.remove(removableNode.terminal);
+				
+				if (nodeHasBeenModified) {
+					tmpNode.terminal.numOfSynapses += removableNode.terminal.numOfNeurons;
+					//unsyncNodes.add(tmpNode);
+					modifiedNodes.add(tmpNode);
+					nodeHasBeenModified = false;
+				}
+				
+			}
+							
+			for (int i = 0; i < removableNode.postsynapticNodes.size(); i++) {
+				
+				tmpNode = removableNode.postsynapticNodes.get(i);
+				
+				nodeHasBeenModified = tmpNode.presynapticNodes.remove(removableNode);
+				tmpNode.terminal.presynapticTerminals.remove(removableNode.terminal);
+				
+				if (nodeHasBeenModified) {
+					tmpNode.terminal.numOfDendrites += removableNode.terminal.numOfNeurons;
+					//unsyncNodes.add(tmpNode);
+					modifiedNodes.add(tmpNode);
+					nodeHasBeenModified = false;
+				}
+				
+			}								
+			
+			weightsTable.remove(removableNode.virtualID);
+			
+			removableNode.terminalFrame = null;
+								
+			VLVisualizer.layeredPaneVL.removeNode(removableNode);			
+						
+			// Sync other nodes that have been eventually modified
+			//syncNodes();
+			connectNodes(modifiedNodes.toArray(new Node[numOfNodesAffected]));
+		
 		}
-		
-		VLVisualizer.layeredPaneVL.removeNode(removableNode);
-		
-		// Sync other nodes that have been eventually modified
-		syncNodes();
 		
 	}
 
@@ -505,12 +762,17 @@ public class VirtualLayerManager extends Thread{
 		if (!unsyncNodes.isEmpty()) {		
 			
 			// Iterate over all the nodes that need to be sync
-			for (int i = 0; i < unsyncNodes.size(); i++) {					
+			for (int i = 0; i < unsyncNodes.size(); i++) {			
+				
+				// TODO: do not call get method repeatedly, instead use reference
 																
 				// Branch depending on whether the terminal is new or not
-				if (unsyncNodes.get(i).terminalFrame.localUpdatedNode == null) {		
+				if (unsyncNodes.get(i).terminalFrame.localUpdatedNode == null 
+						&& !unsyncNodes.get(i).isShadowNode) {		
 					
 					VLVisualizer.layeredPaneVL.addNode(unsyncNodes.get(i));
+					
+					unsyncNodes.get(i).terminalFrame = new TerminalFrame();
 					
 					// Update the info of the frame associated to the terminal
 					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i));
@@ -521,10 +783,19 @@ public class VirtualLayerManager extends Thread{
 					// Since the terminal is new the number of sync nodes must be increased
 					numberOfSyncNodes++;																			
 					
-				} else { 
+				} else if(!unsyncNodes.get(i).isShadowNode) { 
 					
 					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i)); 
 					
+					
+				} else if (unsyncNodes.get(i).isShadowNode) {
+					
+					unsyncNodes.get(i).isShadowNode = false;
+					VLVisualizer.layeredPaneVL.addNode(unsyncNodes.get(i));
+					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i)); 
+					unsyncNodes.get(i).terminalFrame.display();					
+					numberOfSyncNodes++;																			
+
 				}
 				
 				/**
@@ -538,6 +809,12 @@ public class VirtualLayerManager extends Thread{
 					
 					// The terminal acting as holder of the new info is updated
 					tmpTerminal.update(unsyncNodes.get(i).terminal);
+					
+					for (Node postsynNode : unsyncNodes.get(i).presynapticNodes) {						
+						
+						System.out.println("test " + postsynNode.terminal.ip);
+						
+					}
 														
 					// Write the info in the steam					
 					unsyncNodes.get(i).writeObjectIntoStream(tmpTerminal);	
@@ -545,6 +822,10 @@ public class VirtualLayerManager extends Thread{
 					System.out.println("Terminal with ip " + unsyncNodes.get(i).terminal.ip + " has been updated.");
 					//System.out.println("Socket is closed: " + unsyncNodes.get(i).client.isClosed());
 					//System.out.println("Socket is connected: " + unsyncNodes.get(i).client.isConnected());
+					
+					// Reset the collection of weights that have not been updated
+					unsyncNodes.get(i).terminal.newWeights = new float[0];
+					unsyncNodes.get(i).terminal.newWeightsIndexes = new int[0];
 																	
 				} catch (IOException e) {
 		        	e.printStackTrace();
@@ -557,7 +838,7 @@ public class VirtualLayerManager extends Thread{
 												
 		}
 		
-		MainFrame.updateMainFrame(new MainFrameInfo(0, numberOfSyncNodes));
+		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));
 		
 	}
 

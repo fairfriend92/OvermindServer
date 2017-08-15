@@ -22,7 +22,7 @@ public class NodesShutdownPoller extends Thread {
 				e.printStackTrace();
 			}
 			
-			VirtualLayerManager.removeNode(tmpNode);			
+			VirtualLayerManager.removeNode(tmpNode, true);			
 			
 		}
 		
