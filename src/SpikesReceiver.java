@@ -20,7 +20,6 @@ import java.util.concurrent.TimeUnit;
 public class SpikesReceiver extends Thread{
 	
 	private final static int IPTOS_THROUGHPUT = 0x08;
-	
 	private ExecutorService spikesSorterExecutor = Executors.newCachedThreadPool();	
 	
 	@Override
@@ -45,9 +44,9 @@ public class SpikesReceiver extends Thread{
         	
 			try {				
 				
-				byte[] spikesBuffer = new byte[128];
+				byte[] spikesBuffer = new byte[Constants.MAX_DATA_BYTES];
 				
-				DatagramPacket spikesPacket = new DatagramPacket(spikesBuffer, 128);				
+				DatagramPacket spikesPacket = new DatagramPacket(spikesBuffer, Constants.MAX_DATA_BYTES);				
 			
 				spikesReceiver.receive(spikesPacket);			
 								
@@ -72,7 +71,7 @@ public class SpikesReceiver extends Thread{
 	
 	private class SpikesSorter implements Runnable {
 		
-		private byte[] spikesBuffer = new byte[128];
+		private byte[] spikesBuffer;
 		private int ipHashCode = 0;
 		
 		SpikesSorter(byte[] b, int i) {
@@ -83,9 +82,8 @@ public class SpikesReceiver extends Thread{
 		}
 		
 		@Override
-		public void run() {		
-			
-			Node tmpNode = VirtualLayerManager.nodesTable.get(ipHashCode);		
+		public void run() {					
+			Node tmpNode = VirtualLayerManager.nodesTable.get(ipHashCode);				
 		
 			if (tmpNode != null) {
 				try {
@@ -95,8 +93,7 @@ public class SpikesReceiver extends Thread{
 				} 
 			} 
 			
-			//System.out.println(Thread.activeCount());
-			
+			//System.out.println(Thread.activeCount());			
 		}
 
 	}

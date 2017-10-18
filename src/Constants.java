@@ -8,5 +8,6 @@ public class Constants {
 	public final static int SERVER_PORT_UDP = 4196;
 	public final static int MAX_CONNECTED_TERMINALS = 32;
 	public final static int MAX_NUMBER_OF_SYNAPSES = 1024;
+	public final static short MAX_DATA_BYTES = 8192;
 
 }

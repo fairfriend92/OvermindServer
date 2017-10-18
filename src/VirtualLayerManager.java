@@ -128,8 +128,7 @@ public class VirtualLayerManager extends Thread{
 				output = new ObjectOutputStream(clientSocket.getOutputStream());				
 			} catch (IOException e) {
 				System.out.println(e);
-			} 
-		
+			} 		
 			
 			// Receive data stream from the client
 			try {					
@@ -187,7 +186,7 @@ public class VirtualLayerManager extends Thread{
 				
 			Node newNode = new Node(clientSocket, terminal, output);
 			newNode.physicalID = ipHashCode;
-			// Use more intelligent hashing for the virtualID 
+			// TODO Use more intelligent hashing for the virtualID 
 			newNode.virtualID = totalNumberOfDevices;
 			totalNumberOfDevices++;
 		
@@ -218,8 +217,7 @@ public class VirtualLayerManager extends Thread{
 
 				newNode.terminalFrame = new TerminalFrame();
 				newNode.terminalFrame.update(newNode);
-				newNode.terminalFrame.display();
-				
+				newNode.terminalFrame.display();				
 				
 				// Retrieve the list of Shadow Nodes with a certain number of neurons, and if it
 				// doesn't exist, create it
@@ -412,8 +410,10 @@ public class VirtualLayerManager extends Thread{
 	
 	public synchronized static void activateNode(Node shadowNode) {
 		
-		System.out.println("Activating shadow node");
-				
+		System.out.println("Activating shadow node with ip " + shadowNode.terminal.ip);
+		
+		ArrayList<Node> shadowNodesList = shadowNodesListsTable.get((int)shadowNode.terminal.numOfNeurons);
+		shadowNodesList.remove(shadowNode);
 		weightsTable.put(shadowNode.virtualID, new float[shadowNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES]);
 		numberOfShadowNodes--;
 		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));
@@ -564,11 +564,11 @@ public class VirtualLayerManager extends Thread{
 		 * Close the frame associated to the terminal and the socket as well
 		 */
 		
-		removableNode.terminalFrame.frame.dispose();
-		
-		removableNode.terminalFrame.localUpdatedNode = null;	
+		removableNode.terminalFrame.frame.dispose();		
 		
 		removableNode.close();
+		
+		VLVisualizer.layeredPaneVL.removeNode(removableNode);			
 		
 		// TODO: accept shadow nodes with number of neurons greater than that of the removed node?
 		ArrayList<Node> shadowNodesList = shadowNodesListsTable.get((int)removableNode.terminal.numOfNeurons);
@@ -621,7 +621,9 @@ public class VirtualLayerManager extends Thread{
 			shadowNode.terminalFrame.localUpdatedNode = null;
 			shadowNode.terminalFrame = null;
 			
-			System.out.println("Node with ip " + removableNode.terminal.ip + " is being substituted with node with ip " + shadowNode.terminal.ip);			
+			System.out.println("Node with ip " + removableNode.terminal.ip + " is being substituted with node with ip " + shadowNode.terminal.ip);		
+			
+			removableNode.terminalFrame.localUpdatedNode = null;	
 						
 			// Update the physical ID of the old node
 			removableNode.physicalID = shadowNode.physicalID;
@@ -668,25 +670,17 @@ public class VirtualLayerManager extends Thread{
 			System.arraycopy(weights, 0, removableNode.terminal.newWeights, 0, index);
 			removableNode.terminal.newWeightsIndexes = new int[index];
 			System.arraycopy(newWeightsIndexes, 0, removableNode.terminal.newWeightsIndexes, 0, index);		
-			
-			for (Node postsynNode : removableNode.postsynapticNodes) {
-				
-				int removableNodeIndex = postsynNode.presynapticNodes.indexOf(removableNode);
-				System.out.println("test " + postsynNode.presynapticNodes.get(removableNodeIndex).terminal.ip);
-				
-			}
-			
+						
 			unsyncNodes.addAll(removableNode.presynapticNodes);
 			unsyncNodes.addAll(removableNode.postsynapticNodes);
 									
 			// Update the number of shadow nodes
 			numberOfShadowNodes--;
 			
-			//removableNode.terminalFrame.noneRadioButton.doClick();
 			unsyncNodes.add(removableNode);
 			
 			// Prepare shadow node for garbage collection
-			shadowNode = null;
+			shadowNode = null;			
 			
 			syncNodes();
 			
@@ -741,10 +735,8 @@ public class VirtualLayerManager extends Thread{
 			
 			weightsTable.remove(removableNode.virtualID);
 			
-			removableNode.terminalFrame = null;
-								
-			VLVisualizer.layeredPaneVL.removeNode(removableNode);			
-						
+			//removableNode.terminalFrame = null;
+														
 			// Sync other nodes that have been eventually modified
 			//syncNodes();
 			connectNodes(modifiedNodes.toArray(new Node[numOfNodesAffected]));
@@ -792,6 +784,7 @@ public class VirtualLayerManager extends Thread{
 					
 					unsyncNodes.get(i).isShadowNode = false;
 					VLVisualizer.layeredPaneVL.addNode(unsyncNodes.get(i));
+					unsyncNodes.get(i).terminalFrame.mainPanel.removeAll();
 					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i)); 
 					unsyncNodes.get(i).terminalFrame.display();					
 					numberOfSyncNodes++;																			
@@ -809,13 +802,7 @@ public class VirtualLayerManager extends Thread{
 					
 					// The terminal acting as holder of the new info is updated
 					tmpTerminal.update(unsyncNodes.get(i).terminal);
-					
-					for (Node postsynNode : unsyncNodes.get(i).presynapticNodes) {						
-						
-						System.out.println("test " + postsynNode.terminal.ip);
-						
-					}
-														
+																		
 					// Write the info in the steam					
 					unsyncNodes.get(i).writeObjectIntoStream(tmpTerminal);	
 

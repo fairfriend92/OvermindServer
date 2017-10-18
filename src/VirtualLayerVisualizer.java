@@ -595,7 +595,7 @@ public class VirtualLayerVisualizer extends Thread{
 			}
 			
 			// Remove from the panel the label associated to the node, which must be retrieved
-			// from the hash map
+			// from the hash map		
 			
 			VLPanel.remove(nodeIconsTable.get(node.virtualID).nodeLabel);
 			

@@ -39,7 +39,7 @@ public class TerminalFrame {
 	
 	public boolean shutdown = false;	
 		
-	public JFrame frame = new JFrame();
+	public JFrame frame = new JFrame();	
 	
 	public String ip = new String();
 	
@@ -48,7 +48,6 @@ public class TerminalFrame {
 	private JLabel numOfSynapses = new JLabel();
 	private JLabel refreshRate = new JLabel("Clock is: 3 ms");
 	
-	private JButton removeTerminalButton = new JButton();
 	private JButton activateNodeButton = new JButton();
 
 	private DefaultListModel<String> preConnListModel = new DefaultListModel<>();
@@ -66,7 +65,7 @@ public class TerminalFrame {
 	public ExecutorService tcpKeepAliveExecutor = Executors.newSingleThreadExecutor();
 	public boolean spikesMonitorIsActive = false;
 	
-	public MyPanel rastergraphPanel = new MyPanel();	
+	public MyPanel rastergraphPanel;
 
 	public JPanel mainPanel = new JPanel(); 
 	
@@ -100,11 +99,13 @@ public class TerminalFrame {
 		public volatile long time = 0;
 		public byte[][] latestSpikes = new byte[40][];				
 		
-	    public MyPanel() {
+	    public MyPanel(short numOfNeurons) {
 	        setBorder(BorderFactory.createLineBorder(Color.black));
 			setBackground(Color.white);
+			short dataBytes = (numOfNeurons % 8) == 0 ?
+	                (short) (numOfNeurons / 8) : (short)(numOfNeurons / 8 + 1);
 			for (char i = 0; i < 40; i++)
-				latestSpikes[i] = new byte[128]; 
+				latestSpikes[i] = new byte[dataBytes]; 
 	    }
 
 	    public Dimension getPreferredSize() {
@@ -171,6 +172,7 @@ public class TerminalFrame {
 		
 		JButton increaseRate = new JButton("+");
 		JButton decreaseRate = new JButton("-");
+		JButton removeTerminalButton = new JButton();
 		
 		JScrollPane preConnScrollPanel = new JScrollPane();
 		JScrollPane postConnScrollPanel = new JScrollPane();
@@ -417,8 +419,8 @@ public class TerminalFrame {
 		removeTerminalButton.setText("Remove this node");
 		removeTerminalButton.addActionListener(new ActionListener() {
 			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (!localUpdatedNode.isShadowNode)
+			public void actionPerformed(ActionEvent e) {				
+				if (!localUpdatedNode.isShadowNode) 
 					VirtualLayerManager.removeNode(localUpdatedNode, false);
 				else
 					VirtualLayerManager.removeShadowNode(localUpdatedNode);
@@ -471,7 +473,12 @@ public class TerminalFrame {
 	 * Method used to update the frame
 	 */
 	
-	public synchronized void update(Node updatedNode) {
+	public synchronized void update(Node updatedNode) {		
+		localUpdatedNode = updatedNode;
+		
+		// If the rastergraph has not been created yet, do so passing the number of neurons
+		if (rastergraphPanel == null)
+			rastergraphPanel = new MyPanel(updatedNode.terminal.numOfNeurons);
 			
 		if (updatedNode.terminal.numOfDendrites == 0 && !randomSpikesRadioButton.isSelected()) {
 			refreshSignalRadioButton.setEnabled(false);
@@ -493,9 +500,7 @@ public class TerminalFrame {
 			}
 			spikesMonitorExecutor.execute(new SpikesMonitor(receivedSpikesQueue));
 			spikesMonitorIsActive = true;
-		}
-						
-		localUpdatedNode = updatedNode;
+		}						
 						
 		/**
 		 * Update info about local network
@@ -574,26 +579,20 @@ public class TerminalFrame {
 		
 		private BlockingQueue<byte[]> spikesReceivedQueue = new ArrayBlockingQueue<>(4);
 		private byte[][] localLatestSpikes = new byte[40][]; 
-		private short arrayLength = 0;
+		private short arrayLength = 0, dataBytes = 0;
 		
-		SpikesMonitor(BlockingQueue<byte[]> b) {
-			
+		SpikesMonitor(BlockingQueue<byte[]> b) {			
 			this.spikesReceivedQueue = b;
-			for (char i = 0; i < 40; i++)
-				localLatestSpikes[i] = new byte[128];
 			
+			// dataBytes is the number of bytes which make up the vector containing the spikes
+			dataBytes = (localUpdatedNode.terminal.numOfNeurons % 8) == 0 ? 
+		    		(short) (localUpdatedNode.terminal.numOfNeurons / 8) : (short)(localUpdatedNode.terminal.numOfNeurons / 8 + 1);				
+			for (char i = 0; i < 40; i++)
+				localLatestSpikes[i] = new byte[dataBytes];			
 		}
 		
 		@Override
-		public void run() {						
-			
-		    /**
-		     * dataBytes is the number of bytes which make up the vector containing the spikes
-		     */
-			
-		    short dataBytes = (localUpdatedNode.terminal.numOfNeurons % 8) == 0 ? 
-		    		(short) (localUpdatedNode.terminal.numOfNeurons / 8) : (short)(localUpdatedNode.terminal.numOfNeurons / 8 + 1);			
-			
+		public void run() {	    				
 		    // Used to store temporarily the x coordinate of the upper right vertex of the rectangle 
 		    // defining the region of the raster graph that needs to be redrawn
 		    short tmpXCoordinate = 0;
@@ -603,7 +602,7 @@ public class TerminalFrame {
 			
 			while (!shutdown) {		
 				
-				byte[] spikesReceived = new byte[dataBytes];
+				byte[] spikesReceived = null;
 				
 				// The vector containing the spikes is put in this queue by the SpikesSorter class
 				try {
@@ -627,7 +626,7 @@ public class TerminalFrame {
 					// The raster graph is updated every 40 iterations of the simulation to prevent screen flickering 
 					if (arrayLength < 40 && !localUpdatedNode.isShadowNode) {
 						
-						System.arraycopy(spikesReceived, 0, localLatestSpikes[arrayLength], 0, 128);
+						System.arraycopy(spikesReceived, 0, localLatestSpikes[arrayLength], 0, dataBytes);
 						arrayLength++;
 						
 					} else if (!localUpdatedNode.isShadowNode) {
@@ -671,7 +670,7 @@ public class TerminalFrame {
 						lastTime = System.nanoTime();
 					}					
 				
-				} else if (VirtualLayerManager.nodesTable.containsKey(localUpdatedNode.physicalID)) { // Check if some other process is not removing the node already
+				} else if (!shutdown) { // Check if some other process is not removing the node already
 
 					NodesShutdownPoller.nodesToBeRemoved.add(localUpdatedNode);
 					shutdown = true; 	
