@@ -203,7 +203,12 @@ public class VirtualLayerManager extends Thread{
 			if ((numberOfSyncNodes <= activeShadowNodesRatio * numberOfShadowNodes) || !MainFrame.useShadowNodesFlag ) {
 			
 				System.out.println("Active node added");
-				weightsTable.put(newNode.virtualID, new float[newNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES]);
+				
+				// If the terminal has lateral connections, the number of weights must account for the synapses occupied by those
+				int numOfWeights = terminal.presynapticTerminals.size() == 0 ? terminal.numOfNeurons * terminal.numOfSynapses :
+					terminal.numOfNeurons * (terminal.numOfSynapses + terminal.numOfDendrites);
+				
+				weightsTable.put(newNode.virtualID, new float[numOfWeights]);
 				disconnectedNode[0] = newNode;				
 				connectNodes(disconnectedNode);
 				
@@ -414,7 +419,7 @@ public class VirtualLayerManager extends Thread{
 		
 		ArrayList<Node> shadowNodesList = shadowNodesListsTable.get((int)shadowNode.terminal.numOfNeurons);
 		shadowNodesList.remove(shadowNode);
-		weightsTable.put(shadowNode.virtualID, new float[shadowNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES]);
+		weightsTable.put(shadowNode.virtualID, new float[shadowNode.terminal.numOfNeurons * shadowNode.terminal.numOfSynapses]);
 		numberOfShadowNodes--;
 		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));
 		connectNodes(new Node[]{shadowNode});		
@@ -801,7 +806,7 @@ public class VirtualLayerManager extends Thread{
 					com.example.overmind.Terminal tmpTerminal = new com.example.overmind.Terminal();
 					
 					// The terminal acting as holder of the new info is updated
-					tmpTerminal.update(unsyncNodes.get(i).terminal);
+					tmpTerminal.update(unsyncNodes.get(i).terminal);			
 																		
 					// Write the info in the steam					
 					unsyncNodes.get(i).writeObjectIntoStream(tmpTerminal);	

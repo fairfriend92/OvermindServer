@@ -526,11 +526,13 @@ public class TerminalFrame {
 		postConnListModel.clear();
 				
 		for (int i = 0; i < localUpdatedNode.terminal.presynapticTerminals.size(); i++) {
-			com.example.overmind.Terminal presynapticNode = localUpdatedNode.terminal.presynapticTerminals.get(i);
-			if (presynapticNode.ip == serverIP) {
+			com.example.overmind.Terminal presynapticTerminal = localUpdatedNode.terminal.presynapticTerminals.get(i);
+			if (presynapticTerminal.ip == serverIP) {
 				preConnListModel.addElement("Presynaptic device # " + i + " is this server");
+			} else if (presynapticTerminal.ip == localUpdatedNode.terminal.ip) {
+				preConnListModel.addElement("Lateral connections");
 			} else {
-				preConnListModel.addElement("Presynaptic device # " + i + " has ip: " + presynapticNode.ip);
+				preConnListModel.addElement("Presynaptic device # " + i + " has ip: " + presynapticTerminal.ip);
 			}
 		}
 		
@@ -541,11 +543,13 @@ public class TerminalFrame {
 		}
 
 		for (int i = 0; i < localUpdatedNode.terminal.postsynapticTerminals.size(); i++) {
-			com.example.overmind.Terminal postsynapticNode = localUpdatedNode.terminal.postsynapticTerminals.get(i);
-			if (postsynapticNode.ip == serverIP) {
+			com.example.overmind.Terminal postsynapticTerminal = localUpdatedNode.terminal.postsynapticTerminals.get(i);
+			if (postsynapticTerminal.ip == serverIP) {
 				postConnListModel.addElement("Postsynaptic device # " + i + " is this server");
+			} else if (postsynapticTerminal.ip == localUpdatedNode.terminal.ip) {
+				postConnListModel.addElement("Lateral connections");
 			} else {
-				postConnListModel.addElement("Postsynaptic device # " + i + " has ip: " + postsynapticNode.ip);
+				postConnListModel.addElement("Postsynaptic device # " + i + " has ip: " + postsynapticTerminal.ip);
 
 			}
 		}
