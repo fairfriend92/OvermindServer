@@ -279,7 +279,7 @@ public class VirtualLayerVisualizer extends Thread{
 		/* Info panel */
 		
 		infoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-		infoPanel.setLayout(new GridLayout(3,0));
+		infoPanel.setLayout(new GridLayout(4,0));
 		infoPanel.setBorder(BorderFactory.createCompoundBorder(
 					BorderFactory.createTitledBorder("Node info"),
 					BorderFactory.createEmptyBorder(5,5,5,5)));
@@ -749,6 +749,10 @@ public class VirtualLayerVisualizer extends Thread{
 				infoPanel.add(new JLabel("# neurons " + node.terminal.numOfNeurons));
 				infoPanel.add(new JLabel("# synapses " + node.terminal.numOfSynapses));
 				infoPanel.add(new JLabel("# dendrites " + node.terminal.numOfDendrites));
+				if (selectedNode.hasLateralConnections())
+					infoPanel.add(new JLabel("Lateral connections on"));
+				else 
+					infoPanel.add(new JLabel("Lateral connections off"));
 				infoPanel.revalidate();
 				infoPanel.repaint();
 				

@@ -47,6 +47,7 @@ public class TerminalFrame {
 	private JLabel numOfDendrites = new JLabel();
 	private JLabel numOfSynapses = new JLabel();
 	private JLabel refreshRate = new JLabel("Clock is: 3 ms");
+	private JLabel averageSpikesInterval = new JLabel(" 0 ms");
 	
 	private JButton activateNodeButton = new JButton();
 
@@ -159,7 +160,11 @@ public class TerminalFrame {
 	 * Main method used to display the frame for the first time
 	 */
 
-	public void display() {				
+	public void display() {			
+		
+		/*
+		 * Various elements of the frame: panels, buttons, checkboxes...
+		 */
 		
 		JPanel totalPanel = new JPanel();
 		JPanel infoPanel = new JPanel();
@@ -169,6 +174,7 @@ public class TerminalFrame {
 		JPanel postConnPanel = new JPanel();	
 		JPanel commandsPanel = new JPanel();
 		JPanel refreshRatePanel = new JPanel();
+		JPanel ledPanel = new JPanel();
 		
 		JButton increaseRate = new JButton("+");
 		JButton decreaseRate = new JButton("-");
@@ -215,6 +221,18 @@ public class TerminalFrame {
 		});	
 		
 		showRasterGraph.setEnabled(true);		
+		
+		JCheckBox enableLateralConnections = new JCheckBox("Enable lateral conn.", localUpdatedNode.hasLateralConnections());
+		enableLateralConnections.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				boolean operationSuccesful = localUpdatedNode.changeLateralConnectionsOption();
+				if (!operationSuccesful)
+					enableLateralConnections.setSelected(!enableLateralConnections.isSelected());
+			}
+		});
+		
+		enableLateralConnections.setEnabled(true);
 		
 		/*
 		 * Timer for the led status
@@ -330,7 +348,14 @@ public class TerminalFrame {
 		infoPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder("Local network info"),
                 BorderFactory.createEmptyBorder(5,5,5,5)));
-		infoPanel.add(ledStatus);
+		
+		// Create the led panel containing the led icon and the average spikes interval label
+		ledPanel.setLayout(new BoxLayout(ledPanel, BoxLayout.X_AXIS));
+		ledPanel.add(ledStatus);
+		ledPanel.add(averageSpikesInterval);
+		ledPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+				
+		infoPanel.add(ledPanel);
 		infoPanel.add(numOfDendrites);
 		infoPanel.add(numOfNeurons);		
 		infoPanel.add(numOfSynapses);		
@@ -444,6 +469,7 @@ public class TerminalFrame {
 		activateNodeButton.setAlignmentX(Component.LEFT_ALIGNMENT);		
 		commandsPanel.add(activateNodeButton);
 		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		commandsPanel.add(enableLateralConnections);
 		
 		if (!localUpdatedNode.isShadowNode) {
 
@@ -633,12 +659,15 @@ public class TerminalFrame {
 						System.arraycopy(spikesReceived, 0, localLatestSpikes[arrayLength], 0, dataBytes);
 						arrayLength++;
 						
-					} else if (!localUpdatedNode.isShadowNode) {
+					} else if (!localUpdatedNode.isShadowNode) { 
 						
 						arrayLength = 0;
 						
 						// Update the info regarding the time interval between spikes
 						rastergraphPanel.time = (long)(System.nanoTime() - lastTime) / (40 * 1000000);
+						
+						// Display the latest average spikes interval in the ledPanel portion of the interface
+						averageSpikesInterval.setText(" " + rastergraphPanel.time + " ms");
 						
 						// Update the list holding the last 40 spikes vectors
 						for (char i = 0; i < 40; i++)

@@ -183,16 +183,26 @@ public class VirtualLayerManager extends Thread{
 			
 			terminal.postsynapticTerminals.add(thisServer);
 			terminal.serverIP = serverIP;
+			
+			/*
+			 * Create the node containing the terminal object just received
+			 */
 				
 			Node newNode = new Node(clientSocket, terminal, output);
 			newNode.physicalID = ipHashCode;
-			// TODO Use more intelligent hashing for the virtualID 
-			newNode.virtualID = totalNumberOfDevices;
+			newNode.virtualID = totalNumberOfDevices; // TODO Use more intelligent hashing for the virtualID 
 			totalNumberOfDevices++;
+			
+			// If lateral connections have been enabled, to get the number of synapses the node started with the number
+			// of neurons must be added to the current number of synapses
+			if (newNode.hasLateralConnections())
+				newNode.originalNumOfSynapses = (short)(terminal.numOfSynapses + terminal.numOfNeurons);
+			else 
+				newNode.originalNumOfSynapses = terminal.numOfSynapses;
 		
 			// Put the new node in the hashmap using the hashcode of the
 			// InetAddress of the terminal contained in the node as key
-			nodesTable.put(ipHashCode, newNode);	
+			nodesTable.put(newNode.physicalID, newNode);	
 		
 			assert terminal != null;				
 			
@@ -267,7 +277,7 @@ public class VirtualLayerManager extends Thread{
 				nodeToModify[1].postsynapticNodes.remove(nodeToModify[0]);
 				nodeToModify[0].presynapticNodes.remove(nodeToModify[1]);
 			} else
-				return 1;
+				return 1; // TODO: Use constants to return value with meaningful name
 								
 		}
 		
@@ -296,7 +306,7 @@ public class VirtualLayerManager extends Thread{
 	
 	public synchronized static void connectNodes(Node[] disconnectedNodes) {			
 	
-		/**
+		/*
 		 * Populate and update the list of terminals available for connection
 		 */		
 	
@@ -656,8 +666,8 @@ public class VirtualLayerManager extends Thread{
 			
 			// Create the two arrays which represent the sparse array containing only those synaptic 
 			// weights which have been modified
-			float[] newWeights = new float[removableNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES];
-			int[] newWeightsIndexes = new int[removableNode.terminal.numOfNeurons * Constants.MAX_NUMBER_OF_SYNAPSES];
+			float[] newWeights = new float[removableNode.terminal.numOfNeurons * removableNode.originalNumOfSynapses];
+			int[] newWeightsIndexes = new int[removableNode.terminal.numOfNeurons * removableNode.originalNumOfSynapses];
 			int index = 0;
 			
 			// Check which of the retrieve weights are different from the default value (0.0) 
@@ -752,7 +762,7 @@ public class VirtualLayerManager extends Thread{
 
 	public synchronized static void syncNodes() {		
 		
-		/**
+		/*
 		 * Sync the GUI with the updated info about the terminals
 		 */		
 	
@@ -796,7 +806,7 @@ public class VirtualLayerManager extends Thread{
 
 				}
 				
-				/**
+				/*
 				 * Updated info regarding the current terminal are sent back to the physical device
 				 */
 					

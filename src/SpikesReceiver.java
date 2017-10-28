@@ -48,7 +48,7 @@ public class SpikesReceiver extends Thread{
 				
 				DatagramPacket spikesPacket = new DatagramPacket(spikesBuffer, Constants.MAX_DATA_BYTES);				
 			
-				spikesReceiver.receive(spikesPacket);			
+				spikesReceiver.receive(spikesPacket);					
 								
 				spikesBuffer = spikesPacket.getData();			
 			

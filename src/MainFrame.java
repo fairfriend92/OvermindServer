@@ -49,8 +49,8 @@ public class MainFrame {
 		
 		// Class that receives the spikes from the terminals and distribute them to the
 		// raster graph threads
-		SpikesReceiver spikesSorter = new SpikesReceiver();
-		spikesSorter.start();
+		SpikesReceiver spikesReceiver = new SpikesReceiver();
+		spikesReceiver.start();
 		
 		// Class that polls shutdown signals of raster graph threads associated with an
 		// inactive node
