@@ -589,10 +589,26 @@ public class VirtualLayerManager extends Thread{
 		ArrayList<Node> shadowNodesList = shadowNodesListsTable.get((int)removableNode.terminal.numOfNeurons);
 		
 		// If the disconnection is abrupt and there are shadow nodes available
-		if (unwantedDisconnection && shadowNodesList != null && !shadowNodesList.isEmpty()) {			
+		if (unwantedDisconnection && shadowNodesList != null && !shadowNodesList.isEmpty()) {		
 						
 			// Retrieve the first shadow node available 
 			Node shadowNode = shadowNodesList.remove(shadowNodesList.size() - 1);			
+			
+			/*
+			 * Create a RemovedNode object to notify the applications interfaced with the 
+			 * Overmind that a node is being removed and that a shadow node is being inserted in 
+			 * its place.
+			 */
+			
+			// First make deep copies of the shadow node and the one that it's being deleted, 
+			// since later on their info are going to be interchanged. 
+			Node removableNodeCopy = new Node(null, null, null);	
+			removableNodeCopy.update(removableNode);
+			Node shadowNodeCopy = new Node(null, null, null);
+			shadowNodeCopy.update(shadowNode);
+			
+			ApplicationInterface.RemovedNode removedNode = new ApplicationInterface.RemovedNode(removableNodeCopy, shadowNodeCopy);
+			ApplicationInterface.addRemovedNode(removedNode);
 			
 			/*
 			 * Shutdown the partial terminal frame of the shadow node
@@ -701,7 +717,16 @@ public class VirtualLayerManager extends Thread{
 			
 		} else {
 		
-			System.out.println("Node with ip " + removableNode.terminal.ip + " is being removed");		
+			System.out.println("Node with ip " + removableNode.terminal.ip + " is being removed");	
+			
+			/*
+			 * Send the application interface a reference to the removable node so that all 
+			 * the currently interface applications can handle the removal. No need to make a deep copy
+			 * of removable node in this case since its info are left untouched. 
+			 */
+			
+			ApplicationInterface.RemovedNode removedNode = new ApplicationInterface.RemovedNode(removableNode, null);
+			ApplicationInterface.addRemovedNode(removedNode);
 	
 			availableNodes.remove(removableNode); 							
 												
