@@ -10,6 +10,7 @@
  * 		shutdown flags and eventually send to VirtualLayerManager.removeNodes the associated node
  */
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -19,21 +20,29 @@ import java.awt.event.ActionListener;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.ListSelectionModel;
 
 public class MainFrame {
 
 	// TODO Manage application shutdown properly
 	
+	static JPanel mainPanel = new JPanel();
+	
 	private static JLabel numOfUnsyncNodes = new JLabel("# of unsync nodes is 0");
 	private static JLabel numOfSyncNodes = new JLabel("# of sync nodes is 0");
 	private static JLabel numOfShadowNodes = new JLabel("# of shadow nodes is 0");
 	private static JFrame frame = new JFrame();
+	
+	static DefaultListModel<String> registeredAppsListModel = new DefaultListModel<>();
 	
 	public static volatile boolean useShadowNodesFlag = true;
 	
@@ -61,20 +70,57 @@ public class MainFrame {
 	
 	private static void displayMainFrame() {
 		
-		JPanel mainPanel = new JPanel();
 		JPanel nodesInfoPanel = new JPanel();	
 		JPanel commandsPanel = new JPanel();
 		JPanel activeShadowNodesRatioPanel = new JPanel();
+		JPanel registeredAppsPanel = new JPanel();
+		JPanel leftsidePanelContainer = new JPanel();
+		
 		JButton syncButton = new JButton();
 		JButton increaseRatio = new JButton("+");
 		JButton decreaseRatio = new JButton("-");
+		
 		JLabel ratio = new JLabel("A/S ratio is 2");
 				
-		/**
+		JList<String> registeredAppsList = new JList<>();
+		
+		JScrollPane registeredAppsScrollPane = new JScrollPane();
+		
+		/*
+		 * Left side panel container layout.
+		 */
+		
+		leftsidePanelContainer.setLayout(new BoxLayout(leftsidePanelContainer, BoxLayout.Y_AXIS));		
+		leftsidePanelContainer.add(nodesInfoPanel);
+		leftsidePanelContainer.add(registeredAppsPanel);
+		
+		/*
+		 * Registered apps panel layout.
+		 */
+		
+		registeredAppsPanel.setLayout(new BorderLayout());
+		registeredAppsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		registeredAppsPanel.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createTitledBorder("Registered apps"),
+				BorderFactory.createEmptyBorder(5,5,5,5)));
+		
+		registeredAppsList.setVisibleRowCount(2);
+		
+		registeredAppsScrollPane.setViewportView(registeredAppsList);		
+		registeredAppsListModel.addElement("No app registered");
+		registeredAppsList.setModel(registeredAppsListModel);
+		registeredAppsList.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+		registeredAppsList.setLayoutOrientation(JList.VERTICAL);
+		
+		registeredAppsPanel.add(registeredAppsScrollPane, BorderLayout.CENTER);
+	
+				
+		/*
 		 * Nodes info panel layout
 		 */
 		
 		nodesInfoPanel.setLayout(new BoxLayout(nodesInfoPanel, BoxLayout.Y_AXIS));
+		nodesInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		nodesInfoPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder("Virtual Layer Info"),
                 BorderFactory.createEmptyBorder(5,5,5,5)));
@@ -188,8 +234,8 @@ public class MainFrame {
 		 * Main panel layout
 		 */
 		
-		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.X_AXIS));
-		mainPanel.add(nodesInfoPanel);
+		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.X_AXIS));		
+		mainPanel.add(leftsidePanelContainer);
 		mainPanel.add(commandsPanel);
 		
 		/**

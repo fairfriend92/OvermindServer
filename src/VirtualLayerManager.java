@@ -215,8 +215,7 @@ public class VirtualLayerManager extends Thread{
 				System.out.println("Active node added");
 				
 				// If the terminal has lateral connections, the number of weights must account for the synapses occupied by those
-				int numOfWeights = terminal.presynapticTerminals.size() == 0 ? terminal.numOfNeurons * terminal.numOfSynapses :
-					terminal.numOfNeurons * (terminal.numOfSynapses + terminal.numOfDendrites);
+				int numOfWeights = terminal.numOfNeurons * newNode.originalNumOfSynapses;
 				
 				weightsTable.put(newNode.virtualID, new float[numOfWeights]);
 				disconnectedNode[0] = newNode;				
@@ -721,11 +720,11 @@ public class VirtualLayerManager extends Thread{
 			
 			/*
 			 * Send the application interface a reference to the removable node so that all 
-			 * the currently interface applications can handle the removal. No need to make a deep copy
+			 * the currently interfaced applications can handle the removal. No need to make a deep copy
 			 * of removable node in this case since its info are left untouched. 
 			 */
 			
-			ApplicationInterface.RemovedNode removedNode = new ApplicationInterface.RemovedNode(removableNode, null);
+			ApplicationInterface.RemovedNode removedNode = new ApplicationInterface.RemovedNode(removableNode);
 			ApplicationInterface.addRemovedNode(removedNode);
 	
 			availableNodes.remove(removableNode); 							

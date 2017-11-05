@@ -248,9 +248,9 @@ public class VirtualLayerVisualizer extends Thread{
 		commandsPanel.setLayout(new GridLayout(2,3));		
 		commandsPanel.add(cutLink);
 		commandsPanel.add(createLink);
+		commandsPanel.add(showTerminalFrame);
 		commandsPanel.add(resizeX);
 		commandsPanel.add(resizeY);
-		commandsPanel.add(showTerminalFrame);
 		commandsPanel.add(paintAll);
 		
 		/* Commands panel total */

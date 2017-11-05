@@ -18,15 +18,26 @@ public class ApplicationInterface {
 	 * for it. 
 	 */
 	
-	public static RegisteredApp registerApplication(int maxRemoveNodes) {		
+	public static RegisteredApp registerApplication(int maxRemoveNodes, String appName) {		
 		RegisteredApp registeredApp;
 		
 		if (registeredApps.size() == Constants.MAX_REGISTERED_APPS) {
 			return null;
 		}
 		else {
-			registeredApp = new RegisteredApp(maxRemoveNodes);
+			registeredApp = new RegisteredApp(maxRemoveNodes, appName);
 			registeredApps.add(registeredApp);
+			
+			/*
+			 * Update the GUI with the registered apps.
+			 */
+			
+			if (MainFrame.registeredAppsListModel.contains("No app registered")) {
+				MainFrame.registeredAppsListModel.clear();
+			}			
+			MainFrame.registeredAppsListModel.addElement(appName);
+			MainFrame.mainPanel.revalidate();
+			MainFrame.mainPanel.repaint();
 		}
 		
 		return registeredApp;
@@ -51,12 +62,17 @@ public class ApplicationInterface {
 	 */
 	
 	public static class RemovedNode {
-		private Node removedNode, shadowNode; // The node that has been removed and the proposed replacement.
+		Node removedNode, shadowNode; // The node that has been removed and the proposed replacement.
 		
 		public RemovedNode(Node removedNode, Node shadowNode) {
 			this.removedNode = removedNode;
 			this.shadowNode = shadowNode;
 		}		
+		
+		public RemovedNode(Node removedNode) {
+			this.removedNode = removedNode;
+			this.shadowNode = null;
+		}
 	}
 	
 	/**
@@ -65,10 +81,12 @@ public class ApplicationInterface {
 	
 	public static class RegisteredApp {
 		private int maxRemovedNodes; // Capacity of the removedNodes queue.
+		String appName;
 		BlockingQueue<RemovedNode> removedNodes;
 		
-		 private RegisteredApp(int maxRemovedNodes) {
+		 private RegisteredApp(int maxRemovedNodes, String appName) {
 			this.maxRemovedNodes = maxRemovedNodes;
+			this.appName = appName;
 			removedNodes  = new ArrayBlockingQueue<>(maxRemovedNodes);
 		}
 	}

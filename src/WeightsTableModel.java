@@ -69,8 +69,13 @@ public class WeightsTableModel extends AbstractTableModel {
 		data[arg1] = (float) arg0;
 		fireTableCellUpdated(arg1, arg2);
 		
+		// Save in the Node object the new weight so that it can be used by VirtualLayerManager to update the terminal.		
 		VirtualLayerVisualizer.selectedNode.terminal.newWeights = new float[] {(float)arg0};
 		VirtualLayerVisualizer.selectedNode.terminal.newWeightsIndexes = new int[] {arg1};
+		
+		// Update the collection of weights for the selected node with the new weight. 
+		VirtualLayerManager.weightsTable.get(VirtualLayerVisualizer.selectedNode.virtualID)[arg1] = (float)arg0; 
+		
 		VirtualLayerManager.connectNodes(new Node[] {VirtualLayerVisualizer.selectedNode});
 		
 	}
