@@ -30,19 +30,8 @@ public class RefreshSignalSender implements Runnable {
 				
 		targetTerminal = parentFrame.localUpdatedNode.terminal;	
 		
-        long lastTime = 0, staticRefresh = parentFrame.rateMultiplier * 1000000, 
+        long staticRefresh = parentFrame.rateMultiplier * 1000000, 
         		dynamicRefresh = 0, rasterGraphRefresh;          
-        
-        DatagramSocket outputSocket = null;
-
-        try {
-    	    outputSocket = new DatagramSocket();
-    	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);   
-        } catch (SocketException e) {
-        	e.printStackTrace();
-        }
-        
-        assert outputSocket != null;
         
         com.example.overmind.Terminal server = new com.example.overmind.Terminal();
         server.postsynapticTerminals = new ArrayList<>();
@@ -54,7 +43,7 @@ public class RefreshSignalSender implements Runnable {
         server.numOfNeurons = 8 < targetTerminal.numOfDendrites ? 8 : targetTerminal.numOfDendrites;
         server.numOfSynapses = (short)(1024 - targetTerminal.numOfNeurons);
         server.numOfDendrites = 1024;
-        server.natPort = Constants.UDP_PORT;
+        server.natPort = Constants.OUT_UDP_PORT;
         
         targetTerminal.numOfDendrites -= server.numOfNeurons;
         
@@ -80,28 +69,25 @@ public class RefreshSignalSender implements Runnable {
         }
                  
         while (!shutdown) {
+        	long startTime = System.nanoTime();
         	
         	rasterGraphRefresh = (parentFrame.rastergraphPanel.time) * 1000000;  
-    		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;
-        	        	        	    
-        	while ((System.nanoTime() - lastTime) < dynamicRefresh) {
-            	//rasterGraphRefresh = parentFrame.rastergraphPanel.time * 1000000;   	
-        		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;
-        	}   
-                      	        	        	
+    		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;        	        	        	    
+        	                        	        	        	
             try {
                 DatagramPacket outputSpikesPacket = new DatagramPacket(dummySignal, 1, targetDeviceAddr, targetTerminal.natPort);	
-				outputSocket.send(outputSpikesPacket);		
+				SpikesReceiver.datagramSocket.send(outputSpikesPacket);		
 			} catch (IOException e) {
 				System.out.println(e);
 			}		
                                    
-            lastTime = System.nanoTime();            
+            while ((System.nanoTime() - startTime) < dynamicRefresh) {
+            	//rasterGraphRefresh = parentFrame.rastergraphPanel.time * 1000000;   	
+        		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;
+        	}   
         	
-        }
-        
-        outputSocket.close();
-       
+        }       
+      
         targetTerminal.presynapticTerminals.remove(server);
     	targetTerminal.numOfDendrites +=  server.numOfNeurons;
                 

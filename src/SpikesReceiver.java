@@ -11,6 +11,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
@@ -21,22 +22,20 @@ public class SpikesReceiver extends Thread{
 	
 	private final static int IPTOS_THROUGHPUT = 0x08;
 	private ExecutorService spikesSorterExecutor = Executors.newCachedThreadPool();	
+	static DatagramSocket datagramSocket = null;
 	
 	@Override
 	public void run() {
-		super.run();
-		
-		DatagramSocket spikesReceiver = null;
+		super.run();		
 
         try {
-            spikesReceiver = new DatagramSocket(Constants.UDP_PORT);
-    	    spikesReceiver.setTrafficClass(IPTOS_THROUGHPUT);  
-
+            datagramSocket = new DatagramSocket(Constants.OUT_UDP_PORT);
+    	    datagramSocket.setTrafficClass(IPTOS_THROUGHPUT);      	   	
         } catch (SocketException e) {
         	e.printStackTrace();
         }
         
-        assert spikesReceiver != null;
+        assert datagramSocket != null;
        
 		int ipHashCode = 0;     
 		
@@ -48,7 +47,7 @@ public class SpikesReceiver extends Thread{
 				
 				DatagramPacket spikesPacket = new DatagramPacket(spikesBuffer, Constants.MAX_DATA_BYTES);				
 			
-				spikesReceiver.receive(spikesPacket);					
+				datagramSocket.receive(spikesPacket);					
 								
 				spikesBuffer = spikesPacket.getData();			
 			

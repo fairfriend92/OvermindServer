@@ -556,8 +556,11 @@ public class TerminalFrame {
 		for (int i = 0; i < localUpdatedNode.terminal.presynapticTerminals.size(); i++) {
 			com.example.overmind.Terminal presynapticTerminal = localUpdatedNode.terminal.presynapticTerminals.get(i);
 			if (presynapticTerminal.ip.equals(serverIP)) {
-				preConnListModel.addElement("Presynaptic device # " + i + " is this server");
-			} else if (presynapticTerminal.equals(localUpdatedNode.terminal.ip)) {
+				if (presynapticTerminal.natPort == Constants.OUT_UDP_PORT)
+					preConnListModel.addElement("Presynaptic device # " + i + " is this server");
+				else 
+					preConnListModel.addElement("Presynaptic device # " + i + " is an app");
+			} else if (presynapticTerminal.ip.equals(localUpdatedNode.terminal.ip)) {
 				preConnListModel.addElement("Lateral connections");
 			} else {
 				preConnListModel.addElement("Presynaptic device # " + i + " has ip: " + presynapticTerminal.ip);
@@ -573,7 +576,10 @@ public class TerminalFrame {
 		for (int i = 0; i < localUpdatedNode.terminal.postsynapticTerminals.size(); i++) {
 			com.example.overmind.Terminal postsynapticTerminal = localUpdatedNode.terminal.postsynapticTerminals.get(i);
 			if (postsynapticTerminal.ip.equals(serverIP)) {
-				postConnListModel.addElement("Postsynaptic device # " + i + " is this server");
+				if (postsynapticTerminal.natPort == Constants.OUT_UDP_PORT)
+					postConnListModel.addElement("Postsynaptic device # " + i + " is this server");
+				else 
+					postConnListModel.addElement("Postsynaptic device # " + i + " is an app");
 			} else if (postsynapticTerminal.ip.equals(localUpdatedNode.terminal.ip)) {
 				postConnListModel.addElement("Lateral connections");
 			} else {

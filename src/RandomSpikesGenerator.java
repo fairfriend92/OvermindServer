@@ -32,28 +32,14 @@ public class RandomSpikesGenerator implements Runnable {
 		targetTerminal = parentFrame.localUpdatedNode.terminal;
 		
 		Random rand = new Random();
-        long lastTime = 0, staticRefresh = parentFrame.rateMultiplier * 1000000, 
+        long staticRefresh = parentFrame.rateMultiplier * 1000000, 
         		dynamicRefresh = 0, rasterGraphRefresh;   
         int[] waitARP = new int[targetTerminal.numOfDendrites];
         short dataBytes = targetTerminal.numOfDendrites % 8 == 0 ? 
         		(short) (targetTerminal.numOfDendrites / 8) : (short) (targetTerminal.numOfDendrites / 8 + 1);
         
-        com.example.overmind.Terminal targetTerminalOld = new com.example.overmind.Terminal();        
-        
-        /**
-         * Open the socket for sending the spikes and build the InetAddress of the target device
-         */
-        		
-        DatagramSocket outputSocket = null;
-
-        try {
-    	    outputSocket = new DatagramSocket();
-    	    outputSocket.setTrafficClass(IPTOS_THROUGHPUT);   
-        } catch (SocketException e) {
-        	e.printStackTrace();
-        }
-        
-                
+        com.example.overmind.Terminal targetTerminalOld = new com.example.overmind.Terminal();      
+                                        
         /**
          * Procedure to set external stimulus and update Terminal info
          */
@@ -74,17 +60,15 @@ public class RandomSpikesGenerator implements Runnable {
         server.postsynapticTerminals.add(targetTerminal);
         server.numOfNeurons = targetTerminalOld.numOfDendrites;
         server.numOfSynapses = (short)(1024 - targetTerminalOld.numOfNeurons); // TODO: change into 0
-        server.numOfDendrites = 1024; // TODO: change into server.numOfNeurons
-        server.natPort = Constants.UDP_PORT;
+        server.numOfDendrites = 1024; // TODO: change into targetTerminalOld.numOfNeurons
+        server.natPort = Constants.OUT_UDP_PORT;
         
         // Add the server to the list of presynaptic devices connected to the target device
         targetTerminal.presynapticTerminals.add(server);
         
         VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});    
-        //VirtualLayerManager.syncNodes();                          
-        
-        assert outputSocket != null;
-        
+        //VirtualLayerManager.syncNodes();                         
+               
         InetAddress targetDeviceAddr = null;
         		
         try {
@@ -97,7 +81,8 @@ public class RandomSpikesGenerator implements Runnable {
         
         short rateMultiplier = parentFrame.rateMultiplier;
 		
-        while (!shutdown) {       	
+        while (!shutdown) {    
+            long startTime = System.nanoTime();            
         	
         	/**
         	 * Generate spikes randomly, with the only condition that a period of time at least equal to the ARP 
@@ -136,28 +121,25 @@ public class RandomSpikesGenerator implements Runnable {
         	// Retrieve the average refresh rate of the raster graph
         	rasterGraphRefresh = (parentFrame.rastergraphPanel.time) * 1000000;  
         	
-        	// Use the raster graph rr or the one chosen by the user depending on which is slower
-    		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;
-        	        	        	    
-    		// Send a signal to the terge terminal every 1 / dynamicRefresh
-        	while ((System.nanoTime() - lastTime) < dynamicRefresh) {
-            	//rasterGraphRefresh = parentFrame.rastergraphPanel.time * 1000000;   	
-        		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;
-        	}          	
-
+        	// Use the raster graph refresh rate or the one chosen by the user depending on which is slower
+    		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;     	        	        	    
+    		    	
             try {
                 DatagramPacket outputSpikesPacket = new DatagramPacket(outputSpikes, dataBytes, targetDeviceAddr, targetTerminalOld.natPort);	
-				outputSocket.send(outputSpikesPacket);			
+				SpikesReceiver.datagramSocket.send(outputSpikesPacket);			
 			} catch (IOException e) {
 				System.out.println(e);
-			}		
-                                   
-            lastTime = System.nanoTime();            
-   	                             
+			}	                                  
+            
+            // Send a signal to the terge terminal every 1 / dynamicRefresh
+        	while ((System.nanoTime() - startTime) < dynamicRefresh) {
+            	//rasterGraphRefresh = parentFrame.rastergraphPanel.time * 1000000;   	
+        		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;
+        	}         	                             
         }
         /* [End of while for loop] */         
         
-        outputSocket.close();
+        //datagramSocket.close();
         
         // In the meantime the stimulated device may have formed new postsynaptic connections which need to be carried on to the old Terminal
         targetTerminalOld.numOfSynapses = targetTerminal.numOfSynapses;

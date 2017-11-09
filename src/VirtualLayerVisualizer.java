@@ -688,8 +688,7 @@ public class VirtualLayerVisualizer extends Thread{
 				infoPanel.revalidate();
 				infoPanel.repaint();
 				
-				// Update the weights panel
-				
+				// Update the weights panel				
 				weightsPanel.removeAll();
 				weightsPanel.add(new JLabel("Select a node"));
 				weightsPanel.revalidate();
@@ -717,10 +716,11 @@ public class VirtualLayerVisualizer extends Thread{
 				if (selectedNode != null) {
 					
 					// ...then that other node must first be deselected
+					int dimension = nodeIconsTable.get(selectedNode.virtualID).dimension;					
 					try {
 						Image img = ImageIO.read(getClass().getResource("/icons/icons8-New Moon.png"));
 						nodeIcon = (new ImageIcon(
-								img.getScaledInstance(this.dimension, this.dimension, Image.SCALE_SMOOTH)));
+								img.getScaledInstance(dimension, dimension, Image.SCALE_SMOOTH)));
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}

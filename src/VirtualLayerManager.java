@@ -183,6 +183,7 @@ public class VirtualLayerManager extends Thread{
 			
 			terminal.postsynapticTerminals.add(thisServer);
 			terminal.serverIP = serverIP;
+			// TODO: Should the number of synapses of the terminal be decreased by terminal.numOfNeurons to account for the random spike generator?
 			
 			/*
 			 * Create the node containing the terminal object just received
