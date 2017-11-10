@@ -22,6 +22,7 @@ public class SpikesReceiver extends Thread{
 	
 	private final static int IPTOS_THROUGHPUT = 0x08;
 	private ExecutorService spikesSorterExecutor = Executors.newCachedThreadPool();	
+	boolean shutdown = false;
 	static DatagramSocket datagramSocket = null;
 	
 	@Override
@@ -30,16 +31,39 @@ public class SpikesReceiver extends Thread{
 
         try {
             datagramSocket = new DatagramSocket(Constants.OUT_UDP_PORT);
-    	    datagramSocket.setTrafficClass(IPTOS_THROUGHPUT);      	   	
+    	    datagramSocket.setTrafficClass(IPTOS_THROUGHPUT);  
+    	    
+        	try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+    	    InetAddress serverAddress = null;
+			try {
+				serverAddress = InetAddress.getByName(VirtualLayerManager.serverIP);
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			}
+			assert serverAddress != null;
+    	    DatagramPacket testPacket = new DatagramPacket(new byte[1], 1, serverAddress, Constants.OUT_UDP_PORT);
+    	    try {
+    	    	datagramSocket.send(testPacket);
+    	    	DatagramPacket receivePacket = new DatagramPacket(new byte[1], 1);
+				datagramSocket.receive(receivePacket);
+				System.out.println("UDP IN PORT: " + receivePacket.getPort());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}    	    
+    	    
         } catch (SocketException e) {
-        	e.printStackTrace();
+			e.printStackTrace();
         }
         
         assert datagramSocket != null;
        
 		int ipHashCode = 0;     
 		
-        while (true) {
+        while (!shutdown) {
         	
 			try {				
 				
@@ -55,16 +79,28 @@ public class SpikesReceiver extends Thread{
 												
 				spikesSorterExecutor.execute(new SpikesSorter(spikesBuffer, ipHashCode));
 				
+			} catch(SocketException e) {
+				System.out.println("datagramSocket is closed");
+				break;
 			} catch (IOException e) {
 	        	e.printStackTrace();
-			}	       
-			
-			
-			
+			}	    
+						
         }
         
-        // TODO Close the socket when the server is shutdown
-		//spikesReceiver.close();
+        /*
+         * Shutdown worker threads.
+         */
+        
+		spikesSorterExecutor.shutdown();
+		try {
+			boolean spikesSorterIsShutdown = spikesSorterExecutor.awaitTermination(1, TimeUnit.SECONDS);
+			if (!spikesSorterIsShutdown) {
+				System.out.println("ERROR: spikesSorter did not shutdown in time.");
+			} 
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}		
 
 	}
 	

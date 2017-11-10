@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 public class VirtualLayerManager extends Thread{			
 	
-	static boolean shutdown = false;	
+	boolean shutdown = false;	
 	
 	static int numberOfSyncNodes = 0;	
 	static int numberOfShadowNodes = 0;
@@ -49,6 +49,14 @@ public class VirtualLayerManager extends Thread{
 	static public String serverIP = null;
 	
 	static VirtualLayerVisualizer VLVisualizer = new VirtualLayerVisualizer();
+	
+	/* Network related objects */
+	
+	DatagramSocket inputSocket = null;
+    Socket clientSocket = null;		
+	ServerSocket serverSocket = null;	
+	ObjectInputStream input = null;
+	ObjectOutputStream output = null;
 			
 	@Override
 	public void run() {
@@ -70,7 +78,6 @@ public class VirtualLayerManager extends Thread{
 		 * Build the TCP server socket which listens for physical devices ready to connect
 		 */
 		
-		ServerSocket serverSocket = null;		
 		
 		try {
 			serverSocket = new ServerSocket(Constants.SERVER_PORT_TCP);
@@ -84,8 +91,6 @@ public class VirtualLayerManager extends Thread{
 		 * Build the datagram input socket which listens for test packets from which the nat port can be retrieved
 		 */
 				
-		DatagramSocket inputSocket = null;
-
         try {
             inputSocket = new DatagramSocket(Constants.SERVER_PORT_UDP);
         } catch (SocketException e) {
@@ -97,7 +102,7 @@ public class VirtualLayerManager extends Thread{
         com.example.overmind.Terminal thisServer = new com.example.overmind.Terminal();
         thisServer.ip = serverIP;
         //thisServer.ip = "192.168.1.213";
-        thisServer.natPort = 4194;    
+        thisServer.natPort = Constants.OUT_UDP_PORT;    
         
         Node[] disconnectedNode = new Node[1];
 						
@@ -105,30 +110,36 @@ public class VirtualLayerManager extends Thread{
 		
 			/*
 			 * Open new connections with the clients
-			 */
+			 */	
 		
-	        Socket clientSocket = null;		
-			
 			// Accept connections from the clients			
 			try {				
 				clientSocket = serverSocket.accept();
 				clientSocket.setTrafficClass(0x04);
 				clientSocket.setTcpNoDelay(true);
 				//clientSocket.setTcpNoDelay(true);
+			} catch (SocketException e) {
+				
+				/*
+				 * serverSocket gets closed whenever the application is terminated
+				 * by the user. At that point exit the loop and proceed to an 
+				 * orderly shutdown.
+				 */
+				
+				System.out.println("serverSocket is closed");
+				break; // Exit while loop and shutdown this thread. 
 			} catch (IOException e) {
 	        	e.printStackTrace();
-			}		
+			}				
 			
-			com.example.overmind.Terminal terminal = null; 					
-			ObjectInputStream input = null;
-			ObjectOutputStream output = null;
+			com.example.overmind.Terminal terminal = null; 	
 			
 			// Create the output stream for the client socket			
 			try {
 				output = new ObjectOutputStream(clientSocket.getOutputStream());				
 			} catch (IOException e) {
-				System.out.println(e);
-			} 		
+	        	e.printStackTrace();
+			} 					
 			
 			// Receive data stream from the client
 			try {					
@@ -137,18 +148,19 @@ public class VirtualLayerManager extends Thread{
 	        	e.printStackTrace();
 			}
 			
+			
 			assert input != null;
 			
 			// Read the Terminal class from the data stream
 			
-			Object obj = null;
-			
+			Object obj = null;			
+		
 			try {
 				obj = input.readObject();					
 			} catch (IOException | ClassNotFoundException e) {
 	        	e.printStackTrace();
-			}
-			
+			}			
+		
 			assert obj != null;			
 			
 			terminal = (com.example.overmind.Terminal) obj;				
@@ -174,12 +186,11 @@ public class VirtualLayerManager extends Thread{
 				
 				terminal.ip = testPacket.getAddress().toString().substring(1);
 			
-				System.out.println("Nat port for device with IP " + terminal.ip + " is " + terminal.natPort);
-
-				
+				System.out.println("Nat port for device with IP " + terminal.ip + " is " + terminal.natPort);				
+						
 			} catch (IOException e) {
 	        	e.printStackTrace();
-			}			
+			} 
 			
 			terminal.postsynapticTerminals.add(thisServer);
 			terminal.serverIP = serverIP;
@@ -253,7 +264,25 @@ public class VirtualLayerManager extends Thread{
 			/* [End of outer if] */
 											
 		}
-		/* [End of while(!shutdown)] */
+		/* [End of while(!shutdown)] */	
+		
+		/* Shutdown operations. */
+		
+		inputSocket.close();	
+		try {
+			if (clientSocket != null)
+				clientSocket.close();			
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		
+		try {
+			VLVisualizer.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		// TODO: Close all the nodes client sockets. Use removeNode method perhaps?
 							
 	}
 	/* [End of run() method] */	
@@ -490,7 +519,6 @@ public class VirtualLayerManager extends Thread{
 		shadowNode = null;
 		
 		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));
-
 		
 	}
 	
@@ -662,7 +690,7 @@ public class VirtualLayerManager extends Thread{
 			// Reinsert the old node using the new physical ID as hash tag
 			nodesTable.put(removableNode.physicalID, removableNode);
 			
-			// Assign the object output stream of the shadow node to the old node
+			// Assign the object output stream of the shadow node to the old node		
 			removableNode.output = shadowNode.output;
 			
 			// Close the socket which connected the server to the old terminal, since it's not
@@ -774,6 +802,9 @@ public class VirtualLayerManager extends Thread{
 			}								
 			
 			weightsTable.remove(removableNode.virtualID);
+			
+			// Shutdown the object stream and the socket. 			
+			removableNode.close(); // TODO: This method is useless and confusing. 
 			
 			//removableNode.terminalFrame = null;
 														

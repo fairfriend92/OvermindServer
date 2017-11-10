@@ -3,7 +3,7 @@ import java.util.concurrent.BlockingQueue;
 
 public class NodesShutdownPoller extends Thread {
 	
-	static boolean shutdown = false;
+	boolean shutdown = false;
 	
 	static BlockingQueue<Node> nodesToBeRemoved = new ArrayBlockingQueue<>(32);
 
@@ -19,7 +19,8 @@ public class NodesShutdownPoller extends Thread {
 			try {
 				tmpNode = nodesToBeRemoved.take();
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				System.out.println("NodesShutdownPoller interrupted");
+				break; 
 			}
 			
 			if (tmpNode.isShadowNode)

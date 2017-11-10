@@ -13,9 +13,6 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class RandomSpikesGenerator implements Runnable {	
-
-	public final static int UDP_CLIENT_PORT = 4194;	
-	private final static int IPTOS_THROUGHPUT = 0x08;
 	
 	private com.example.overmind.Terminal targetTerminal;
 	private TerminalFrame parentFrame;
@@ -61,7 +58,7 @@ public class RandomSpikesGenerator implements Runnable {
         server.numOfNeurons = targetTerminalOld.numOfDendrites;
         server.numOfSynapses = (short)(1024 - targetTerminalOld.numOfNeurons); // TODO: change into 0
         server.numOfDendrites = 1024; // TODO: change into targetTerminalOld.numOfNeurons
-        server.natPort = Constants.OUT_UDP_PORT;
+        server.natPort = Constants.OUT_UDP_PORT; // TODO: Useless entry. 
         
         // Add the server to the list of presynaptic devices connected to the target device
         targetTerminal.presynapticTerminals.add(server);

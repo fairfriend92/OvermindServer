@@ -16,6 +16,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -65,6 +66,36 @@ public class MainFrame {
 		// inactive node
 		NodesShutdownPoller nodesShutdownPoller = new NodesShutdownPoller();
 		nodesShutdownPoller.start();
+		
+		// Shutdown worker threads when closing application.
+		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+	        public void run() {
+	        	VLManager.shutdown = true;
+	        	spikesReceiver.shutdown = true;
+	        	nodesShutdownPoller.shutdown = true;
+	        	
+	        	// First interrupt blocking operations.
+        		try {
+					VLManager.serverSocket.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+        		SpikesReceiver.datagramSocket.close();
+        		nodesShutdownPoller.interrupt();	        	
+        		
+	        	try {        		
+	        		// Wait for the threads to die. 
+					VLManager.join();
+					spikesReceiver.join();
+					nodesShutdownPoller.join();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				
+	        	
+	            System.out.println("Orderly shutdown succesfull");
+	        }
+	    }, "Shutdown-thread"));
 			
 	}
 	
