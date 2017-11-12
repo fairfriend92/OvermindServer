@@ -30,31 +30,8 @@ public class SpikesReceiver extends Thread{
 		super.run();		
 
         try {
-            datagramSocket = new DatagramSocket(Constants.OUT_UDP_PORT);
-    	    datagramSocket.setTrafficClass(IPTOS_THROUGHPUT);  
-    	    
-        	try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e1) {
-				e1.printStackTrace();
-			}
-    	    InetAddress serverAddress = null;
-			try {
-				serverAddress = InetAddress.getByName(VirtualLayerManager.serverIP);
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-			}
-			assert serverAddress != null;
-    	    DatagramPacket testPacket = new DatagramPacket(new byte[1], 1, serverAddress, Constants.OUT_UDP_PORT);
-    	    try {
-    	    	datagramSocket.send(testPacket);
-    	    	DatagramPacket receivePacket = new DatagramPacket(new byte[1], 1);
-				datagramSocket.receive(receivePacket);
-				System.out.println("UDP IN PORT: " + receivePacket.getPort());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}    	    
-    	    
+            datagramSocket = new DatagramSocket(Constants.UDP_PORT);
+    	    datagramSocket.setTrafficClass(IPTOS_THROUGHPUT);      	    
         } catch (SocketException e) {
 			e.printStackTrace();
         }

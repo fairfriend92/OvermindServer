@@ -118,10 +118,15 @@ public class Node {
 	@Override
     public boolean equals(Object obj) {		
        
-		if (obj == null || obj.getClass() != this.getClass()) { return false; }
-		Node compare = (Node) obj;
-    	return (compare.physicalID == this.physicalID);
-    	
+		if (obj == null) { return false; }
+		if (obj.getClass().equals(com.example.overmind.Terminal.class)) {
+			com.example.overmind.Terminal compare = (com.example.overmind.Terminal) obj;
+			return this.terminal.equals(compare);
+		} else if (obj.getClass().equals(this.getClass())) {
+			Node compare = (Node) obj;
+	    	return compare.physicalID == this.physicalID;
+		} else
+			return false;    	
     }
 	
 	public void writeObjectIntoStream (Object obj) throws IOException

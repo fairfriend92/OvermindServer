@@ -58,7 +58,7 @@ public class RandomSpikesGenerator implements Runnable {
         server.numOfNeurons = targetTerminalOld.numOfDendrites;
         server.numOfSynapses = (short)(1024 - targetTerminalOld.numOfNeurons); // TODO: change into 0
         server.numOfDendrites = 1024; // TODO: change into targetTerminalOld.numOfNeurons
-        server.natPort = Constants.OUT_UDP_PORT; // TODO: Useless entry. 
+        server.natPort = Constants.UDP_PORT; // TODO: Useless entry. 
         
         // Add the server to the list of presynaptic devices connected to the target device
         targetTerminal.presynapticTerminals.add(server);

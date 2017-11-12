@@ -102,7 +102,7 @@ public class VirtualLayerManager extends Thread{
         com.example.overmind.Terminal thisServer = new com.example.overmind.Terminal();
         thisServer.ip = serverIP;
         //thisServer.ip = "192.168.1.213";
-        thisServer.natPort = Constants.OUT_UDP_PORT;    
+        thisServer.natPort = Constants.UDP_PORT;    
         
         Node[] disconnectedNode = new Node[1];
 						
@@ -725,7 +725,7 @@ public class VirtualLayerManager extends Thread{
 			}
 			
 			// Resize the sparse array
-			removableNode.terminal.newWeights = new float[index];
+			removableNode.terminal.newWeights = new byte[index];
 			System.arraycopy(weights, 0, removableNode.terminal.newWeights, 0, index);
 			removableNode.terminal.newWeightsIndexes = new int[index];
 			System.arraycopy(newWeightsIndexes, 0, removableNode.terminal.newWeightsIndexes, 0, index);		
@@ -882,7 +882,7 @@ public class VirtualLayerManager extends Thread{
 					//System.out.println("Socket is connected: " + unsyncNodes.get(i).client.isConnected());
 					
 					// Reset the collection of weights that have not been updated
-					unsyncNodes.get(i).terminal.newWeights = new float[0];
+					unsyncNodes.get(i).terminal.newWeights = new byte[0];
 					unsyncNodes.get(i).terminal.newWeightsIndexes = new int[0];
 																	
 				} catch (IOException e) {
