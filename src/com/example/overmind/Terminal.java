@@ -40,10 +40,9 @@ public class Terminal implements Serializable {
         this.natPort = updatedTerminal.natPort;
         this.presynapticTerminals = new ArrayList<>(updatedTerminal.presynapticTerminals);
         this.postsynapticTerminals = new ArrayList<>(updatedTerminal.postsynapticTerminals);
-        int length = updatedTerminal.newWeights.length;
-        newWeights = new byte[length];
-        newWeightsIndexes = new int[length];
-        System.arraycopy(updatedTerminal.newWeights, 0, newWeights, 0, length);
-        System.arraycopy(updatedTerminal.newWeightsIndexes, 0, newWeightsIndexes, 0, length);
+        newWeights = new byte[updatedTerminal.newWeights.length];
+        newWeightsIndexes = new int[updatedTerminal.newWeightsIndexes.length];
+        System.arraycopy(updatedTerminal.newWeights, 0, newWeights, 0, updatedTerminal.newWeights.length);
+        System.arraycopy(updatedTerminal.newWeightsIndexes, 0, newWeightsIndexes, 0, updatedTerminal.newWeightsIndexes.length);
     }
 }

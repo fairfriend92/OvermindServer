@@ -15,7 +15,7 @@ public class Node {
 	public Socket client;
 	public ObjectOutputStream output;
 	public com.example.overmind.Terminal terminal;
-	private final Object lock = new Object ();
+	private final Object lock = new Object (); // TODO: Is this lock necessary?
 	public boolean isExternallyStimulated; // Flag that tells if another program outside of the OvermindServer package is stimulating this node.
 	
 	public Node(Socket s1, com.example.overmind.Terminal t, ObjectOutputStream o) {

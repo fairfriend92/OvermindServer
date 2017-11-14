@@ -26,37 +26,45 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 public class VirtualLayerManager extends Thread{			
 	
-	boolean shutdown = false;	
+	static boolean shutdown = false;	
+	
+	/* Server statistics */
 	
 	static int numberOfSyncNodes = 0;	
 	static int numberOfShadowNodes = 0;
 	int totalNumberOfDevices = 0;
 	static volatile int activeShadowNodesRatio = 2;
-	static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);
 	
-	// TODO: perhaps weights could be char instead of float?
+	
+	/* Nodes collections */
+	
+	static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
 	static ConcurrentHashMap<Integer, float[]> weightsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
-	static ConcurrentHashMap<Integer, ArrayList<Node>> shadowNodesListsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);
-	
+	static ConcurrentHashMap<Integer, ArrayList<Node>> shadowNodesListsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
 	static List<Node> unsyncNodes = Collections.synchronizedList(new ArrayList<Node>());
 	static List<Node> availableNodes = Collections.synchronizedList(new ArrayList<Node>());	
-	static List<Short> freeNodes = Collections.synchronizedList(new ArrayList<Short>());
+	static List<Short> freeNodes = Collections.synchronizedList(new ArrayList<Short>());	
 	
-	static public String serverIP = null;
+	/* Objects related to threading */
 	
 	static VirtualLayerVisualizer VLVisualizer = new VirtualLayerVisualizer();
+	private static ExecutorService syncNodesExecutor = Executors.newCachedThreadPool();
 	
 	/* Network related objects */
 	
-	DatagramSocket inputSocket = null;
-    Socket clientSocket = null;		
-	ServerSocket serverSocket = null;	
-	ObjectInputStream input = null;
-	ObjectOutputStream output = null;
+	static public String serverIP = null;
+	private DatagramSocket inputSocket = null;
+    private Socket clientSocket = null;		
+	ServerSocket serverSocket = null; // Server socket can't be private since it's accessed by MainFrame during shutdown. 	
+	private ObjectInputStream input = null;
+	private ObjectOutputStream output = null;
 			
 	@Override
 	public void run() {
@@ -271,20 +279,25 @@ public class VirtualLayerManager extends Thread{
 		inputSocket.close();	
 		try {
 			if (clientSocket != null)
-				clientSocket.close();			
+				clientSocket.close(); // Closing the client automatically closes the streams too.			
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
 		
 		try {
 			VLVisualizer.join();
+			
+			syncNodesExecutor.shutdown();
+			boolean syncNodesExecutorIsShutdown = syncNodesExecutor.awaitTermination(1, TimeUnit.SECONDS);
+			if (!syncNodesExecutorIsShutdown) {
+				System.out.println("syncNodes executor did not shutdown in time");
+				syncNodesExecutor.shutdownNow();
+			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
-		}
-		
-		// TODO: Close all the nodes client sockets. Use removeNode method perhaps?
-							
+		}		
 	}
+	
 	/* [End of run() method] */	
 	
 	public synchronized static short modifyNode(Node[] nodeToModify) {			
@@ -528,7 +541,7 @@ public class VirtualLayerManager extends Thread{
 	
 	// TODO: use syncNodes instead of connectNodes
 	
-	public synchronized static void removeNode(Node removableNode, boolean unwantedDisconnection) {	
+	public synchronized static void removeNode(Node removableNode, boolean disconnectionIsAbrupt) {	
 		
 		// If the removable node was in line to be updated, drop its reference
 		unsyncNodes.remove(removableNode);	
@@ -617,7 +630,7 @@ public class VirtualLayerManager extends Thread{
 		ArrayList<Node> shadowNodesList = shadowNodesListsTable.get((int)removableNode.terminal.numOfNeurons);
 		
 		// If the disconnection is abrupt and there are shadow nodes available
-		if (unwantedDisconnection && shadowNodesList != null && !shadowNodesList.isEmpty()) {		
+		if (disconnectionIsAbrupt && shadowNodesList != null && !shadowNodesList.isEmpty()) {		
 						
 			// Retrieve the first shadow node available 
 			Node shadowNode = shadowNodesList.remove(shadowNodesList.size() - 1);			
@@ -815,88 +828,109 @@ public class VirtualLayerManager extends Thread{
 		}
 		
 	}
-
-	public synchronized static void syncNodes() {		
+	
+	/**
+	 * Method that simply submits a worker thread whose job is that synchronizing 
+	 * all the unsync nodes. 
+	 * @return Future object useful to know when the sync operation is done. 
+	 */
+	
+	public synchronized static Future<?> syncNodes() {
 		
 		/*
-		 * Sync the GUI with the updated info about the terminals
-		 */		
-	
-		if (!unsyncNodes.isEmpty()) {		
-			
-			// Iterate over all the nodes that need to be sync
-			for (int i = 0; i < unsyncNodes.size(); i++) {			
-				
-				// TODO: do not call get method repeatedly, instead use reference
-																
-				// Branch depending on whether the terminal is new or not
-				if (unsyncNodes.get(i).terminalFrame.localUpdatedNode == null 
-						&& !unsyncNodes.get(i).isShadowNode) {		
-					
-					VLVisualizer.layeredPaneVL.addNode(unsyncNodes.get(i));
-					
-					unsyncNodes.get(i).terminalFrame = new TerminalFrame();
-					
-					// Update the info of the frame associated to the terminal
-					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i));
-								
-					// The terminal is new so its frame must be sent to the screen
-					unsyncNodes.get(i).terminalFrame.display();															
-						
-					// Since the terminal is new the number of sync nodes must be increased
-					numberOfSyncNodes++;																			
-					
-				} else if(!unsyncNodes.get(i).isShadowNode) { 
-					
-					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i)); 
-					
-					
-				} else if (unsyncNodes.get(i).isShadowNode) {
-					
-					unsyncNodes.get(i).isShadowNode = false;
-					VLVisualizer.layeredPaneVL.addNode(unsyncNodes.get(i));
-					unsyncNodes.get(i).terminalFrame.mainPanel.removeAll();
-					unsyncNodes.get(i).terminalFrame.update(unsyncNodes.get(i)); 
-					unsyncNodes.get(i).terminalFrame.display();					
-					numberOfSyncNodes++;																			
-
-				}
-				
-				/*
-				 * Updated info regarding the current terminal are sent back to the physical device
-				 */
-					
-				try {
-					
-					// A dummy terminal is required to send the updated info to the physical device
-					com.example.overmind.Terminal tmpTerminal = new com.example.overmind.Terminal();
-					
-					// The terminal acting as holder of the new info is updated
-					tmpTerminal.update(unsyncNodes.get(i).terminal);			
-																		
-					// Write the info in the steam					
-					unsyncNodes.get(i).writeObjectIntoStream(tmpTerminal);	
-
-					System.out.println("Terminal with ip " + unsyncNodes.get(i).terminal.ip + " has been updated.");
-					//System.out.println("Socket is closed: " + unsyncNodes.get(i).client.isClosed());
-					//System.out.println("Socket is connected: " + unsyncNodes.get(i).client.isConnected());
-					
-					// Reset the collection of weights that have not been updated
-					unsyncNodes.get(i).terminal.newWeights = new byte[0];
-					unsyncNodes.get(i).terminal.newWeightsIndexes = new int[0];
-																	
-				} catch (IOException e) {
-		        	e.printStackTrace();
-		        	//removeNode(unsyncNodes.get(i));
-				}
-							
-			}				
-			
-			unsyncNodes.clear();	
-												
-		}
+		 * Threading of the sync operation allows the VLM thread to receive 
+		 * new connections even if the SyncNodeWorker is busy. It can also allow 
+		 * for multiple synchronization processes to take place at the same time. 
+		 */
 		
-		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));
+		return syncNodesExecutor.submit(new SyncNodeWorker());			
+	}
+
+	private static class SyncNodeWorker implements Runnable {		
+		
+		@Override
+		public void run() {
+		
+			/*
+			 * Sync the GUI with the updated info about the terminals
+			 */	
+			
+			if (!unsyncNodes.isEmpty()) {		
+				
+				// TODO: Use iterator instead of for loop. 
+				
+				// Iterate over all the nodes that need to be sync
+				for (int i = 0; i < unsyncNodes.size(); i++) {		
+					
+					Node nodeToSync = unsyncNodes.get(i);
+					unsyncNodes.remove(i);				
+																					
+					// Branch depending on whether the terminal is new or not
+					if (nodeToSync.terminalFrame.localUpdatedNode == null 
+							&& !nodeToSync.isShadowNode) {		
+						
+						VLVisualizer.layeredPaneVL.addNode(nodeToSync);
+						
+						nodeToSync.terminalFrame = new TerminalFrame();
+						
+						// Update the info of the frame associated to the terminal
+						nodeToSync.terminalFrame.update(nodeToSync);
+									
+						// The terminal is new so its frame must be sent to the screen
+						nodeToSync.terminalFrame.display();															
+							
+						// Since the terminal is new the number of sync nodes must be increased
+						numberOfSyncNodes++;																			
+						
+					} else if(!nodeToSync.isShadowNode) {  // TODO: Revise terminology used here to make things clearer. 
+						
+						nodeToSync.terminalFrame.update(nodeToSync); 
+						
+						
+					} else if (nodeToSync.isShadowNode) {
+						
+						nodeToSync.isShadowNode = false;
+						VLVisualizer.layeredPaneVL.addNode(nodeToSync);
+						nodeToSync.terminalFrame.mainPanel.removeAll();
+						nodeToSync.terminalFrame.update(nodeToSync); 
+						nodeToSync.terminalFrame.display();					
+						numberOfSyncNodes++;																			
+	
+					}
+					
+					/*
+					 * Updated info regarding the current terminal are sent back to the physical device
+					 */
+						
+					try {
+						
+						// A dummy terminal is required to send the updated info to the physical device
+						com.example.overmind.Terminal tmpTerminal = new com.example.overmind.Terminal();
+						
+						// The terminal acting as holder of the new info is updated
+						tmpTerminal.update(nodeToSync.terminal);			
+																			
+						// Write the info in the steam					
+						nodeToSync.writeObjectIntoStream(tmpTerminal);	
+	
+						System.out.println("Terminal with ip " + nodeToSync.terminal.ip + " has been updated");
+						
+						// Reset the collection of weights that have not been updated
+						nodeToSync.terminal.newWeights = new byte[0];
+						nodeToSync.terminal.newWeightsIndexes = new int[0];
+																		
+					} catch (IOException e) {
+						System.out.println("Update of terminal with ip " + nodeToSync.terminal.ip + " interrupted abruptly");
+						if (!shutdown) // The stream may have been interrupted by a shutdown order. No need to remove the node in that case. 
+							removeNode(nodeToSync, true);
+					}
+								
+				}			
+																
+			}
+			
+			MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));	
+		}
 		
 	}
 
