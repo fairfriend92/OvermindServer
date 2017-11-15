@@ -25,6 +25,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -830,12 +831,12 @@ public class VirtualLayerManager extends Thread{
 	}
 	
 	/**
-	 * Method that simply submits a worker thread whose job is that synchronizing 
+	 * Method that simply submits a worker thread whose job is that of synchronizing 
 	 * all the unsync nodes. 
 	 * @return Future object useful to know when the sync operation is done. 
 	 */
 	
-	public synchronized static Future<?> syncNodes() {
+	public synchronized static Future<Boolean> syncNodes() {
 		
 		/*
 		 * Threading of the sync operation allows the VLM thread to receive 
@@ -846,13 +847,16 @@ public class VirtualLayerManager extends Thread{
 		return syncNodesExecutor.submit(new SyncNodeWorker());			
 	}
 
-	private static class SyncNodeWorker implements Runnable {		
+	private static class SyncNodeWorker implements Callable<Boolean> {	
+		
+		private final boolean STREAM_INTERRUPTED = false;
+		private final boolean SYNC_SUCCESSFUL = true;
 		
 		@Override
-		public void run() {
+		public Boolean call() {
 		
 			/*
-			 * Sync the GUI with the updated info about the terminals
+			 * Sync the GUI with the updated info about the terminals 
 			 */	
 			
 			if (!unsyncNodes.isEmpty()) {		
@@ -923,6 +927,7 @@ public class VirtualLayerManager extends Thread{
 						System.out.println("Update of terminal with ip " + nodeToSync.terminal.ip + " interrupted abruptly");
 						if (!shutdown) // The stream may have been interrupted by a shutdown order. No need to remove the node in that case. 
 							removeNode(nodeToSync, true);
+						return STREAM_INTERRUPTED;
 					}
 								
 				}			
@@ -930,6 +935,8 @@ public class VirtualLayerManager extends Thread{
 			}
 			
 			MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));	
+			
+			return SYNC_SUCCESSFUL;
 		}
 		
 	}
