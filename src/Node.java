@@ -99,7 +99,7 @@ public class Node {
 		this.terminalFrame.update(updatedNode);
 		this.client = updatedNode.client;
 		this.output = updatedNode.output;
-		this.terminal.update(updatedNode.terminal);		
+		Common.updateTerminal(updatedNode.terminal, this.terminal);
 	}
 
 	public void close() {

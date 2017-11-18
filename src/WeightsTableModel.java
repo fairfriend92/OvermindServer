@@ -45,11 +45,12 @@ public class WeightsTableModel extends AbstractTableModel {
 
 		Object result = null;
 		
+		int numOfActiveSynapses = VirtualLayerVisualizer.selectedNode.originalNumOfSynapses - VirtualLayerVisualizer.selectedNode.terminal.numOfSynapses;
+		
 		switch (arg1) {
-		case 0: result = Integer.toString(((int) (arg0 / VirtualLayerVisualizer.selectedNode.originalNumOfSynapses)));
+		case 0: result = Integer.toString(((int) (arg0 / numOfActiveSynapses)));
 				break;
-		case 1: result = Integer.toString(arg0 - (int) (arg0 / VirtualLayerVisualizer.selectedNode.originalNumOfSynapses) * 
-				VirtualLayerVisualizer.selectedNode.originalNumOfSynapses);
+		case 1: result = Integer.toString(arg0 - (int) (arg0 / numOfActiveSynapses) * numOfActiveSynapses);
 				break;
 		case 2: result = data[arg0];
 				break;

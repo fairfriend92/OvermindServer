@@ -62,11 +62,7 @@ public class RefreshSignalSender implements Runnable {
         
         assert targetDeviceAddr != null;
         
-        byte[] dummySignal = new byte[1];
-        
-        for (int index = 0; index < 8; index++) {
-        	dummySignal[0] &= ~(1 << index);
-        }
+        byte[] dummySignal = new byte[1];        
                  
         while (!shutdown) {
         	long startTime = System.nanoTime();
