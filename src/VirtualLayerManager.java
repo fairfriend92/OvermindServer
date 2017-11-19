@@ -235,7 +235,7 @@ public class VirtualLayerManager extends Thread{
 			
 				System.out.println("Active node added");				
 				
-				weightsTable.put(newNode.virtualID, new float[1]);
+				weightsTable.put(newNode.virtualID, new float[0]);
 				disconnectedNode[0] = newNode;				
 				connectNodes(disconnectedNode);
 				
@@ -469,7 +469,7 @@ public class VirtualLayerManager extends Thread{
 		
 		ArrayList<Node> shadowNodesList = shadowNodesListsTable.get((int)shadowNode.terminal.numOfNeurons);
 		shadowNodesList.remove(shadowNode);
-		weightsTable.put(shadowNode.virtualID, new float[1]);
+		weightsTable.put(shadowNode.virtualID, new float[0]);
 		numberOfShadowNodes--;
 		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));
 		connectNodes(new Node[]{shadowNode});		
@@ -919,6 +919,7 @@ public class VirtualLayerManager extends Thread{
 						// Reset the collection of weights that have not been updated
 						nodeToSync.terminal.newWeights = new byte[0];
 						nodeToSync.terminal.newWeightsIndexes = new int[0];
+						nodeToSync.terminal.updateWeightsFlags = new byte[0];
 																		
 					} catch (IOException e) {
 						System.out.println("Update of terminal with ip " + nodeToSync.terminal.ip + " interrupted abruptly");

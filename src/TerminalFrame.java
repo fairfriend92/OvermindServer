@@ -263,6 +263,7 @@ public class TerminalFrame {
 		 * Radio buttons used to select the external stimulus
 		 */
 		
+		randomSpikesRadioButton.setEnabled(!localUpdatedNode.isExternallyStimulated);
 		randomSpikesRadioButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -274,6 +275,7 @@ public class TerminalFrame {
 			}
 		});	
 		
+		refreshSignalRadioButton.setEnabled(!localUpdatedNode.isExternallyStimulated);
 		refreshSignalRadioButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
