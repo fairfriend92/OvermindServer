@@ -41,8 +41,7 @@ public class VirtualLayerManager extends Thread{
 	static int numberOfSyncNodes = 0;	
 	static int numberOfShadowNodes = 0;
 	int totalNumberOfDevices = 0;
-	static volatile int activeShadowNodesRatio = 2;
-	
+	static volatile int activeShadowNodesRatio = 2;	
 	
 	/* Nodes collections */
 	
@@ -833,7 +832,7 @@ public class VirtualLayerManager extends Thread{
 	 * @return Future object useful to know when the sync operation is done. 
 	 */
 	
-	public synchronized static Future<Boolean> syncNodes() {
+	public static Future<Boolean> syncNodes() {
 		
 		/*
 		 * Threading of the sync operation allows the VLM thread to receive 
@@ -858,13 +857,12 @@ public class VirtualLayerManager extends Thread{
 			
 			if (!unsyncNodes.isEmpty()) {		
 				
-				// TODO: Use iterator instead of for loop. 
+				// TODO: Use iterator instead of for loop. 				
 				
 				// Iterate over all the nodes that need to be sync
 				for (int i = 0; i < unsyncNodes.size(); i++) {		
 					
 					Node nodeToSync = unsyncNodes.get(i);
-					unsyncNodes.remove(i);				
 																					
 					// Branch depending on whether the terminal is new or not
 					if (nodeToSync.terminalFrame.localUpdatedNode == null 
@@ -926,11 +924,13 @@ public class VirtualLayerManager extends Thread{
 						if (!shutdown) // The stream may have been interrupted by a shutdown order. No need to remove the node in that case. 
 							removeNode(nodeToSync, true);
 						return STREAM_INTERRUPTED;
-					}
+					}					
 								
 				}			
 																
 			}
+			
+			unsyncNodes.clear();
 			
 			MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));	
 			
@@ -938,6 +938,4 @@ public class VirtualLayerManager extends Thread{
 		}
 		
 	}
-
 }
-/* [End of VirtualLayerManager class] */
