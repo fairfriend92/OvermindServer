@@ -20,8 +20,10 @@ public class Common {
     	oldTerminal.postsynapticTerminals = new ArrayList<>(updatedTerminal.postsynapticTerminals);
     	oldTerminal.newWeights = new byte[updatedTerminal.newWeights.length];
     	oldTerminal.newWeightsIndexes = new int[updatedTerminal.newWeightsIndexes.length];
+    	oldTerminal.updateWeightsFlags = new byte[updatedTerminal.updateWeightsFlags.length];
         System.arraycopy(updatedTerminal.newWeights, 0, oldTerminal.newWeights, 0, updatedTerminal.newWeights.length);
         System.arraycopy(updatedTerminal.newWeightsIndexes, 0, oldTerminal.newWeightsIndexes, 0, updatedTerminal.newWeightsIndexes.length);
+        System.arraycopy(updatedTerminal.updateWeightsFlags, 0, oldTerminal.updateWeightsFlags, 0, updatedTerminal.updateWeightsFlags.length);
     }
 
 }

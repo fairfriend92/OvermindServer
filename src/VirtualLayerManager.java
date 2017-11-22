@@ -814,9 +814,8 @@ public class VirtualLayerManager extends Thread{
 					 * be shifted since, when removableNode is removed from the presynaptic connections of
 					 * postsynNode, the connections in the ArrayList are automatically shifted and therefore
 					 * the weights do not coincide anymore with the relative connections. 
-					 */
-					
-					
+					 */					
+									
 					if (postsynNodeDendrites == postsynNode.originalNumOfSynapses) {
 						float[] newWeights = new float[0];
 						weightsTable.put(postsynNode.virtualID, newWeights);
