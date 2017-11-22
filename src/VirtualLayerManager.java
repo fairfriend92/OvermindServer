@@ -25,12 +25,15 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+import com.example.overmind.Terminal;
 
 public class VirtualLayerManager extends Thread{			
 	
@@ -773,7 +776,7 @@ public class VirtualLayerManager extends Thread{
 			 */
 			
 			boolean nodeHasBeenModified = false;
-			Node tmpNode;
+			Node postsynNode;
 			
 			int numOfNodesAffected = removableNode.presynapticNodes.size() + removableNode.postsynapticNodes.size();
 			
@@ -781,15 +784,15 @@ public class VirtualLayerManager extends Thread{
 			
 			for (int i = 0; i < removableNode.presynapticNodes.size(); i++) {
 				
-				tmpNode = removableNode.presynapticNodes.get(i);
+				postsynNode = removableNode.presynapticNodes.get(i);
 				
-				nodeHasBeenModified = tmpNode.postsynapticNodes.remove(removableNode);
-				tmpNode.terminal.postsynapticTerminals.remove(removableNode.terminal);
+				nodeHasBeenModified = postsynNode.postsynapticNodes.remove(removableNode);
+				postsynNode.terminal.postsynapticTerminals.remove(removableNode.terminal);
 				
 				if (nodeHasBeenModified) {
-					tmpNode.terminal.numOfSynapses += removableNode.terminal.numOfNeurons;
+					postsynNode.terminal.numOfSynapses += removableNode.terminal.numOfNeurons;
 					//unsyncNodes.add(tmpNode);
-					modifiedNodes.add(tmpNode);
+					modifiedNodes.add(postsynNode);
 					nodeHasBeenModified = false;
 				}
 				
@@ -797,15 +800,69 @@ public class VirtualLayerManager extends Thread{
 							
 			for (int i = 0; i < removableNode.postsynapticNodes.size(); i++) {
 				
-				tmpNode = removableNode.postsynapticNodes.get(i);
+				postsynNode = removableNode.postsynapticNodes.get(i);
 				
-				nodeHasBeenModified = tmpNode.presynapticNodes.remove(removableNode);
-				tmpNode.terminal.presynapticTerminals.remove(removableNode.terminal);
+				nodeHasBeenModified = postsynNode.presynapticNodes.remove(removableNode);
+				postsynNode.terminal.presynapticTerminals.remove(removableNode.terminal);
 				
 				if (nodeHasBeenModified) {
-					tmpNode.terminal.numOfDendrites += removableNode.terminal.numOfNeurons;
+					short postsynNodeDendrites = (short)(postsynNode.terminal.numOfDendrites + removableNode.terminal.numOfNeurons);
+					
+					/*
+					 * If the number of active synapses is zero, then the reference in the table of weights
+					 * must be updated with a zero length array. Otherwise the weights in the array need to 
+					 * be shifted since, when removableNode is removed from the presynaptic connections of
+					 * postsynNode, the connections in the ArrayList are automatically shifted and therefore
+					 * the weights do not coincide anymore with the relative connections. 
+					 */
+					
+					
+					if (postsynNodeDendrites == postsynNode.originalNumOfSynapses) {
+						float[] newWeights = new float[0];
+						weightsTable.put(postsynNode.virtualID, newWeights);
+					} else {					
+						int weightsOffset = 0; // How many synapses come before the ones of the node which is being removed
+						short activeSynapses = (short)(postsynNode.originalNumOfSynapses - postsynNode.terminal.numOfDendrites);
+						
+						/*
+						 * Compute the weights offset by iterating over the presynaptic connections of the
+						 * node which is connected to the one to be removed and by incrementing the offset
+						 * by the number of neurons of said presynaptic connection. 
+						 */
+						
+						Iterator<Terminal> iterator = postsynNode.terminal.presynapticTerminals.iterator();
+						while (iterator.hasNext()) {
+							Terminal presynTerminal = iterator.next();
+							if (presynTerminal.equals(removableNode.terminal)) {
+								break;
+							} else {
+								weightsOffset += presynTerminal.numOfNeurons;
+							}
+						}
+						
+						/*
+						 * Copy the weights that come after the ones relative to the synapses of the removableNode in place
+						 * of the latter. For convenience the weights that now do not refer to any synapse are not zeroed, neither
+						 * is the the synaptic weights array resized. 
+						 */
+						
+						float[] postsynNodeWeights = weightsTable.get(postsynNode.virtualID);
+						
+						// Active synapses that come in the array after the ones relative to removableNode
+						int remainingActiveSynapses = activeSynapses - weightsOffset - removableNode.terminal.numOfNeurons;
+						
+						// Copy the weights of the synapses that come after the ones of removableNode in their positions 
+						for (int neuronIndex = 0; neuronIndex < postsynNode.terminal.numOfNeurons; neuronIndex++) {
+							System.arraycopy(postsynNodeWeights, neuronIndex * activeSynapses + weightsOffset + removableNode.terminal.numOfNeurons,
+									postsynNodeWeights, neuronIndex * activeSynapses + weightsOffset, remainingActiveSynapses);
+						}
+						
+						weightsTable.put(postsynNode.virtualID, postsynNodeWeights);
+					}
+					
+					postsynNode.terminal.numOfDendrites = postsynNodeDendrites;
 					//unsyncNodes.add(tmpNode);
-					modifiedNodes.add(tmpNode);
+					modifiedNodes.add(postsynNode);
 					nodeHasBeenModified = false;
 				}
 				
