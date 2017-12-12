@@ -56,7 +56,7 @@ public class TerminalFrame {
 	
 	public ExecutorService stimulusExecutor = Executors.newSingleThreadExecutor();	
 	
-	public Node localUpdatedNode;
+	public volatile Node localUpdatedNode;
 	
 	public RandomSpikesGenerator thisTerminalRSG = new RandomSpikesGenerator(this);	
 	public RefreshSignalSender thisTerminalRSS = new RefreshSignalSender(this);
@@ -82,7 +82,7 @@ public class TerminalFrame {
 	private volatile boolean redIsOn = true; 
 	private volatile boolean ledStatusChanged = false;
 	
-	public void TerminalFrame () {
+	TerminalFrame () {
 		tcpKeepAliveExecutor.execute(new tcpKeepAlivePackageSender());		
 	}
 	
@@ -678,6 +678,7 @@ public class TerminalFrame {
 						
 						// Display the latest average spikes interval in the ledPanel portion of the interface
 						averageSpikesInterval.setText(" " + rastergraphPanel.time + " ms");
+						averageSpikesInterval.repaint();
 						
 						// Update the list holding the last 40 spikes vectors
 						for (char i = 0; i < 40; i++)
@@ -738,14 +739,14 @@ public class TerminalFrame {
 		@Override
 		public void run() {
 			
-			while (!shutdown) {
-				
-				try {
-					localUpdatedNode.writeObjectIntoStream(new Boolean(true));
-				} catch (IOException e) {
-					e.printStackTrace();
+			while (!shutdown) {				
+				if (localUpdatedNode != null) {
+					try {
+						localUpdatedNode.writeObjectIntoStream(new Boolean(true));
+					} catch (IOException e) {
+						System.out.println("Error with tcp keep alive stream"); // TODO: Handle this error
+					}
 				}
-				
 				synchronized (tcpKeepAliveLock) {
 					
 					try {

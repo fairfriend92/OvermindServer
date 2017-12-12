@@ -491,15 +491,15 @@ public class VirtualLayerManager extends Thread{
 		nodesTable.remove(shadowNode.physicalID);
 		numberOfShadowNodes--;
 
+		shadowNode.terminalFrame.shutdown = true;		
+		
 		synchronized (shadowNode.terminalFrame.tcpKeepAliveLock) {
 			
 			shadowNode.terminalFrame.tcpKeepAliveLock.notify();
 		
 		}
 		
-		boolean sNodeMonitorIsShutdown = false;	
-		
-		shadowNode.terminalFrame.shutdown = true;		
+		boolean sNodeMonitorIsShutdown = false;			
 	
 		shadowNode.terminalFrame.spikesMonitorExecutor.shutdown();	
 		
@@ -554,6 +554,8 @@ public class VirtualLayerManager extends Thread{
 		 * Wake up the thread that sends the TCP keep alive packet
 		 */
 		
+		removableNode.terminalFrame.shutdown = true;		
+		
 		synchronized (removableNode.terminalFrame.tcpKeepAliveLock) {
 		
 			removableNode.terminalFrame.tcpKeepAliveLock.notify();
@@ -564,10 +566,8 @@ public class VirtualLayerManager extends Thread{
 		 * Shutdown the executor of the the spikes monitor 
 		 */		
 		
-		boolean spikesMonitorIsShutdown = false;	
-		
-		removableNode.terminalFrame.shutdown = true;		
-	
+		boolean spikesMonitorIsShutdown = false;
+			
 		removableNode.terminalFrame.spikesMonitorExecutor.shutdown();	
 		
 		try {
@@ -655,15 +655,15 @@ public class VirtualLayerManager extends Thread{
 			 * Shutdown the partial terminal frame of the shadow node
 			 */
 			
+			shadowNode.terminalFrame.shutdown = true;		
+			
 			synchronized (shadowNode.terminalFrame.tcpKeepAliveLock) {
 				
 				shadowNode.terminalFrame.tcpKeepAliveLock.notify();
 			
 			}
 			
-			boolean sNodeMonitorIsShutdown = false;	
-			
-			shadowNode.terminalFrame.shutdown = true;		
+			boolean sNodeMonitorIsShutdown = false;				
 		
 			shadowNode.terminalFrame.spikesMonitorExecutor.shutdown();	
 			
