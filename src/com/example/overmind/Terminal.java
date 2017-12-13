@@ -18,10 +18,7 @@ public class Terminal implements Serializable {
     public boolean equals(Object obj) {
         if (obj == null || obj.getClass() != this.getClass()) { return false; }
         Terminal compare = (Terminal) obj;
-        if (compare.ip.equals(this.serverIP) || this.ip.equals(this.serverIP))
-            return (compare.ip.equals(this.ip));
-        else
-            return (compare.ip.equals(this.ip) & compare.natPort == this.natPort);
+        return (compare.ip.equals(this.ip) & compare.natPort == this.natPort);
     }
 
 }

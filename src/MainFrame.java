@@ -17,6 +17,8 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -50,7 +52,7 @@ public class MainFrame {
 	static long rasterGraphRefresh = 0;
 
 	public static void main(String[] args) {		
-		
+						
 		displayMainFrame();
 					
 		// Class that connects, removes and updates the nodes that make up the network
@@ -196,10 +198,10 @@ public class MainFrame {
 		activeShadowNodesRatioPanel.add(Box.createRigidArea(new Dimension(5,0)));
 		activeShadowNodesRatioPanel.add(decreaseRatio);
 		
-		/**
+		/*
 		 * Commands panel layout		
 		 */
-		
+						
 		commandsPanel.setLayout(new BoxLayout(commandsPanel, BoxLayout.Y_AXIS));
 		commandsPanel.setBorder(BorderFactory.createCompoundBorder(
 					BorderFactory.createTitledBorder("Commands"),
@@ -210,7 +212,22 @@ public class MainFrame {
 			public void actionPerformed(ActionEvent e) {							
 				VirtualLayerManager.syncNodes();			
 			}
-		});				
+		});			
+		
+		JCheckBox useLocalConnection = new JCheckBox("Use local connection", false);
+		useLocalConnection.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {							
+				JCheckBox cb = (JCheckBox) e.getSource();
+		        if (cb.isSelected()) {		        	
+		        	Constants.USE_LOCAL_CONNECTION = true;
+		        	VirtualLayerManager.thisServer.ip = VirtualLayerManager.localIP;
+		        } else {
+		        	Constants.USE_LOCAL_CONNECTION = false;
+		        	VirtualLayerManager.thisServer.ip = VirtualLayerManager.serverIP;
+		        }
+			}
+		});	
 		
 		JCheckBox hideVLV = new JCheckBox("Hide Virtual Layer", false);
 		hideVLV.addActionListener(new ActionListener() {
@@ -249,6 +266,10 @@ public class MainFrame {
 		syncButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 		commandsPanel.add(syncButton);
 		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));
+		
+		useLocalConnection.setAlignmentX(Component.LEFT_ALIGNMENT);
+		commandsPanel.add(useLocalConnection);
+		commandsPanel.add(Box.createRigidArea(new Dimension(0,5)));	
 		
 		hideVLV.setAlignmentX(Component.LEFT_ALIGNMENT);
 		commandsPanel.add(hideVLV);

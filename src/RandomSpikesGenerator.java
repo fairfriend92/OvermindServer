@@ -51,14 +51,13 @@ public class RandomSpikesGenerator implements Runnable {
         com.example.overmind.Terminal server = new com.example.overmind.Terminal();
         server.postsynapticTerminals = new ArrayList<>();
         server.presynapticTerminals = new ArrayList<>();
-        server.ip = VirtualLayerManager.serverIP;
-        //server.ip = "192.168.1.213";
         
+        server.ip = Constants.USE_LOCAL_CONNECTION ? VirtualLayerManager.localIP : VirtualLayerManager.serverIP;        
         server.postsynapticTerminals.add(targetTerminal);
         server.numOfNeurons = targetTerminalOld.numOfDendrites;
         server.numOfSynapses = (short)(1024 - targetTerminalOld.numOfNeurons); // TODO: change into 0
         server.numOfDendrites = 1024; // TODO: change into targetTerminalOld.numOfNeurons
-        server.natPort = Constants.UDP_PORT; // TODO: Useless entry. 
+        server.natPort = Constants.UDP_PORT; 
         
         // Add the server to the list of presynaptic devices connected to the target device
         targetTerminal.presynapticTerminals.add(server);

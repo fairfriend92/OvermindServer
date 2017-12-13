@@ -20,9 +20,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -63,15 +65,26 @@ public class VirtualLayerManager extends Thread{
 	/* Network related objects */
 	
 	static public String serverIP = null;
+	static public String localIP = null;
 	private DatagramSocket inputSocket = null;
     private Socket clientSocket = null;		
 	ServerSocket serverSocket = null; // Server socket can't be private since it's accessed by MainFrame during shutdown. 	
 	private ObjectInputStream input = null;
 	private ObjectOutputStream output = null;
+	
+    static com.example.overmind.Terminal thisServer = new com.example.overmind.Terminal();
 			
 	@Override
 	public void run() {
 		super.run();
+		
+		try {
+			localIP = InetAddress.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e2) {
+			e2.printStackTrace();
+		}
+		
+		System.out.println("Local IP is " + localIP);
 		
 		VLVisualizer.start();
 		
@@ -110,9 +123,7 @@ public class VirtualLayerManager extends Thread{
 
         assert inputSocket != null;
                 
-        com.example.overmind.Terminal thisServer = new com.example.overmind.Terminal();
         thisServer.ip = serverIP;
-        //thisServer.ip = "192.168.1.213";
         thisServer.natPort = Constants.UDP_PORT;    
         
         Node[] disconnectedNode = new Node[1];
@@ -128,7 +139,6 @@ public class VirtualLayerManager extends Thread{
 				clientSocket = serverSocket.accept();
 				clientSocket.setTrafficClass(0x04);
 				clientSocket.setTcpNoDelay(true);
-				//clientSocket.setTcpNoDelay(true);
 			} catch (SocketException e) {
 				
 				/*
@@ -190,12 +200,11 @@ public class VirtualLayerManager extends Thread{
 			
 				inputSocket.receive(testPacket);				
 				
-				terminal.natPort = testPacket.getPort();			
+				terminal.natPort = testPacket.getPort();		
+							
+				//terminal.ip = testPacket.getAddress().toString().substring(1);
 				
-				// Use the InetAddress hashcode to identify the node
-				ipHashCode = testPacket.getAddress().hashCode();
-				
-				terminal.ip = testPacket.getAddress().toString().substring(1);
+				ipHashCode = (terminal.ip + "/" + terminal.natPort).hashCode();
 			
 				System.out.println("Nat port for device with IP " + terminal.ip + " is " + terminal.natPort);				
 						
@@ -204,7 +213,7 @@ public class VirtualLayerManager extends Thread{
 			} 
 			
 			terminal.postsynapticTerminals.add(thisServer);
-			terminal.serverIP = serverIP;
+			terminal.serverIP = thisServer.ip;
 			// TODO: Should the number of synapses of the terminal be decreased by terminal.numOfNeurons to account for the random spike generator?
 			
 			/*
@@ -852,6 +861,8 @@ public class VirtualLayerManager extends Thread{
 						
 						// Copy the weights of the synapses that come after the ones of removableNode in their positions 
 						for (int neuronIndex = 0; neuronIndex < postsynNode.terminal.numOfNeurons; neuronIndex++) {
+							System.out.println(" " + (neuronIndex * activeSynapses + weightsOffset + removableNode.terminal.numOfNeurons) + " " 
+									+ postsynNodeWeights.length);
 							System.arraycopy(postsynNodeWeights, neuronIndex * activeSynapses + weightsOffset + removableNode.terminal.numOfNeurons,
 									postsynNodeWeights, neuronIndex * activeSynapses + weightsOffset, remainingActiveSynapses);
 						}

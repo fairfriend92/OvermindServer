@@ -36,8 +36,7 @@ public class RefreshSignalSender implements Runnable {
         com.example.overmind.Terminal server = new com.example.overmind.Terminal();
         server.postsynapticTerminals = new ArrayList<>();
         server.presynapticTerminals = new ArrayList<>();
-        server.ip = VirtualLayerManager.serverIP;
-        //server.ip = "192.168.1.213";
+        server.ip = Constants.USE_LOCAL_CONNECTION ? VirtualLayerManager.localIP : VirtualLayerManager.serverIP;
         
         server.postsynapticTerminals.add(targetTerminal);
         server.numOfNeurons = 8 < targetTerminal.numOfDendrites ? 8 : targetTerminal.numOfDendrites;

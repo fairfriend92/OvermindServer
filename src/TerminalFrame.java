@@ -550,39 +550,55 @@ public class TerminalFrame {
 		
 		String serverIP; 
 		
-		serverIP = VirtualLayerManager.serverIP;
+		serverIP = Constants.USE_LOCAL_CONNECTION ? VirtualLayerManager.localIP : VirtualLayerManager.serverIP;
 	
 		preConnListModel.clear();
 		postConnListModel.clear();	
 				
+		// Go over the presynaptic connections
 		for (int i = 0; i < localUpdatedNode.terminal.presynapticTerminals.size(); i++) {
+			// Get the i-th connection
 			com.example.overmind.Terminal presynapticTerminal = localUpdatedNode.terminal.presynapticTerminals.get(i);
-			if (presynapticTerminal.ip.equals(serverIP)) {
+			
+			// Established if said connection is a lateral one
+			boolean isThisTerminal = presynapticTerminal.ip.equals(localUpdatedNode.terminal.ip) &
+					presynapticTerminal.natPort == localUpdatedNode.terminal.natPort;
+			
+			// Depending on the connection kind put a different string in the list model
+			if (presynapticTerminal.ip.equals(serverIP) & !isThisTerminal) {
 				if (presynapticTerminal.natPort == Constants.UDP_PORT)
 					preConnListModel.addElement("Presynaptic device # " + i + " is this server");
-				else 
+				else if (VirtualLayerManager.nodesTable.containsKey((presynapticTerminal.ip + "/" + presynapticTerminal.natPort).hashCode())) 
+					preConnListModel.addElement("Presynaptic device # " + i + " is under local connection");
+				else 						
 					preConnListModel.addElement("Presynaptic device # " + i + " is an app");
-			} else if (presynapticTerminal.ip.equals(localUpdatedNode.terminal.ip)) {
+			} else if (isThisTerminal) {
 				preConnListModel.addElement("Lateral connections");
 			} else {
 				preConnListModel.addElement("Presynaptic device # " + i + " has ip: " + presynapticTerminal.ip);
 			}
 		}
 		
+		// If no connections are present put a special string
 		if (localUpdatedNode.terminal.presynapticTerminals.size() == 0) {
 			preConnListModel.addElement("No presynaptic connection has been established yet");
 		} else if (preConnListModel.contains("No presynaptic connection has been established yet")) {
 			preConnListModel.remove(0);
 		}
 
+		// Do as before for the postsynaptic connections now
 		for (int i = 0; i < localUpdatedNode.terminal.postsynapticTerminals.size(); i++) {
 			com.example.overmind.Terminal postsynapticTerminal = localUpdatedNode.terminal.postsynapticTerminals.get(i);
-			if (postsynapticTerminal.ip.equals(serverIP)) {
+			boolean isThisTerminal = postsynapticTerminal.ip.equals(localUpdatedNode.terminal.ip) &
+					postsynapticTerminal.natPort == localUpdatedNode.terminal.natPort;
+			if (postsynapticTerminal.ip.equals(serverIP) & !isThisTerminal) {
 				if (postsynapticTerminal.natPort == Constants.UDP_PORT)
 					postConnListModel.addElement("Postsynaptic device # " + i + " is this server");
+				else if (VirtualLayerManager.nodesTable.containsKey((postsynapticTerminal.ip + "/" + postsynapticTerminal.natPort).hashCode()))
+					postConnListModel.addElement("Postsynaptic device # " + i + " is under local connection");
 				else 
 					postConnListModel.addElement("Postsynaptic device # " + i + " is an app");
-			} else if (postsynapticTerminal.ip.equals(localUpdatedNode.terminal.ip)) {
+			} else if (isThisTerminal) {
 				postConnListModel.addElement("Lateral connections");
 			} else {
 				postConnListModel.addElement("Postsynaptic device # " + i + " has ip: " + postsynapticTerminal.ip);

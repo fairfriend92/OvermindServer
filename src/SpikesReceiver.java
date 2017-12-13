@@ -52,8 +52,8 @@ public class SpikesReceiver extends Thread{
 								
 				spikesBuffer = spikesPacket.getData();			
 			
-				ipHashCode = spikesPacket.getAddress().hashCode();			
-												
+				ipHashCode = (spikesPacket.getAddress().toString().substring(1) + "/" + spikesPacket.getPort()).hashCode();
+				
 				spikesSorterExecutor.execute(new SpikesSorter(spikesBuffer, ipHashCode));
 				
 			} catch(SocketException e) {
