@@ -1,3 +1,4 @@
+package overmind_server;
 import java.util.ArrayList;
 
 import com.example.overmind.Terminal;

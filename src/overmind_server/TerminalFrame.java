@@ -1,3 +1,4 @@
+package overmind_server;
 /**
  * Class which describes the frame used to monitor the activity of a terminal
  */
@@ -90,9 +91,9 @@ public class TerminalFrame {
 	 * Custom panel to display the raster graph
 	 */
 	
-	JRadioButton randomSpikesRadioButton = new JRadioButton("Random spikes");
-	JRadioButton refreshSignalRadioButton = new JRadioButton("Refresh signal");
-	JRadioButton noneRadioButton = new JRadioButton("None");
+	public JRadioButton randomSpikesRadioButton = new JRadioButton("Random spikes");
+	public JRadioButton refreshSignalRadioButton = new JRadioButton("Refresh signal");
+	public JRadioButton noneRadioButton = new JRadioButton("None");
 	
 	class MyPanel extends JPanel {		
 		

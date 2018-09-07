@@ -1,3 +1,4 @@
+package overmind_server;
 
 public class Constants {
 	

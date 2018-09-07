@@ -1,3 +1,4 @@
+package overmind_server;
 /**
  * Called by my MainFrame to manage the connection and disconnection of the devices which make up the 
  * physical layer (PL). The connected devices form the virtual layer (VL) on top of which the Overmind is built.
@@ -50,11 +51,11 @@ public class VirtualLayerManager extends Thread{
 	
 	/* Nodes collections */
 	
-	static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
-	static ConcurrentHashMap<Integer, float[]> weightsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
+	public static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
+	public static ConcurrentHashMap<Integer, float[]> weightsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
 	static ConcurrentHashMap<Integer, ArrayList<Node>> shadowNodesListsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
-	static List<Node> unsyncNodes = Collections.synchronizedList(new ArrayList<Node>());
-	static List<Node> availableNodes = Collections.synchronizedList(new ArrayList<Node>());	
+	public static List<Node> unsyncNodes = Collections.synchronizedList(new ArrayList<Node>());
+	public static List<Node> availableNodes = Collections.synchronizedList(new ArrayList<Node>());	
 	static List<Short> freeNodes = Collections.synchronizedList(new ArrayList<Short>());	
 	
 	/* Objects related to threading */

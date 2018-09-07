@@ -1,3 +1,4 @@
+package overmind_server;
 /**
  * Called by a particular instance of TerminalFrame to generate random spikes to be sent to the 
  * terminal whose frame is managed by that instance

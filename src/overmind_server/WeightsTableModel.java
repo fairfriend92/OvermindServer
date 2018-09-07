@@ -1,3 +1,4 @@
+package overmind_server;
 import javax.swing.table.AbstractTableModel;
 
 public class WeightsTableModel extends AbstractTableModel {	

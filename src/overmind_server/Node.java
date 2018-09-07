@@ -1,7 +1,13 @@
+package overmind_server;
+
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+
+import overmind_server.Common;
+import overmind_server.TerminalFrame;
+import overmind_server.VirtualLayerManager;
 
 public class Node {
 	

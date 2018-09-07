@@ -1,3 +1,4 @@
+package overmind_server;
 /**
  * Main class which displays the main panel and executes the main threads: 
  * 

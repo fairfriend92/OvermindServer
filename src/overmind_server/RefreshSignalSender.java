@@ -1,3 +1,4 @@
+package overmind_server;
 /**
  * This class sends to the target terminal a single byte containing no information.
  * The packet sent has the only purpose of unlocking the blocking buffer of the target terminal,

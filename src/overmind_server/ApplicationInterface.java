@@ -1,3 +1,4 @@
+package overmind_server;
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -62,7 +63,8 @@ public class ApplicationInterface {
 	 */
 	
 	public static class RemovedNode {
-		Node removedNode, shadowNode; // The node that has been removed and the proposed replacement.
+		public Node removedNode; // The node that has been removed and the proposed replacement.
+		public Node shadowNode;
 		
 		public RemovedNode(Node removedNode, Node shadowNode) {
 			this.removedNode = removedNode;
@@ -82,7 +84,7 @@ public class ApplicationInterface {
 	public static class RegisteredApp {
 		private int maxRemovedNodes; // Capacity of the removedNodes queue.
 		String appName;
-		BlockingQueue<RemovedNode> removedNodes;
+		public BlockingQueue<RemovedNode> removedNodes;
 		
 		 private RegisteredApp(int maxRemovedNodes, String appName) {
 			this.maxRemovedNodes = maxRemovedNodes;

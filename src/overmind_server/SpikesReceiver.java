@@ -1,3 +1,4 @@
+package overmind_server;
 /**
  * Thread executed by MainFrame to listen for spikes sent by the clients. The spikes,
  * together with an hashcode identifying the sending terminal, are passed to a separate thread.
