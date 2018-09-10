@@ -66,6 +66,8 @@ public class VirtualLayerVisualizer extends Thread{
 	public void run () {
 		super.run();
 		
+		PartitionTool partTool = new PartitionTool();
+		
 		String frameTitle = new String("Virtual Layer Visualizer");					
 
 		JScrollPane scrollPane = new JScrollPane(layeredPaneVL.connPanel);
@@ -78,6 +80,7 @@ public class VirtualLayerVisualizer extends Thread{
 		
 		JButton resizeX = new JButton();
 		JButton resizeY = new JButton();		
+		JButton partitionNetwork = new JButton();
 		JToggleButton paintAll = new JToggleButton();		
 		JCheckBox bidirectionalConn = new JCheckBox("Bidirectional conn.", false);
 		bidirectionalConn.setEnabled(false);
@@ -127,7 +130,30 @@ public class VirtualLayerVisualizer extends Thread{
 			e.printStackTrace();
 		}	
 		
+		try {
+			Image img = ImageIO.read(getClass().getResource("/icons/partition.png"));
+			partitionNetwork.setIcon(new ImageIcon(img.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 		/* Action events for the buttons of the commands panel */
+		
+		partitionNetwork.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {				
+				if (selectedNode != null) {
+					if (partTool.isOpen) {
+						displayText("Partition tool is already opened", Color.red);
+					} else {
+						if (partTool.open() == Constants.ERROR)
+							displayText("Error while opening the partition tool", Color.red);					
+					}					
+				} else {
+					displayText("Choose a node before using the partition tool", Color.black);
+				}		
+			}			
+		});
 		
 		cutLink.addItemListener(new ItemListener() {
 			public void itemStateChanged(ItemEvent ev) {
@@ -246,13 +272,14 @@ public class VirtualLayerVisualizer extends Thread{
 				
 		/* Commands panel */
 		
-		commandsPanel.setLayout(new GridLayout(2,3));		
+		commandsPanel.setLayout(new GridLayout(2,4));		
 		commandsPanel.add(cutLink);
 		commandsPanel.add(createLink);
 		commandsPanel.add(showTerminalFrame);
 		commandsPanel.add(resizeX);
 		commandsPanel.add(resizeY);
 		commandsPanel.add(paintAll);
+		commandsPanel.add(partitionNetwork);
 		
 		/* Commands panel total */
 		
@@ -431,10 +458,10 @@ public class VirtualLayerVisualizer extends Thread{
 						
 						if (node.postsynapticNodes.contains(node.presynapticNodes.get(i))) {
 							
-							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).virtualID).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).id).nodeLabel
 									.getLocation();
 
-							radius = nodeIconsTable.get(node.presynapticNodes.get(i).virtualID).nodeLabel
+							radius = nodeIconsTable.get(node.presynapticNodes.get(i).id).nodeLabel
 									.getWidth() / 2;
 
 							g.drawLine(nodeLabel.getX() + nodeLabel.getWidth() / 2,
@@ -474,11 +501,11 @@ public class VirtualLayerVisualizer extends Thread{
 						if (node.presynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP && !servedPresynNodesIndexes.contains(i)) {
 
 							// Store the location of the icon representing the i-th node
-							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).virtualID).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).id).nodeLabel
 									.getLocation();
 
 							// Retrieve the radius of the icon of the i-th node
-							radius = nodeIconsTable.get(node.presynapticNodes.get(i).virtualID).nodeLabel
+							radius = nodeIconsTable.get(node.presynapticNodes.get(i).id).nodeLabel
 									.getWidth() / 2;
 
 							// Draw the line 
@@ -503,10 +530,10 @@ public class VirtualLayerVisualizer extends Thread{
 
 						if (node.postsynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP && !servedPostsynNodesIndexes.contains(i)) {
 
-							tmpPoint = nodeIconsTable.get(node.postsynapticNodes.get(i).virtualID).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.postsynapticNodes.get(i).id).nodeLabel
 									.getLocation();
 
-							radius = nodeIconsTable.get(node.postsynapticNodes.get(i).virtualID).nodeLabel
+							radius = nodeIconsTable.get(node.postsynapticNodes.get(i).id).nodeLabel
 									.getWidth() / 2;
 
 							g.drawLine(nodeLabel.getX() + nodeLabel.getWidth() / 2,
@@ -564,7 +591,7 @@ public class VirtualLayerVisualizer extends Thread{
 			// A new label for the node is created
 			JLabelVL newNodeLabel = new JLabelVL(node);
 			// The node is saved in the hash map
-			nodeIconsTable.put(node.virtualID, newNodeLabel);
+			nodeIconsTable.put(node.id, newNodeLabel);
 			// The label is added to the appropriate panel
 			VLPanel.add(newNodeLabel.nodeLabel, new Integer(1), nodeIconsTable.size());			
 			connPanel.revalidate();
@@ -598,10 +625,10 @@ public class VirtualLayerVisualizer extends Thread{
 			// Remove from the panel the label associated to the node, which must be retrieved
 			// from the hash map		
 			
-			VLPanel.remove(nodeIconsTable.get(node.virtualID).nodeLabel);
+			VLPanel.remove(nodeIconsTable.get(node.id).nodeLabel);
 			
 			// Remove the reference to the label from the hash map and repaint the connection panel
-			nodeIconsTable.remove(node.virtualID);
+			nodeIconsTable.remove(node.id);
 			connPanel.revalidate();
 			connPanel.repaint();		
 						
@@ -717,7 +744,7 @@ public class VirtualLayerVisualizer extends Thread{
 				if (selectedNode != null) {
 					
 					// ...then that other node must first be deselected
-					int dimension = nodeIconsTable.get(selectedNode.virtualID).dimension;					
+					int dimension = nodeIconsTable.get(selectedNode.id).dimension;					
 					try {
 						Image img = ImageIO.read(getClass().getResource("/icons/icons8-New Moon.png"));
 						nodeIcon = (new ImageIcon(
@@ -737,7 +764,7 @@ public class VirtualLayerVisualizer extends Thread{
 				
 				// Reference to this node and its label is added to selecetedNode and selectedNodeLabel
 				selectedNode = this.node;
-				selectedNodeLabel = nodeIconsTable.get(selectedNode.virtualID).nodeLabel;
+				selectedNodeLabel = nodeIconsTable.get(selectedNode.id).nodeLabel;
 				
 				// Change the status of the info button depending on visibility of the terminal frame of this node
 				if (node.terminalFrame.frame.isVisible())
@@ -759,7 +786,7 @@ public class VirtualLayerVisualizer extends Thread{
 				
 				// Updated the weight panel
 				
-				WeightsTableModel weightsTableModel = new WeightsTableModel(VirtualLayerManager.weightsTable.get(node.virtualID));
+				WeightsTableModel weightsTableModel = new WeightsTableModel(VirtualLayerManager.weightsTable.get(node.id));
 				JTable weightsTable = new JTable(weightsTableModel);				
 				weightsPanel.removeAll();
 				weightsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
@@ -849,11 +876,23 @@ public class VirtualLayerVisualizer extends Thread{
 					}
 					
 				}
+				/* [End of if (cutLinkFlag || createLinkFlag)] */
 								
 			}
+			/* [End of if (selectedNode == null)] */
 			
 		}
+		/* [End of MouseClicked method] */
 				
 	}
-
+	/* [End of JLabelVL class] */
+	
+	private void displayText(String text, Color color) {
+		logPanel.removeAll();
+		JLabel textLabel = new JLabel();
+		textLabel.setForeground(color);
+		textLabel.setText(text);
+		logPanel.add(textLabel);
+		logPanel.revalidate();
+	}
 }

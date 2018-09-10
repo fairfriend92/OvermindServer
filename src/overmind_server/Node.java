@@ -11,9 +11,8 @@ import overmind_server.VirtualLayerManager;
 
 public class Node {
 	
-	public int physicalID;
-	public int virtualID;
-	public short originalNumOfSynapses; // The number of synapses (available) decreases as new connections are added. It is useful to remember the number the node start with. 
+	public int id;
+	public short originalNumOfSynapses; // The number of synapses (available) decreases as new connections are added. It is useful to remember the number the node starts with. 
 	public boolean isShadowNode;
 	public ArrayList<Node> postsynapticNodes;
 	public ArrayList<Node> presynapticNodes;
@@ -25,8 +24,7 @@ public class Node {
 	public boolean isExternallyStimulated; // Flag that tells if another program outside of the OvermindServer package is stimulating this node.
 	
 	public Node(Socket s1, com.example.overmind.Terminal t, ObjectOutputStream o) {
-		this.physicalID = 0;
-		this.virtualID = 0;
+		this.id = 0;
 		this.isShadowNode = false;
 		this.client = s1;
 		this.output = o;
@@ -61,7 +59,7 @@ public class Node {
 	public boolean hasLateralConnections() {
 		for (com.example.overmind.Terminal presynapticTerminal : terminal.presynapticTerminals) 
 			if (presynapticTerminal.ip.equals(terminal.ip) & 
-					presynapticTerminal.natPort == presynapticTerminal.natPort) return true; 
+					presynapticTerminal.natPort == terminal.natPort) return true; 
 		return false;		
 	}
 	
@@ -89,7 +87,7 @@ public class Node {
 		}
 		
 		if (operationSuccesful) {
-			if (VirtualLayerManager.nodesTable.containsKey(physicalID)) 
+			if (VirtualLayerManager.nodesTable.containsKey(id)) 
 				VirtualLayerManager.connectNodes(new Node[]{this});		
 		}
 		
@@ -97,8 +95,7 @@ public class Node {
 	}
 	
 	public void update(Node updatedNode) {
-		this.physicalID = updatedNode.physicalID;		
-		this.virtualID = updatedNode.virtualID;
+		this.id = updatedNode.id;
 		this.isShadowNode = updatedNode.isShadowNode;
 		this.postsynapticNodes = new ArrayList<>(updatedNode.postsynapticNodes);
 		this.presynapticNodes = new ArrayList<>(updatedNode.presynapticNodes);
@@ -118,7 +115,7 @@ public class Node {
 	
 	@Override
 	public int hashCode() {
-	    return this.physicalID;
+	    return this.id;
 	}
 
 	@Override
@@ -130,7 +127,7 @@ public class Node {
 			return this.terminal.equals(compare);
 		} else if (obj.getClass().equals(this.getClass())) {
 			Node compare = (Node) obj;
-	    	return compare.physicalID == this.physicalID;
+	    	return compare.id == this.id;
 		} else
 			return false;    	
     }

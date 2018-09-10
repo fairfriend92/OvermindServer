@@ -81,7 +81,7 @@ public class WeightsTableModel extends AbstractTableModel {
 		VirtualLayerVisualizer.selectedNode.terminal.newWeightsIndexes = new int[] {arg1};
 		
 		// Update the collection of weights for the selected node with the new weight. 
-		VirtualLayerManager.weightsTable.get(VirtualLayerVisualizer.selectedNode.virtualID)[arg1] = (float)arg0; 
+		VirtualLayerManager.weightsTable.get(VirtualLayerVisualizer.selectedNode.id)[arg1] = (float)arg0; 
 		
 		VirtualLayerManager.connectNodes(new Node[] {VirtualLayerVisualizer.selectedNode});
 		

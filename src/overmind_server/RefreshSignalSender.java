@@ -87,7 +87,7 @@ public class RefreshSignalSender implements Runnable {
         targetTerminal.presynapticTerminals.remove(server);
     	targetTerminal.numOfDendrites +=  server.numOfNeurons;
                 
-        if (VirtualLayerManager.nodesTable.containsKey(parentFrame.localUpdatedNode.physicalID)) {
+        if (VirtualLayerManager.nodesTable.containsKey(parentFrame.localUpdatedNode.id)) {
 			VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});
 			//VirtualLayerManager.syncNodes();
 		}        

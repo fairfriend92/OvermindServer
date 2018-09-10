@@ -37,9 +37,7 @@ public class SpikesReceiver extends Thread{
 			e.printStackTrace();
         }
         
-        assert datagramSocket != null;
-       
-		int ipHashCode = 0;     
+        assert datagramSocket != null;       
 		
         while (!shutdown) {
         	
@@ -53,9 +51,10 @@ public class SpikesReceiver extends Thread{
 								
 				spikesBuffer = spikesPacket.getData();			
 			
-				ipHashCode = (spikesPacket.getAddress().toString().substring(1) + "/" + spikesPacket.getPort()).hashCode();
+				String ip = spikesPacket.getAddress().toString().substring(1);
+				int natPort = spikesPacket.getPort();
 				
-				spikesSorterExecutor.execute(new SpikesSorter(spikesBuffer, ipHashCode));
+				spikesSorterExecutor.execute(new SpikesSorter(spikesBuffer, ip, natPort));
 				
 			} catch(SocketException e) {
 				System.out.println("datagramSocket is closed");
@@ -85,18 +84,33 @@ public class SpikesReceiver extends Thread{
 	private class SpikesSorter implements Runnable {
 		
 		private byte[] spikesBuffer;
-		private int ipHashCode = 0;
+		private int natPort;
+		String ip;
 		
-		SpikesSorter(byte[] b, int i) {
+		SpikesSorter(byte[] b, String ip, int natPort) {
 			
 			this.spikesBuffer = b;
-			this.ipHashCode = i;
+			this.ip = ip;
+			this.natPort = natPort;
 			
 		}
 		
 		@Override
-		public void run() {					
-			Node tmpNode = VirtualLayerManager.nodesTable.get(ipHashCode);				
+		public void run() {				
+			byte[] firstHalf = ip.getBytes();
+	    	byte secondHalf = new Integer(natPort).byteValue();
+	    	byte[] data = new byte[firstHalf.length + 1];
+	    	System.arraycopy(firstHalf, 0, data, 0, firstHalf.length);
+	    	data[firstHalf.length] = secondHalf;
+	    	
+	    	// Implementation of the FNV-1 algorithm
+	    	int hash = 0x811c9dc5;    	
+	    	for (int i = 0; i < data.length; i++) {
+	    		hash ^= (int)data[i];
+	    		hash *= 16777619;
+	    	}		  
+	    	
+			Node tmpNode = VirtualLayerManager.nodesTable.get(VirtualLayerManager.physical2VirtualID.get(hash));				
 		
 			if (tmpNode != null) {
 				try {

@@ -36,6 +36,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import com.example.overmind.Population;
 import com.example.overmind.Terminal;
 
 public class VirtualLayerManager extends Thread{			
@@ -46,7 +47,6 @@ public class VirtualLayerManager extends Thread{
 	
 	static int numberOfSyncNodes = 0;	
 	static int numberOfShadowNodes = 0;
-	int totalNumberOfDevices = 0;
 	static volatile int activeShadowNodesRatio = 2;	
 	
 	/* Nodes collections */
@@ -54,6 +54,11 @@ public class VirtualLayerManager extends Thread{
 	public static ConcurrentHashMap<Integer, Node> nodesTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
 	public static ConcurrentHashMap<Integer, float[]> weightsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
 	static ConcurrentHashMap<Integer, ArrayList<Node>> shadowNodesListsTable = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);	
+	
+	// When a packet arrives from a terminal we must be able to fetch the node from the information contained in the header of the packet,
+	// therefore we create a map from the physical id to the virtual id
+	public static ConcurrentHashMap<Integer, Integer> physical2VirtualID = new ConcurrentHashMap<>(Constants.MAX_CONNECTED_TERMINALS);
+	
 	public static List<Node> unsyncNodes = Collections.synchronizedList(new ArrayList<Node>());
 	public static List<Node> availableNodes = Collections.synchronizedList(new ArrayList<Node>());	
 	static List<Short> freeNodes = Collections.synchronizedList(new ArrayList<Short>());	
@@ -126,6 +131,7 @@ public class VirtualLayerManager extends Thread{
                 
         thisServer.ip = serverIP;
         thisServer.natPort = Constants.UDP_PORT;    
+        thisServer.id = thisServer.customHashCode();
         
         Node[] disconnectedNode = new Node[1];
 						
@@ -190,9 +196,7 @@ public class VirtualLayerManager extends Thread{
 			/*
 			 * Retrieve nat port of the current device 
 			 */			
-			
-			int ipHashCode = 0;
-			
+						
 			try {				
 						
 				byte[] testPacketBuffer = new byte[1];
@@ -205,15 +209,16 @@ public class VirtualLayerManager extends Thread{
 							
 				//terminal.ip = testPacket.getAddress().toString().substring(1);
 				
-				ipHashCode = (terminal.ip + "/" + terminal.natPort).hashCode();
+				terminal.id = terminal.customHashCode();
 			
-				System.out.println("Nat port for device with IP " + terminal.ip + " is " + terminal.natPort);				
+				System.out.println("Nat port for device with IP " + terminal.ip + " is " + terminal.natPort + " " );				
 						
 			} catch (IOException e) {
 	        	e.printStackTrace();
 			} 
 			
 			terminal.postsynapticTerminals.add(thisServer);
+			terminal.updateMaps(0, thisServer.id, Terminal.POPULATION_TO_OUTPUT); // 0 is the default population
 			terminal.serverIP = thisServer.ip;
 			// TODO: Should the number of synapses of the terminal be decreased by terminal.numOfNeurons to account for the random spike generator?
 			
@@ -222,9 +227,8 @@ public class VirtualLayerManager extends Thread{
 			 */
 				
 			Node newNode = new Node(clientSocket, terminal, output);
-			newNode.physicalID = ipHashCode;
-			newNode.virtualID = totalNumberOfDevices; // TODO Use more intelligent hashing for the virtualID 
-			totalNumberOfDevices++;
+			newNode.id = newNode.hashCode(); // Since the Node objects are local to the server machine the memory address is a valid hash code
+			physical2VirtualID.put(terminal.id, newNode.id); 
 			
 			// If lateral connections have been enabled, to get the number of synapses the node started with the number
 			// of neurons must be added to the current number of synapses
@@ -235,7 +239,7 @@ public class VirtualLayerManager extends Thread{
 		
 			// Put the new node in the hashmap using the hashcode of the
 			// InetAddress of the terminal contained in the node as key
-			nodesTable.put(newNode.physicalID, newNode);	
+			nodesTable.put(newNode.id, newNode);	
 		
 			assert terminal != null;				
 			
@@ -247,7 +251,7 @@ public class VirtualLayerManager extends Thread{
 			
 				System.out.println("Active node added");				
 				
-				weightsTable.put(newNode.virtualID, new float[0]);
+				weightsTable.put(newNode.id, new float[0]);
 				disconnectedNode[0] = newNode;				
 				connectNodes(disconnectedNode);
 				
@@ -481,7 +485,7 @@ public class VirtualLayerManager extends Thread{
 		
 		ArrayList<Node> shadowNodesList = shadowNodesListsTable.get((int)shadowNode.terminal.numOfNeurons);
 		shadowNodesList.remove(shadowNode);
-		weightsTable.put(shadowNode.virtualID, new float[0]);
+		weightsTable.put(shadowNode.id, new float[0]);
 		numberOfShadowNodes--;
 		MainFrame.updateMainFrame(new MainFrameInfo(unsyncNodes.size(), numberOfSyncNodes, numberOfShadowNodes));
 		connectNodes(new Node[]{shadowNode});		
@@ -498,7 +502,7 @@ public class VirtualLayerManager extends Thread{
 		
 		ArrayList<Node> shadowNodesList = shadowNodesListsTable.get((int)shadowNode.terminal.numOfNeurons);
 		shadowNodesList.remove(shadowNode);
-		nodesTable.remove(shadowNode.physicalID);
+		nodesTable.remove(shadowNode.id);
 		numberOfShadowNodes--;
 
 		shadowNode.terminalFrame.shutdown = true;		
@@ -557,8 +561,10 @@ public class VirtualLayerManager extends Thread{
 		unsyncNodes.remove(removableNode);	
 		
 		// Remove the reference to the old node
-		nodesTable.remove(removableNode.physicalID);
+		nodesTable.remove(removableNode.id);
 		numberOfSyncNodes--;
+		
+		physical2VirtualID.remove(removableNode.terminal.id);
 		
 		/*
 		 * Wake up the thread that sends the TCP keep alive packet
@@ -640,8 +646,7 @@ public class VirtualLayerManager extends Thread{
 		ArrayList<Node> shadowNodesList = shadowNodesListsTable.get((int)removableNode.terminal.numOfNeurons);
 		
 		// If the disconnection is abrupt and there are shadow nodes available
-		if (disconnectionIsAbrupt && shadowNodesList != null && !shadowNodesList.isEmpty()) {		
-						
+		if (disconnectionIsAbrupt && shadowNodesList != null && !shadowNodesList.isEmpty()) {							
 			// Retrieve the first shadow node available 
 			Node shadowNode = shadowNodesList.remove(shadowNodesList.size() - 1);			
 			
@@ -707,11 +712,14 @@ public class VirtualLayerManager extends Thread{
 			
 			removableNode.terminalFrame.localUpdatedNode = null;	
 						
-			// Update the physical ID of the old node
-			removableNode.physicalID = shadowNode.physicalID;
+			// Retrieve the weights of the old node
+			float[] weights = weightsTable.get(removableNode.id);
 			
-			// Reinsert the old node using the new physical ID as hash tag
-			nodesTable.put(removableNode.physicalID, removableNode);
+			// Update the virtual ID of the old node
+			removableNode.id = shadowNode.id;
+			
+			// Reinsert the old node using the new virtual ID as hash tag
+			nodesTable.put(removableNode.id, removableNode);
 			
 			// Assign the object output stream of the shadow node to the old node		
 			removableNode.output = shadowNode.output;
@@ -728,16 +736,13 @@ public class VirtualLayerManager extends Thread{
 			removableNode.terminal.ip = shadowNode.terminal.ip;
 			removableNode.terminal.natPort = shadowNode.terminal.natPort;
 			
-			// Retrieve the weights of the old node
-			float[] weights = weightsTable.get(removableNode.virtualID);
-			
 			// Create the two arrays which represent the sparse array containing only those synaptic 
 			// weights which have been modified
 			float[] newWeights = new float[removableNode.terminal.numOfNeurons * removableNode.originalNumOfSynapses];
 			int[] newWeightsIndexes = new int[removableNode.terminal.numOfNeurons * removableNode.originalNumOfSynapses];
 			int index = 0;
 			
-			// Check which of the retrieve weights are different from the default value (0.0) 
+			// Check which of the retrieved weights are different from the default value (0.0) 
 			// and populate the sparse array consequently
 			for (int i = 0; i < weights.length; i++) {
 				if (weights[i] != 0) {
@@ -786,7 +791,7 @@ public class VirtualLayerManager extends Thread{
 			 */
 			
 			boolean nodeHasBeenModified = false;
-			Node postsynNode;
+			Node tmpNode;
 			
 			int numOfNodesAffected = removableNode.presynapticNodes.size() + removableNode.postsynapticNodes.size();
 			
@@ -794,15 +799,22 @@ public class VirtualLayerManager extends Thread{
 			
 			for (int i = 0; i < removableNode.presynapticNodes.size(); i++) {
 				
-				postsynNode = removableNode.presynapticNodes.get(i);
+				tmpNode = removableNode.presynapticNodes.get(i);
 				
-				nodeHasBeenModified = postsynNode.postsynapticNodes.remove(removableNode);
-				postsynNode.terminal.postsynapticTerminals.remove(removableNode.terminal);
+				nodeHasBeenModified = tmpNode.postsynapticNodes.remove(removableNode);
+				tmpNode.terminal.postsynapticTerminals.remove(removableNode.terminal);			
 				
 				if (nodeHasBeenModified) {
-					postsynNode.terminal.numOfSynapses += removableNode.terminal.numOfNeurons;
+					tmpNode.terminal.numOfSynapses += removableNode.terminal.numOfNeurons;
 					//unsyncNodes.add(tmpNode);
-					modifiedNodes.add(postsynNode);
+					modifiedNodes.add(tmpNode);
+					
+					// Remove all the references to the disconnected terminal from the arraylists containing the indexes 
+					// of the terminals stimulated by population
+					for (Population population : tmpNode.terminal.populations) {
+						tmpNode.terminal.populationsToOutputs.get(population.id).remove(removableNode.terminal.id);
+					}
+					
 					nodeHasBeenModified = false;
 				}
 				
@@ -810,13 +822,17 @@ public class VirtualLayerManager extends Thread{
 							
 			for (int i = 0; i < removableNode.postsynapticNodes.size(); i++) {
 				
-				postsynNode = removableNode.postsynapticNodes.get(i);
+				tmpNode = removableNode.postsynapticNodes.get(i);
 				
-				nodeHasBeenModified = postsynNode.presynapticNodes.remove(removableNode);
-				postsynNode.terminal.presynapticTerminals.remove(removableNode.terminal);
+				nodeHasBeenModified = tmpNode.presynapticNodes.remove(removableNode);
+				tmpNode.terminal.presynapticTerminals.remove(removableNode.terminal);
+				
+				// Remove the arraylist containing all the indexes of the populations that were stimulated by the
+				// disconnected terminal
+				tmpNode.terminal.inputsToPopulations.remove(removableNode.terminal.id);
 				
 				if (nodeHasBeenModified) {
-					short postsynNodeDendrites = (short)(postsynNode.terminal.numOfDendrites + removableNode.terminal.numOfNeurons);
+					short postsynNodeDendrites = (short)(tmpNode.terminal.numOfDendrites + removableNode.terminal.numOfNeurons);
 					
 					/*
 					 * If the number of active synapses is zero, then the reference in the table of weights
@@ -826,12 +842,12 @@ public class VirtualLayerManager extends Thread{
 					 * the weights do not coincide anymore with the relative connections. 
 					 */					
 									
-					if (postsynNodeDendrites == postsynNode.originalNumOfSynapses) {
+					if (postsynNodeDendrites == tmpNode.originalNumOfSynapses) {
 						float[] newWeights = new float[0];
-						weightsTable.put(postsynNode.virtualID, newWeights);
+						weightsTable.put(tmpNode.id, newWeights);
 					} else {					
 						int weightsOffset = 0; // How many synapses come before the ones of the node which is being removed
-						short activeSynapses = (short)(postsynNode.originalNumOfSynapses - postsynNode.terminal.numOfDendrites);
+						short activeSynapses = (short)(tmpNode.originalNumOfSynapses - tmpNode.terminal.numOfDendrites);
 						
 						/*
 						 * Compute the weights offset by iterating over the presynaptic connections of the
@@ -839,7 +855,7 @@ public class VirtualLayerManager extends Thread{
 						 * by the number of neurons of said presynaptic connection. 
 						 */
 						
-						Iterator<Terminal> iterator = postsynNode.terminal.presynapticTerminals.iterator();
+						Iterator<Terminal> iterator = tmpNode.terminal.presynapticTerminals.iterator();
 						while (iterator.hasNext()) {
 							Terminal presynTerminal = iterator.next();
 							if (presynTerminal.equals(removableNode.terminal)) {
@@ -855,31 +871,31 @@ public class VirtualLayerManager extends Thread{
 						 * is the the synaptic weights array resized. 
 						 */
 						
-						float[] postsynNodeWeights = weightsTable.get(postsynNode.virtualID);
+						float[] postsynNodeWeights = weightsTable.get(tmpNode.id);
 						
 						// Active synapses that come in the array after the ones relative to removableNode
 						int remainingActiveSynapses = activeSynapses - weightsOffset - removableNode.terminal.numOfNeurons;
 						
 						// Copy the weights of the synapses that come after the ones of removableNode in their positions 
-						for (int neuronIndex = 0; neuronIndex < postsynNode.terminal.numOfNeurons; neuronIndex++) {
+						for (int neuronIndex = 0; neuronIndex < tmpNode.terminal.numOfNeurons; neuronIndex++) {
 							System.out.println(" " + (neuronIndex * activeSynapses + weightsOffset + removableNode.terminal.numOfNeurons) + " " 
 									+ postsynNodeWeights.length);
 							System.arraycopy(postsynNodeWeights, neuronIndex * activeSynapses + weightsOffset + removableNode.terminal.numOfNeurons,
 									postsynNodeWeights, neuronIndex * activeSynapses + weightsOffset, remainingActiveSynapses);
 						}
 						
-						weightsTable.put(postsynNode.virtualID, postsynNodeWeights);
+						weightsTable.put(tmpNode.id, postsynNodeWeights);
 					}
 					
-					postsynNode.terminal.numOfDendrites = postsynNodeDendrites;
+					tmpNode.terminal.numOfDendrites = postsynNodeDendrites;
 					//unsyncNodes.add(tmpNode);
-					modifiedNodes.add(postsynNode);
+					modifiedNodes.add(tmpNode);
 					nodeHasBeenModified = false;
 				}
 				
 			}								
 			
-			weightsTable.remove(removableNode.virtualID);
+			weightsTable.remove(removableNode.id);
 			
 			// Shutdown the object stream and the socket. 			
 			removableNode.close(); // TODO: This method is useless and confusing. 

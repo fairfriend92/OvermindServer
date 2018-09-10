@@ -147,7 +147,7 @@ public class RandomSpikesGenerator implements Runnable {
         Common.updateTerminal(targetTerminalOld, parentFrame.localUpdatedNode.terminal);
        
         // The old node is substituted to the one connected with the server
-        if (VirtualLayerManager.nodesTable.containsKey(parentFrame.localUpdatedNode.physicalID)) {
+        if (VirtualLayerManager.nodesTable.containsKey(parentFrame.localUpdatedNode.id)) {
 			VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});
 			//VirtualLayerManager.syncNodes();
 		}

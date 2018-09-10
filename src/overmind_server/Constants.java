@@ -2,6 +2,10 @@ package overmind_server;
 
 public class Constants {
 	
+	/* Flags */
+	public final static int ERROR = 0;
+	public final static int SUCCESS = 1;
+	
 	/* Network constants */
 	
     public final static int ABSOLUTE_REFRACTORY_PERIOD = 2;
