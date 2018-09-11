@@ -4,6 +4,12 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+/**
+ * Class that describes the client devices and the populations that live therein. 
+ * @author rodolforocco
+ *
+ */
+
 public class Terminal implements Serializable {
 	public static final int INPUT_TO_POPULATION = 0, POPULATION_TO_OUTPUT = 1;
 	
@@ -29,6 +35,7 @@ public class Terminal implements Serializable {
     public int[] newWeightsIndexes = new int[0];
     public byte[] updateWeightsFlags = new byte[0];
 
+    // TODO: Use customHashCode() for the comparison
     @Override
     public boolean equals(Object obj) {
         if (obj == null || obj.getClass() != this.getClass()) { return false; }
@@ -39,6 +46,13 @@ public class Terminal implements Serializable {
             return compare.ip.equals(this.ip);
     }
 
+
+    /**
+     * Generate a hash code base on the physical information of the connection
+     * associated with the underlying device
+     * @return: A custom hash obtained from the FNV-1 algorithm
+     */
+    
     public int customHashCode() {
         byte[] firstHalf = ip.getBytes();
         byte secondHalf = new Integer(natPort).byteValue();
@@ -55,6 +69,15 @@ public class Terminal implements Serializable {
         return hash;
     }
     
+
+    /**
+     * Update the maps of the internal connections between input connections and populations
+     * or populations and output connections
+     * @param populationId 
+     * @param terminalId
+     * @param FLAG: Final value which tells what kind of operation should be executed
+     */
+    
     public void updateMaps(int populationId, int terminalId, int FLAG) {
     	if (FLAG == INPUT_TO_POPULATION) {
     		if (!inputsToPopulations.containsKey(terminalId)) { 
@@ -64,6 +87,7 @@ public class Terminal implements Serializable {
     		} else {
     			inputsToPopulations.get(terminalId).add(populationId);
     		}
+    		this.populations.get(this.populations.indexOf(new Integer(populationId))).inputIndexes.add(terminalId);
     	} else {
     		if (!populationsToOutputs.containsKey(populationId)) {
     			ArrayList<Integer> arrayList = new ArrayList<>();
@@ -72,6 +96,29 @@ public class Terminal implements Serializable {
     		} else {
     			populationsToOutputs.get(populationId).add(terminalId);
     		}
+    		this.populations.get(this.populations.indexOf(new Integer(populationId))).outputIndexes.add(terminalId);
     	}
+    }
+    
+    /**
+     * Update all the references of this object and copies the contents of all
+     * the arrays
+     * @param terminal
+     */
+    
+    public void updateTerminal(Terminal terminal) {
+    	this.numOfNeurons = terminal.numOfNeurons;
+    	this.numOfDendrites = terminal.numOfDendrites;
+    	this.numOfSynapses = terminal.numOfSynapses;
+    	this.ip = terminal.ip;
+    	this.natPort = terminal.natPort;
+    	this.presynapticTerminals = new ArrayList<>(terminal.presynapticTerminals);
+    	this.postsynapticTerminals = new ArrayList<>(terminal.postsynapticTerminals);
+    	this.newWeights = new byte[terminal.newWeights.length];
+    	this.newWeightsIndexes = new int[terminal.newWeightsIndexes.length];
+    	this.updateWeightsFlags = new byte[terminal.updateWeightsFlags.length];
+        System.arraycopy(terminal.newWeights, 0, this.newWeights, 0, terminal.newWeights.length);
+        System.arraycopy(terminal.newWeightsIndexes, 0, this.newWeightsIndexes, 0, terminal.newWeightsIndexes.length);
+        System.arraycopy(terminal.updateWeightsFlags, 0, this.updateWeightsFlags, 0, terminal.updateWeightsFlags.length);
     }
 }

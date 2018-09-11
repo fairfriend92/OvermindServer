@@ -5,7 +5,6 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 
-import overmind_server.Common;
 import overmind_server.TerminalFrame;
 import overmind_server.VirtualLayerManager;
 
@@ -14,7 +13,7 @@ public class Node {
 	public int id;
 	public short originalNumOfSynapses; // The number of synapses (available) decreases as new connections are added. It is useful to remember the number the node starts with. 
 	public boolean isShadowNode;
-	public ArrayList<Node> postsynapticNodes;
+	public ArrayList<Node> postsynapticNodes; // TODO: Are these 2 arrays really needed now that we have the physical2virtual hash map?
 	public ArrayList<Node> presynapticNodes;
 	public TerminalFrame terminalFrame;
 	public Socket client;
@@ -94,15 +93,15 @@ public class Node {
 		return operationSuccesful;
 	}
 	
-	public void update(Node updatedNode) {
-		this.id = updatedNode.id;
-		this.isShadowNode = updatedNode.isShadowNode;
-		this.postsynapticNodes = new ArrayList<>(updatedNode.postsynapticNodes);
-		this.presynapticNodes = new ArrayList<>(updatedNode.presynapticNodes);
-		this.terminalFrame.update(updatedNode);
-		this.client = updatedNode.client;
-		this.output = updatedNode.output;
-		Common.updateTerminal(updatedNode.terminal, this.terminal);
+	public void update(Node node) {
+		this.id = node.id;
+		this.isShadowNode = node.isShadowNode;
+		this.postsynapticNodes = new ArrayList<>(node.postsynapticNodes);
+		this.presynapticNodes = new ArrayList<>(node.presynapticNodes);
+		this.terminalFrame.update(node);
+		this.client = node.client;
+		this.output = node.output;
+		this.terminal.updateTerminal(node.terminal);
 	}
 
 	public void close() {

@@ -86,14 +86,14 @@ public class TerminalFrame {
 	TerminalFrame () {
 		tcpKeepAliveExecutor.execute(new tcpKeepAlivePackageSender());		
 	}
+			
+	public JRadioButton randomSpikesRadioButton = new JRadioButton("Random spikes");
+	public JRadioButton refreshSignalRadioButton = new JRadioButton("Refresh signal");
+	public JRadioButton noneRadioButton = new JRadioButton("None");
 	
 	/**
 	 * Custom panel to display the raster graph
 	 */
-	
-	public JRadioButton randomSpikesRadioButton = new JRadioButton("Random spikes");
-	public JRadioButton refreshSignalRadioButton = new JRadioButton("Refresh signal");
-	public JRadioButton noneRadioButton = new JRadioButton("None");
 	
 	class MyPanel extends JPanel {		
 		
@@ -260,7 +260,7 @@ public class TerminalFrame {
 		ledStatusTimer.start();
 		
 			
-		/**
+		/*
 		 * Radio buttons used to select the external stimulus
 		 */
 		
@@ -302,7 +302,7 @@ public class TerminalFrame {
 	    stimulusButtonsGroup.add(refreshSignalRadioButton);
 	    stimulusButtonsGroup.add(noneRadioButton);			    
 			
-		/**
+		/*
 		 * Lists options		
 		 */
 		
@@ -318,7 +318,7 @@ public class TerminalFrame {
 		postsynapticConnections.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
 		postsynapticConnections.setLayoutOrientation(JList.VERTICAL);
 		
-		/**
+		/*
 		 * Total panel layout
 		 */
 		
@@ -327,7 +327,7 @@ public class TerminalFrame {
 		if (!localUpdatedNode.isShadowNode) 
 			totalPanel.add(rastergraphPanel);
 			
-		/**
+		/*
 		 * Main panel layout
 		 */
 		
@@ -343,7 +343,7 @@ public class TerminalFrame {
 		}
 		mainPanel.add(commandsPanel);
 					
-		/**
+		/*
 		 * Info panel layout
 		 */
 
@@ -365,7 +365,7 @@ public class TerminalFrame {
 
 		if (!localUpdatedNode.isShadowNode) {
 		
-			/**
+			/*
 			 * Stimulus panel layout
 			 */
 			
@@ -377,7 +377,7 @@ public class TerminalFrame {
 			stimulusPanel.add(randomSpikesRadioButton);
 			stimulusPanel.add(refreshSignalRadioButton);
 			
-			/**
+			/*
 			 * Presynaptic connections panel layout
 			 */
 			
@@ -387,7 +387,7 @@ public class TerminalFrame {
 						BorderFactory.createEmptyBorder(5,5,5,5)));
 			preConnPanel.add(preConnScrollPanel);
 			
-			/**
+			/*
 			 * Postsynaptic connections panel layout
 			 */
 			
@@ -397,7 +397,7 @@ public class TerminalFrame {
 					BorderFactory.createEmptyBorder(5,5,5,5)));
 			postConnPanel.add(postConnScrollPanel);	
 			
-			/**
+			/*
 			 * Refresh rate panel layout
 			 */
 		
@@ -436,7 +436,7 @@ public class TerminalFrame {
 		
 		}
 		
-		/**
+		/*
 		 * Command panel layout
 		 */
 		
@@ -487,7 +487,7 @@ public class TerminalFrame {
 			commandsPanel.add(showRasterGraph);
 		}
 			
-		/**
+		/*
 		 * Frame composition
 		 */
 		
@@ -533,7 +533,7 @@ public class TerminalFrame {
 			spikesMonitorIsActive = true;
 		}						
 						
-		/**
+		/*
 		 * Update info about local network
 		 */
 		
@@ -541,8 +541,8 @@ public class TerminalFrame {
 		numOfNeurons.setText("# neurons: " + localUpdatedNode.terminal.numOfNeurons);
 		numOfDendrites.setText("# available dendrites: " + localUpdatedNode.terminal.numOfDendrites);
 		numOfSynapses.setText("# available synapses: " + localUpdatedNode.terminal.numOfSynapses);		
-		
-		/**
+	
+		/*
 		 * Update info about connected devices
 		 */
 		
@@ -613,7 +613,7 @@ public class TerminalFrame {
 			preConnListModel.remove(0);
 		}
 		
-		/**
+		/*
 		 * Redraw the frame
 		 */
 		
@@ -746,7 +746,7 @@ public class TerminalFrame {
 	}
 	/* [End of SpikesMonitor] */
 	
-	/*
+	/**
 	 * Runnable which periodically sends a TCP keep alive packet to the terminal
 	 * associated with this frame
 	 */

@@ -43,7 +43,7 @@ public class RandomSpikesGenerator implements Runnable {
          */
         		
         // Store locally the info of the target terminal before sending the stimulus 
-        Common.updateTerminal(targetTerminal, targetTerminalOld);
+        targetTerminalOld.updateTerminal(targetTerminal);
         
         // Update the info of the targetTerminal according to the chosen stimulus
         targetTerminal.numOfDendrites = 0;
@@ -144,7 +144,7 @@ public class RandomSpikesGenerator implements Runnable {
         
         // The update method must be used because we can't reference targetTerminalOld since it is
         // a local variable that gets destroyed the moment this runnable ends
-        Common.updateTerminal(targetTerminalOld, parentFrame.localUpdatedNode.terminal);
+        parentFrame.localUpdatedNode.terminal.updateTerminal(targetTerminalOld);
        
         // The old node is substituted to the one connected with the server
         if (VirtualLayerManager.nodesTable.containsKey(parentFrame.localUpdatedNode.id)) {

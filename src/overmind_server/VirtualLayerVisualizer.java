@@ -46,12 +46,12 @@ public class VirtualLayerVisualizer extends Thread{
 	static boolean createLinkFlag = false;
 	public JLabelVL[] editableNodeLabels = {null, null};
 	
-	private JToggleButton showTerminalFrame = new JToggleButton();
+	private JButton showTerminalFrame = new JButton();
 		
 	private boolean shutdown = false;
 	private int editingNode = 0;
 	static public Node selectedNode;
-	private JLabel selectedNodeLabel;
+	private JLabelVL selectedNodeLabel;
 	private HashMap<Integer, JLabelVL> nodeIconsTable = new HashMap<>();
 	private JPanel infoPanel = new JPanel();
 	private JPanel logPanel = new JPanel();
@@ -62,12 +62,11 @@ public class VirtualLayerVisualizer extends Thread{
 	JToggleButton cutLink = new JToggleButton();
 	JToggleButton createLink = new JToggleButton();	
 	
+	PartitionTool partTool = new PartitionTool();
+	
 	@Override
 	public void run () {
 		super.run();
-		
-		PartitionTool partTool = new PartitionTool();
-		
 		String frameTitle = new String("Virtual Layer Visualizer");					
 
 		JScrollPane scrollPane = new JScrollPane(layeredPaneVL.connPanel);
@@ -143,8 +142,8 @@ public class VirtualLayerVisualizer extends Thread{
 			@Override
 			public void actionPerformed(ActionEvent e) {				
 				if (selectedNode != null) {
-					if (partTool.isOpen) {
-						displayText("Partition tool is already opened", Color.red);
+					if (partTool.isVisible()) {
+						partTool.close();
 					} else {
 						if (partTool.open() == Constants.ERROR)
 							displayText("Error while opening the partition tool", Color.red);					
@@ -220,20 +219,20 @@ public class VirtualLayerVisualizer extends Thread{
 			}
 		});
 		
-		showTerminalFrame.addItemListener(new ItemListener() {
-			public void itemStateChanged(ItemEvent ev) {
-				if(ev.getStateChange()==ItemEvent.SELECTED && selectedNode != null)
-					selectedNode.terminalFrame.frame.setVisible(true);
-				else if(ev.getStateChange()==ItemEvent.DESELECTED && selectedNode != null)
-					selectedNode.terminalFrame.frame.setVisible(false);
-			}
+		showTerminalFrame.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (selectedNode != null)
+					selectedNode.terminalFrame.frame.setVisible(
+							!selectedNode.terminalFrame.frame.isVisible());
+			}			
 		});
 		
 		resizeX.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				Component[] childComp = layeredPaneVL.VLPanel.getComponents();
-				int maxX = 640, maxY = (int) layeredPaneVL.VLPanel.getSize().getHeight();
+				Component[] childComp = layeredPaneVL.getComponents();
+				int maxX = 640, maxY = (int) layeredPaneVL.getSize().getHeight();
 				for (int i = 0; i < childComp.length; i++) {
 					maxX = maxX > childComp[i].getX() ? maxX : childComp[i].getX() + (int)childComp[i].getSize().getWidth();
 				}
@@ -246,8 +245,8 @@ public class VirtualLayerVisualizer extends Thread{
 		resizeY.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				Component[] childComp = layeredPaneVL.VLPanel.getComponents();
-				int maxX = (int) layeredPaneVL.VLPanel.getSize().getWidth(), maxY = 480;
+				Component[] childComp = layeredPaneVL.getComponents();
+				int maxX = (int) layeredPaneVL.getSize().getWidth(), maxY = 480;
 				for (int i = 0; i < childComp.length; i++) {
 					maxY = maxY > childComp[i].getY() ? maxY : childComp[i].getY() + (int)childComp[i].getSize().getHeight();	
 				}
@@ -394,7 +393,13 @@ public class VirtualLayerVisualizer extends Thread{
 				
 	}
 	
-	/* Class for the panel which acts as a canvas on which we paint the synaptic connections */
+	// TODO: DrawablePanelVL and LayeredPaneVL can be combined in one class
+	
+	/**
+	 * Class for the panel which acts as a canvas on which we paint the synaptic connections
+	 * @author rodolforocco
+	 *
+	 */
 	
 	public class DrawablePanelVL extends JPanel {		
 
@@ -408,6 +413,7 @@ public class VirtualLayerVisualizer extends Thread{
 		}
 		
 		// Extends the paint method to draw the synaptic connections in addition to everything else		
+		@Override
 		public void paintComponent(Graphics g) {
 	        super.paintComponent(g); 
 
@@ -435,7 +441,7 @@ public class VirtualLayerVisualizer extends Thread{
 	        for (int j = 0; j < forIterations; j++) {
 	        	
 	        	node = paintAll ? nodeIconsArray[j].node : selectedNode;
-	        	nodeLabel = paintAll ? nodeIconsArray[j].nodeLabel : selectedNodeLabel;
+	        	nodeLabel = paintAll ? nodeIconsArray[j] : selectedNodeLabel;
 	        		        	
 				if (node != null) {
 
@@ -458,10 +464,10 @@ public class VirtualLayerVisualizer extends Thread{
 						
 						if (node.postsynapticNodes.contains(node.presynapticNodes.get(i))) {
 							
-							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).id).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).id)
 									.getLocation();
 
-							radius = nodeIconsTable.get(node.presynapticNodes.get(i).id).nodeLabel
+							radius = nodeIconsTable.get(node.presynapticNodes.get(i).id)
 									.getWidth() / 2;
 
 							g.drawLine(nodeLabel.getX() + nodeLabel.getWidth() / 2,
@@ -501,11 +507,11 @@ public class VirtualLayerVisualizer extends Thread{
 						if (node.presynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP && !servedPresynNodesIndexes.contains(i)) {
 
 							// Store the location of the icon representing the i-th node
-							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).id).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.presynapticNodes.get(i).id)
 									.getLocation();
 
 							// Retrieve the radius of the icon of the i-th node
-							radius = nodeIconsTable.get(node.presynapticNodes.get(i).id).nodeLabel
+							radius = nodeIconsTable.get(node.presynapticNodes.get(i).id)
 									.getWidth() / 2;
 
 							// Draw the line 
@@ -530,10 +536,10 @@ public class VirtualLayerVisualizer extends Thread{
 
 						if (node.postsynapticNodes.get(i).terminal.ip != VirtualLayerManager.serverIP && !servedPostsynNodesIndexes.contains(i)) {
 
-							tmpPoint = nodeIconsTable.get(node.postsynapticNodes.get(i).id).nodeLabel
+							tmpPoint = nodeIconsTable.get(node.postsynapticNodes.get(i).id)
 									.getLocation();
 
-							radius = nodeIconsTable.get(node.postsynapticNodes.get(i).id).nodeLabel
+							radius = nodeIconsTable.get(node.postsynapticNodes.get(i).id)
 									.getWidth() / 2;
 
 							g.drawLine(nodeLabel.getX() + nodeLabel.getWidth() / 2,
@@ -561,28 +567,28 @@ public class VirtualLayerVisualizer extends Thread{
 	}
 	/* [End of DrawablePanelVL class] */	
 	
-	/* Class describing the panel on top of which the labels and the connections are drawn */
+	/**
+	 * Class describing the panel on top of which the labels and the connections are drawn
+	 * @author rodolforocco
+	 *
+	 */
 	
-	public class LayeredPaneVL extends JPanel implements MouseMotionListener {
-		
-		// The panel containing the nodes labels
-		public JLayeredPane VLPanel = new JLayeredPane();
-		
+	public class LayeredPaneVL extends JLayeredPane implements MouseMotionListener {
 		// The panel on which the connections are drawn
 		public DrawablePanelVL connPanel = new DrawablePanelVL();
 		
+		@Override
 		public void setPreferredSize(Dimension d) {
 			super.setPreferredSize(d);			
-			this.connPanel.setPreferredSize(d);	
-			this.VLPanel.setPreferredSize(d);	
+			connPanel.setPreferredSize(d);	
 		}
 		
 		public LayeredPaneVL () {
 							
-			connPanel.add(VLPanel);
-			VLPanel.setPreferredSize(new Dimension(640, 480));
-			VLPanel.setOpaque(false);
-			VLPanel.addMouseMotionListener(this);
+			connPanel.add(this);
+			this.setPreferredSize(new Dimension(640, 480));
+			this.setOpaque(false);
+			this.addMouseMotionListener(this);
 									
 		}
 		
@@ -593,13 +599,16 @@ public class VirtualLayerVisualizer extends Thread{
 			// The node is saved in the hash map
 			nodeIconsTable.put(node.id, newNodeLabel);
 			// The label is added to the appropriate panel
-			VLPanel.add(newNodeLabel.nodeLabel, new Integer(1), nodeIconsTable.size());			
+			this.add(newNodeLabel, new Integer(1), nodeIconsTable.size());			
 			connPanel.revalidate();
 			connPanel.repaint();
 						
 		}
 		
 		public void removeNode (Node node) {
+			if (node == partTool.selectedNode) {
+				partTool.close();
+			}			
 			
 			// If the selected node is the one to be removed further steps need to be taken
 			if (selectedNode == node) {
@@ -618,14 +627,13 @@ public class VirtualLayerVisualizer extends Thread{
 				weightsPanel.repaint();
 				VLVFrame.pack();
 				// No matter the status of the button we reset it to be on the safe side
-				showTerminalFrame.setSelected(false);
 				showTerminalFrame.setEnabled(false);
 			}
 			
 			// Remove from the panel the label associated to the node, which must be retrieved
 			// from the hash map		
 			
-			VLPanel.remove(nodeIconsTable.get(node.id).nodeLabel);
+			this.remove(nodeIconsTable.get(node.id));
 			
 			// Remove the reference to the label from the hash map and repaint the connection panel
 			nodeIconsTable.remove(node.id);
@@ -643,9 +651,9 @@ public class VirtualLayerVisualizer extends Thread{
 				// Updated the location of the label of the selected node
 				selectedNodeLabel.setLocation(e.getX(), e.getY());	
 				// Proceed in the case the label is dragged close to the window border
-				if (e.getX() > (VLPanel.getWidth() - 10) || e.getY() > (VLPanel.getHeight() - 10)) {
+				if (e.getX() > (this.getWidth() - 10) || e.getY() > (this.getHeight() - 10)) {
 					// Increase the size of the panel underlying the scrolling panel
-					this.setPreferredSize(new Dimension(VLPanel.getWidth() + 32, VLPanel.getHeight() + 32));
+					this.setPreferredSize(new Dimension(this.getWidth() + 32, this.getHeight() + 32));
 					connPanel.revalidate();
 				}
 				// Repaint the connections
@@ -656,26 +664,29 @@ public class VirtualLayerVisualizer extends Thread{
 			
 	}
 	
-	/* The class which describes the label representing the nodes */
+	/**
+	 * The class which describes the label representing the nodes
+	 * @author rodolforocco
+	 *
+	 */
 	
 	public class JLabelVL extends JLabel implements MouseListener {
 		
 		private ImageIcon nodeIcon;
-		public JLabel nodeLabel;
 		private Node node;
 		int dimension;
 		
 		public JLabelVL (Node n) {
 			
-			this.node = n;
+			node = n;
 			
 			// Scale the dimension of the icon so that the node with more neurons appears bigger
-			this.dimension = (int) (48.0f - (24.0f / 1023.0f) * (1024.0f - (float)n.terminal.numOfNeurons));
+			dimension = (int) (48.0f - (24.0f / 1024.0f) * (1024.0f - (float)n.terminal.numOfNeurons));
 			
 			// Get the image for the icon
 			try {
 				Image img = ImageIO.read(getClass().getResource("/icons/icons8-New Moon.png"));
-				nodeIcon = (new ImageIcon(img.getScaledInstance(this.dimension, this.dimension, Image.SCALE_SMOOTH)));
+				nodeIcon = (new ImageIcon(img.getScaledInstance(dimension, dimension, Image.SCALE_SMOOTH)));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -683,10 +694,10 @@ public class VirtualLayerVisualizer extends Thread{
 			assert nodeIcon != null;
 			
 			// Associate the icon to the label and put it somewhere in the main window
-			nodeLabel = new JLabel(nodeIcon);
-			nodeLabel.setBounds(64, 64, this.dimension, this.dimension);
+			this.setIcon(nodeIcon);;
+			this.setBounds(64, 64, dimension, dimension);
 			
-			nodeLabel.addMouseListener(this);
+			this.addMouseListener(this);
 						
 		}
 		
@@ -703,9 +714,6 @@ public class VirtualLayerVisualizer extends Thread{
 				// ...then it must be deselected
 				selectedNode = null;
 				selectedNodeLabel = null;
-				// If the terminal frame of this node was in focus, then the relative button must be deselected
-				// now that the node itself has been deselected
-				showTerminalFrame.setSelected(false);
 				
 				// When no node is selected the button to show the terminal frame must be grayed out
 				showTerminalFrame.setEnabled(false);
@@ -733,7 +741,7 @@ public class VirtualLayerVisualizer extends Thread{
 				assert nodeIcon != null;
 				
 				// Set the icon and repaint the window
-				nodeLabel.setIcon(nodeIcon);
+				this.setIcon(nodeIcon);
 				
 				layeredPaneVL.connPanel.revalidate();
 				layeredPaneVL.connPanel.repaint();
@@ -763,14 +771,8 @@ public class VirtualLayerVisualizer extends Thread{
 				showTerminalFrame.setEnabled(true);
 				
 				// Reference to this node and its label is added to selecetedNode and selectedNodeLabel
-				selectedNode = this.node;
-				selectedNodeLabel = nodeIconsTable.get(selectedNode.id).nodeLabel;
-				
-				// Change the status of the info button depending on visibility of the terminal frame of this node
-				if (node.terminalFrame.frame.isVisible())
-					showTerminalFrame.setSelected(true);
-				else
-					showTerminalFrame.setSelected(false);
+				selectedNode = node;
+				selectedNodeLabel = nodeIconsTable.get(selectedNode.id);
 				
 				// Update the info panel
 				infoPanel.removeAll();
@@ -798,7 +800,7 @@ public class VirtualLayerVisualizer extends Thread{
 				weightsPanel.add(weightsScrollPane, BorderLayout.CENTER);
 				weightsPanel.revalidate();
 				weightsPanel.repaint();
-				VLVFrame.pack();
+				VLVFrame.pack(); // Needed so that the weights panel has the right size
 				
 				// Get the icon for the now selected node
 				try {
@@ -811,7 +813,7 @@ public class VirtualLayerVisualizer extends Thread{
 				assert nodeIcon != null;
 						
 				// set the icon and update the panel
-				nodeLabel.setIcon(nodeIcon);				
+				this.setIcon(nodeIcon);				
 				
 				layeredPaneVL.connPanel.revalidate();
 				layeredPaneVL.connPanel.repaint();

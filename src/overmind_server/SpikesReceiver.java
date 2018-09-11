@@ -110,7 +110,8 @@ public class SpikesReceiver extends Thread{
 	    		hash *= 16777619;
 	    	}		  
 	    	
-			Node tmpNode = VirtualLayerManager.nodesTable.get(VirtualLayerManager.physical2VirtualID.get(hash));				
+	    	Integer virtualId = VirtualLayerManager.physical2VirtualID.get(hash);	    	
+			Node tmpNode = virtualId == null ? null : VirtualLayerManager.nodesTable.get(virtualId);				
 		
 			if (tmpNode != null) {
 				try {
