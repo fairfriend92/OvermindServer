@@ -19,7 +19,7 @@ public class Population implements Serializable {
         this.numOfNeurons = numOfNeurons;
         this.numOfDendrites = numOfDendrites;
         this.numOfSynapses = numOfSynapses;
-        this.id = this.hashCode(); // TODO: Use the 2 ArrayLists?
+        this.id = this.hashCode(); 
         
     }
 
@@ -27,7 +27,8 @@ public class Population implements Serializable {
     public boolean equals(Object obj) {
         if (obj == null) { return false; }
         else if (obj.getClass().equals(Integer.class)) {
-        	return this.id == Integer.valueOf((Integer)obj);
+        	Integer compareId = (Integer)obj;
+        	return this.id == compareId.intValue();
         }
         Population compare = (Population) obj;
         return this.id == compare.id; 

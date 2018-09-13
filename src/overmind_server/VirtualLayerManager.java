@@ -19,6 +19,7 @@ package overmind_server;
  */
 
 import java.util.List;
+import java.util.Map;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -221,7 +222,10 @@ public class VirtualLayerManager extends Thread{
 			} 
 			
 			terminal.postsynapticTerminals.add(thisServer);
-			terminal.updateMaps(0, thisServer.id, Terminal.POPULATION_TO_OUTPUT); // 0 is the default population
+			
+			int defaultPopulationId = terminal.populations.values().iterator().next().id; // At this stage only one population is present on the device
+
+			terminal.updateMaps(defaultPopulationId, thisServer.id, Terminal.POPULATION_TO_OUTPUT); // 0 is the default population
 			terminal.serverIP = thisServer.ip;
 			// TODO: Should the number of synapses of the terminal be decreased by terminal.numOfNeurons to account for the random spike generator?
 			
@@ -235,10 +239,15 @@ public class VirtualLayerManager extends Thread{
 			
 			// If lateral connections have been enabled, to get the number of synapses the node started with the number
 			// of neurons must be added to the current number of synapses
-			if (newNode.hasLateralConnections())
+			if (newNode.hasLateralConnections()) {
 				newNode.originalNumOfSynapses = (short)(terminal.numOfSynapses + terminal.numOfNeurons);
-			else 
+
+	            terminal.updateMaps(defaultPopulationId, terminal.id, Terminal.INPUT_TO_POPULATION);
+	            terminal.updateMaps(defaultPopulationId, terminal.id, Terminal.POPULATION_TO_OUTPUT);
+			}
+			else {
 				newNode.originalNumOfSynapses = terminal.numOfSynapses;
+			}
 		
 			// Put the new node in the hashmap using the hashcode of the
 			// InetAddress of the terminal contained in the node as key
@@ -828,9 +837,11 @@ public class VirtualLayerManager extends Thread{
 					
 					// Remove all the references to the disconnected terminal from the arraylists containing the indexes 
 					// of the terminals stimulated by population
-					for (Population population : tmpNode.terminal.populations) {
-						tmpNode.terminal.populationsToOutputs.get(population.id).remove(node.terminal.id);
-					}
+					Iterator<Map.Entry<Integer, Population>> entriesIterator = tmpNode.terminal.populations.entrySet().iterator();
+					while (entriesIterator.hasNext()) {
+						int populationId = entriesIterator.next().getValue().id;
+						tmpNode.terminal.populationsToOutputs.get(populationId).remove(node.terminal.id);
+					}					
 					
 					nodeHasBeenModified = false;
 				}

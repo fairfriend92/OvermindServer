@@ -599,7 +599,7 @@ public class VirtualLayerVisualizer extends Thread{
 			// The node is saved in the hash map
 			nodeIconsTable.put(node.id, newNodeLabel);
 			// The label is added to the appropriate panel
-			this.add(newNodeLabel, new Integer(1), nodeIconsTable.size());			
+			this.add(newNodeLabel, Integer.valueOf(1), nodeIconsTable.size());			
 			connPanel.revalidate();
 			connPanel.repaint();
 						
