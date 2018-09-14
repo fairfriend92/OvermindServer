@@ -66,6 +66,8 @@ public class Node {
 	 * Enable or disable lateral connections depending on the current status
 	 */
 	
+	// TODO: How should we handle this when populations are introduced?
+	
 	public boolean changeLateralConnectionsOption() {		
 		boolean operationSuccesful = false;
 		
@@ -73,7 +75,7 @@ public class Node {
 		if (this.hasLateralConnections()) {
 			terminal.numOfSynapses += terminal.numOfNeurons;
 			terminal.numOfDendrites += terminal.numOfNeurons;
-			terminal.presynapticTerminals.remove(terminal); // TODO: equals method of terminal should also check the nat port
+			terminal.presynapticTerminals.remove(terminal); 
 			terminal.postsynapticTerminals.remove(terminal);
 			operationSuccesful = true;
 		} else if (terminal.numOfSynapses >= terminal.numOfNeurons & 

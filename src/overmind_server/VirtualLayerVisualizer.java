@@ -420,7 +420,7 @@ public class VirtualLayerVisualizer extends Thread{
 	        Point tmpPoint;
 	        int radius;
 	        
-	        // Array used to store sequentially the values of the hasmap
+	        // Array used to store sequentially the values of the hashmap
 	        JLabelVL[] nodeIconsArray = new JLabelVL[nodeIconsTable.size()];
 	        
 	        // Number of iterations of the following for loop
@@ -429,7 +429,7 @@ public class VirtualLayerVisualizer extends Thread{
 	        Node node;
 	        JLabel nodeLabel;
 	        
-	        // If paintAll then we need to iterate over all the values of the hasmap, thus they must be stored into
+	        // If paintAll then we need to iterate over all the values of the hashmap, thus they must be stored into
 	        // an array
 	        if (paintAll) {
 	        	nodeIconsArray = nodeIconsTable.values().toArray(new JLabelVL[nodeIconsTable.size()]);	        	
