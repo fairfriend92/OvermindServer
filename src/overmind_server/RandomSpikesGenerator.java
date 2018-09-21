@@ -13,6 +13,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Random;
 
+import com.example.overmind.Terminal;
+
 public class RandomSpikesGenerator implements Runnable {	
 	
 	private com.example.overmind.Terminal targetTerminal;
@@ -35,41 +37,39 @@ public class RandomSpikesGenerator implements Runnable {
         int[] waitARP = new int[targetTerminal.numOfDendrites];
         short dataBytes = targetTerminal.numOfDendrites % 8 == 0 ? 
         		(short) (targetTerminal.numOfDendrites / 8) : (short) (targetTerminal.numOfDendrites / 8 + 1);
-        
-        com.example.overmind.Terminal targetTerminalOld = new com.example.overmind.Terminal();      
-                                        
-        /**
+                                                
+        /*
          * Procedure to set external stimulus and update Terminal info
          */
-        		
-        // Store locally the info of the target terminal before sending the stimulus 
-        targetTerminalOld.updateTerminal(targetTerminal);
-        
-        // Update the info of the targetTerminal according to the chosen stimulus
-        targetTerminal.numOfDendrites = 0;
         
         // Create a Terminal representing this server
-        com.example.overmind.Terminal server = new com.example.overmind.Terminal();
-        server.postsynapticTerminals = new ArrayList<>();
-        server.presynapticTerminals = new ArrayList<>();
+        com.example.overmind.Terminal server = null;
+        
+        // We can't use the reference contained in VirtualLayerManager since its information are general
+        // and not specific to the target terminal
+        for (Terminal postsynTerminal : targetTerminal.postsynapticTerminals)        	
+        	if (postsynTerminal.id == VirtualLayerManager.thisServer.id)
+        		server = postsynTerminal;        
+        
+        assert server != null;
         
         server.ip = Constants.USE_LOCAL_CONNECTION ? VirtualLayerManager.localIP : VirtualLayerManager.serverIP;        
         server.postsynapticTerminals.add(targetTerminal);
-        server.numOfNeurons = targetTerminalOld.numOfDendrites;
-        server.numOfSynapses = (short)(1024 - targetTerminalOld.numOfNeurons); // TODO: change into 0
-        server.numOfDendrites = 1024; // TODO: change into targetTerminalOld.numOfNeurons
-        server.natPort = Constants.UDP_PORT; 
+        server.numOfNeurons = targetTerminal.numOfDendrites;
+        server.numOfSynapses = (short)(32767 - targetTerminal.numOfNeurons); 
+        
+        // Update the info of the targetTerminal according to the chosen stimulus
+        targetTerminal.numOfDendrites = 0;
         
         // Add the server to the list of presynaptic devices connected to the target device
         targetTerminal.presynapticTerminals.add(server);
         
         VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});    
-        //VirtualLayerManager.syncNodes();                         
                
         InetAddress targetDeviceAddr = null;
         		
         try {
-			targetDeviceAddr = InetAddress.getByName(targetTerminalOld.ip);
+			targetDeviceAddr = InetAddress.getByName(targetTerminal.ip);
 		} catch (UnknownHostException e) {
         	e.printStackTrace();
 		}
@@ -81,14 +81,14 @@ public class RandomSpikesGenerator implements Runnable {
         while (!shutdown) {    
             long startTime = System.nanoTime();            
         	
-        	/**
+        	/*
         	 * Generate spikes randomly, with the only condition that a period of time at least equal to the ARP 
         	 * should pass between two subsequent spikes
         	 */        	
         	
         	byte[] outputSpikes = new byte[dataBytes];       	      	
         	
-        	for (int index = 0; index < targetTerminalOld.numOfDendrites; index++) {  
+        	for (int index = 0; index < server.numOfNeurons; index++) {  
         		
         		int byteIndex = (int) index / 8;
         		
@@ -122,7 +122,7 @@ public class RandomSpikesGenerator implements Runnable {
     		dynamicRefresh = (staticRefresh < rasterGraphRefresh) && parentFrame.waitForLatestPacket ? rasterGraphRefresh : staticRefresh;     	        	        	    
     		    	
             try {
-                DatagramPacket outputSpikesPacket = new DatagramPacket(outputSpikes, dataBytes, targetDeviceAddr, targetTerminalOld.natPort);	
+                DatagramPacket outputSpikesPacket = new DatagramPacket(outputSpikes, dataBytes, targetDeviceAddr, targetTerminal.natPort);	
 				SpikesReceiver.datagramSocket.send(outputSpikesPacket);			
 			} catch (IOException e) {
 				System.out.println(e);
@@ -138,15 +138,9 @@ public class RandomSpikesGenerator implements Runnable {
         
         //datagramSocket.close();
         
-        // In the meantime the stimulated device may have formed new postsynaptic connections which need to be carried on to the old Terminal
-        targetTerminalOld.numOfSynapses = targetTerminal.numOfSynapses;
-        targetTerminalOld.postsynapticTerminals = new ArrayList<>(targetTerminal.postsynapticTerminals);
-        
-        // The update method must be used because we can't reference targetTerminalOld since it is
-        // a local variable that gets destroyed the moment this runnable ends
-        parentFrame.localUpdatedNode.terminal.updateTerminal(targetTerminalOld);
+        targetTerminal.presynapticTerminals.remove(server);
+    	targetTerminal.numOfDendrites +=  server.numOfNeurons;
        
-        // The old node is substituted to the one connected with the server
         if (VirtualLayerManager.nodesTable.containsKey(parentFrame.localUpdatedNode.id)) {
 			VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});
 			//VirtualLayerManager.syncNodes();

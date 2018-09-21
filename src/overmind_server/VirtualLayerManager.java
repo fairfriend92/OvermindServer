@@ -133,7 +133,7 @@ public class VirtualLayerManager extends Thread{
 
         assert inputSocket != null;
                 
-        thisServer.ip = serverIP;
+        thisServer.ip = Constants.USE_LOCAL_CONNECTION ? localIP : serverIP;
         thisServer.natPort = Constants.UDP_PORT;    
         thisServer.id = thisServer.customHashCode();
         
@@ -221,12 +221,16 @@ public class VirtualLayerManager extends Thread{
 	        	e.printStackTrace();
 			} 
 			
+			thisServer.numOfDendrites = terminal.numOfNeurons;
+			thisServer.presynapticTerminals = new ArrayList<>();
+			thisServer.presynapticTerminals.add(terminal);
+			
 			terminal.postsynapticTerminals.add(thisServer);
 			
 			int defaultPopulationId = terminal.populations.values().iterator().next().id; // At this stage only one population is present on the device
 
-			terminal.updateMaps(defaultPopulationId, thisServer.id, Terminal.POPULATION_TO_OUTPUT); // 0 is the default population
-			terminal.serverIP = thisServer.ip;
+			terminal.updateMaps(defaultPopulationId, thisServer.id, Terminal.POPULATION_TO_OUTPUT); 
+			terminal.serverIP = Constants.USE_LOCAL_CONNECTION ? localIP : serverIP;
 			// TODO: Should the number of synapses of the terminal be decreased by terminal.numOfNeurons to account for the random spike generator?
 			
 			/*

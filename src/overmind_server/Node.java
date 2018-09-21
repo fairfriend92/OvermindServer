@@ -5,6 +5,8 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 
+import com.example.overmind.Population;
+
 import overmind_server.TerminalFrame;
 import overmind_server.VirtualLayerManager;
 
@@ -65,9 +67,7 @@ public class Node {
 	/*
 	 * Enable or disable lateral connections depending on the current status
 	 */
-	
-	// TODO: How should we handle this when populations are introduced?
-	
+		
 	public boolean changeLateralConnectionsOption() {		
 		boolean operationSuccesful = false;
 		
@@ -77,6 +77,13 @@ public class Node {
 			terminal.numOfDendrites += terminal.numOfNeurons;
 			terminal.presynapticTerminals.remove(terminal); 
 			terminal.postsynapticTerminals.remove(terminal);
+			
+			// Some of the populations may be connected to the pre or postsynaptic terminals
+			// representing lateral connections and thus must be disconnected 
+			for (Population pop : terminal.populations.values()) {
+				pop.inputIndexes.remove(Integer.valueOf(terminal.id));
+				pop.outputIndexes.remove(Integer.valueOf(terminal.id));
+			}
 			operationSuccesful = true;
 		} else if (terminal.numOfSynapses >= terminal.numOfNeurons & 
 				terminal.numOfDendrites >= terminal.numOfNeurons){

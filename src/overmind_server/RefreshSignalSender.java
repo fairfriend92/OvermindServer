@@ -13,6 +13,8 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
+import com.example.overmind.Terminal;
+
 public class RefreshSignalSender implements Runnable {
 	
 	public final static int UDP_CLIENT_PORT = 4194;	
@@ -32,26 +34,27 @@ public class RefreshSignalSender implements Runnable {
 		targetTerminal = parentFrame.localUpdatedNode.terminal;	
 		
         long staticRefresh = parentFrame.rateMultiplier * 1000000, 
-        		dynamicRefresh = 0, rasterGraphRefresh;          
+        		dynamicRefresh = 0, rasterGraphRefresh;
+     
+        com.example.overmind.Terminal server = null;
         
-        com.example.overmind.Terminal server = new com.example.overmind.Terminal();
-        server.postsynapticTerminals = new ArrayList<>();
-        server.presynapticTerminals = new ArrayList<>();
-        server.ip = Constants.USE_LOCAL_CONNECTION ? VirtualLayerManager.localIP : VirtualLayerManager.serverIP;
+        for (Terminal postsynTerminal : targetTerminal.postsynapticTerminals)        	
+        	if (postsynTerminal.id == VirtualLayerManager.thisServer.id)
+        		server = postsynTerminal;        
         
+        assert server != null;
+        
+        server.ip = Constants.USE_LOCAL_CONNECTION ? VirtualLayerManager.localIP : VirtualLayerManager.serverIP;        
         server.postsynapticTerminals.add(targetTerminal);
-        server.numOfNeurons = 8 < targetTerminal.numOfDendrites ? 8 : targetTerminal.numOfDendrites;
-        server.numOfSynapses = (short)(1024 - targetTerminal.numOfNeurons);
-        server.numOfDendrites = 1024;
-        server.natPort = Constants.UDP_PORT;
-        
+        server.numOfNeurons = 8 < targetTerminal.numOfDendrites ? 8 : targetTerminal.numOfDendrites;;
+        server.numOfSynapses = (short)(32767 - targetTerminal.numOfNeurons); 
+
         targetTerminal.numOfDendrites -= server.numOfNeurons;
         
         targetTerminal.presynapticTerminals.add(server);
         
         VirtualLayerManager.connectNodes(new Node[]{parentFrame.localUpdatedNode});    
-        //VirtualLayerManager.syncNodes();
-                        
+                                
         InetAddress targetDeviceAddr = null;
         		
         try {
