@@ -68,36 +68,106 @@ public class Terminal implements Serializable {
         }
         return hash;
     }
-
-
+    
     /**
-     * Update the maps of the internal connections between input connections and populations
-     * or populations and output connections
-     * @param populationId
-     * @param terminalId
-     * @param FLAG: Final value which tells what kind of operation should be executed
+     * Method that removes a given population from the map and all its references 
+     * from the input and output indexes arrays of the other populations. If, as a result
+     * of this, either the inputs or the outputs lists of any given population are empty,
+     * the method is called recursively to remove this population too
+     * @param pop: The population to be removed
      */
 
-    public void updateMaps(int populationId, int terminalId, int FLAG) {
-        if (FLAG == INPUT_TO_POPULATION) {
-            if (!inputsToPopulations.containsKey(terminalId)) {
-                ArrayList<Integer> arrayList = new ArrayList<>();
-                arrayList.add(populationId);
-                inputsToPopulations.put(terminalId, arrayList);
-            } else {
-                inputsToPopulations.get(terminalId).add(populationId);
-            }
-            this.populations.get(populationId).inputIndexes.add(terminalId);
-        } else {
-            if (!populationsToOutputs.containsKey(populationId)) {
-                ArrayList<Integer> arrayList = new ArrayList<>();
-                arrayList.add(terminalId);
-                populationsToOutputs.put(populationId, arrayList);
-            } else {
-                populationsToOutputs.get(populationId).add(terminalId);
-            }
-            this.populations.get(populationId).outputIndexes.add(terminalId);
-        }
+    public void removePopulation(Population pop) {
+    	// Remove the population from the table
+    	populations.remove(pop.id);
+    	
+    	// Remove all the references to the population from its inputs
+    	for (Integer inputId : pop.inputIndexes) {
+    		Population input = populations.get(inputId);
+    		
+    		// The input might be a terminal, in which case populations.get
+    		// returned null
+    		if (input != null) {
+        		input.outputIndexes.remove(pop.id);
+        		input.numOfSynapses += pop.numOfNeurons;
+    			
+	    		// If the input is not connected to any other postsynaptic
+	    		// population, it should be removed too
+	    		if (input.outputIndexes.size() == 0)
+	    			removePopulation(input);
+    		} else {
+    			
+    			/*
+    			 * If the input is a terminal we must remove the population from the input
+    			 * to population mapping too
+    			 */
+    			
+    			// Remove the population from the mapping
+    			ArrayList<Integer> popsIndexes = inputsToPopulations.get(inputId);
+    			popsIndexes.remove(pop.id);
+    			
+    			// Remove the array of the connections if it is empty
+    			if (popsIndexes.size() == 0)
+    				inputsToPopulations.remove(inputId);
+    		}
+    	}
+    	
+    	// Like before but now for the outputs
+    	for (Integer outputId : pop.outputIndexes) {
+    		Population output = populations.get(outputId);
+    		if (output != null) {
+    			output.numOfDendrites += pop.numOfNeurons;
+        		output.inputIndexes.remove(pop.id);
+	    		if (output.inputIndexes.size() == 0)
+	    			removePopulation(output);
+    		}
+
+    		/*
+    		 * Here the code is different as we merely need to eliminate the list containing
+    		 * all the mappings of the population to be removed to the postsynaptic terminals
+    		 */
+    		
+    		populationsToOutputs.remove(pop.id); // It is not guaranteed that there is such a list but this is not a problem
+    	}
+    }
+
+    /**
+     * This method adds a population, updating the lists of its input and outputs populations as well as 
+     * the mappings between the terminals and the population itself. The method is very similar
+     * to removePopulation
+     * @param pop: The population to be added
+     */
+    
+    public void addPopulation(Population pop) {
+    	populations.put(pop.id, pop);
+    	
+    	for (Integer inputId : pop.inputIndexes) {
+    		Population input = populations.get(inputId);
+    		
+    		if (input != null) {
+    			input.outputIndexes.add(pop.id);
+    		} else {
+    			// There's a chance that the input terminal became childless after some populations were removed,
+    			// therefore create a new array for the mappings if necessary   			
+    			ArrayList<Integer> popsIndexes = inputsToPopulations.get(inputId);
+    			if (popsIndexes == null) 
+    				popsIndexes = new ArrayList<>();
+    			popsIndexes.add(pop.id);
+    			inputsToPopulations.put(inputId, popsIndexes);
+    		}
+    	}
+    	
+    	for (Integer outputId : pop.outputIndexes) {
+    		Population output = populations.get(outputId);
+    		if (output != null) {
+        		output.inputIndexes.add(pop.id);
+    		} else {
+    			ArrayList<Integer> popsIndexes = new ArrayList<>();
+    			popsIndexes.add(outputId);
+    			populationsToOutputs.put(pop.id, popsIndexes);
+    		}
+    		
+    	}
     }
 
     /**
@@ -114,6 +184,9 @@ public class Terminal implements Serializable {
         this.natPort = terminal.natPort;
         this.presynapticTerminals = new ArrayList<>(terminal.presynapticTerminals);
         this.postsynapticTerminals = new ArrayList<>(terminal.postsynapticTerminals);
+    	this.populations = new HashMap<>(terminal.populations);
+    	this.inputsToPopulations = new HashMap<>(terminal.inputsToPopulations);
+    	this.populationsToOutputs = new HashMap<>(terminal.populationsToOutputs);
         this.newWeights = new byte[terminal.newWeights.length];
         this.newWeightsIndexes = new int[terminal.newWeightsIndexes.length];
         this.updateWeightsFlags = new byte[terminal.updateWeightsFlags.length];

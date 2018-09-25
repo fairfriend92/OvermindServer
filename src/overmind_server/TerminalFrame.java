@@ -250,7 +250,8 @@ public class TerminalFrame {
 					ledStatus.setIcon(new ImageIcon(redLed.getScaledInstance(12, 12, Image.SCALE_SMOOTH)));
 								
 				ledStatusChanged = false;
-								
+				ledPanel.repaint();
+				ledPanel.revalidate();								
 			}
 			
 		};
@@ -724,8 +725,7 @@ public class TerminalFrame {
 					    	// If there isn't room in the raster graph the hole graph needs to be refreshed
 					    	rastergraphPanel.xCoordinate = 0;
 					    	tmpXCoordinate = 40;
-					    	rastergraphPanel.repaint();
-					    	
+					    	rastergraphPanel.repaint();					    	
 					    }					
 												
 						lastTime = System.nanoTime();

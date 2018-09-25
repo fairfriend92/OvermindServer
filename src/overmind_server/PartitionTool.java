@@ -12,6 +12,8 @@ import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
@@ -29,9 +31,18 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.JToggleButton;
+import javax.swing.SpinnerNumberModel;
 
 public class PartitionTool extends JFrame implements WindowListener {		
 	 Node selectedNode = null;	
+	 
+	 private static final boolean DRAW_LINES_ON = true, DRAW_LINES_OFF = false;
+	 private static final int ENTRY_SIDE = 64, // Entry is one space of the grid used to display the populations
+				ICON_SIDE = 48,
+				BORDER_SIDE = ENTRY_SIDE - ICON_SIDE, // Border is the space between the side of entry and that of the icon inside of it	
+				ICON_LAYER = 1; 
 	 
 	 private PopulationsPanel populationsPanel = new PopulationsPanel();
 	 private JPanel globalPanel = new JPanel();
@@ -41,10 +52,9 @@ public class PartitionTool extends JFrame implements WindowListener {
 	 private JPanel optionsPanel = new JPanel();
 	 private JPanel addPopPanel = new JPanel();
 	 private JButton addPopulation = new JButton();	 
+	 private JButton commitButton = new JButton();
+	 private JToggleButton paintConnections = new JToggleButton();
 	 private JFrame thisFrame;
-	 
-	 // TODO: We shouldn't have input and output terminals. Instead we should have input and output
-	 // populations
 	 
 	 private boolean addingInputs = false;
 	 private boolean addingOutputs = false;
@@ -61,9 +71,20 @@ public class PartitionTool extends JFrame implements WindowListener {
 		
 	 // Width and depth of the grid
 	 private int maxDepth = 0, maxWidth = 0;
+	 
+	 private short numOfDendrites = 0, numOfSynapses = 0, numOfNeurons = 0;
 
 	 
 	 int open() {
+		 this.setTitle("Partition Tool");
+		 this.setVisible(true);
+		 this.selectedNode = VirtualLayerVisualizer.selectedNode;
+		 
+		 if (selectedNode == null) {
+			 System.out.println("Partition Tool: selectedNode is null when it shouldn't");
+			 return Constants.ERROR;
+		 }
+		 
 		 thisFrame = this;
 		 addingInputs = false;
 		 addingOutputs = false;
@@ -83,6 +104,20 @@ public class PartitionTool extends JFrame implements WindowListener {
 			 e.printStackTrace();
 		 }
 		 
+		 try {
+			Image img = ImageIO.read(getClass().getResource("/icons/icons8-Paint Bucket.png"));
+			paintConnections.setIcon(new ImageIcon(img.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
+		 } catch (IOException e) {
+			e.printStackTrace();
+		 }	
+		 
+		 try {
+			Image img = ImageIO.read(getClass().getResource("/icons/arrow-up.png"));
+			commitButton.setIcon(new ImageIcon(img.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
+		 } catch (IOException e) {
+			e.printStackTrace();
+		 }	
+		 
 		 addPopulation.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {				
@@ -90,16 +125,31 @@ public class PartitionTool extends JFrame implements WindowListener {
 				}			
 			});
 		 
-		 this.setTitle("Partition Tool");
-		 this.setVisible(true);
-		 this.selectedNode = VirtualLayerVisualizer.selectedNode;
+		 paintConnections.setSelected(true);
 		 
-		 if (selectedNode == null) {
-			 System.out.println("Partition Tool: selectedNode is null when it shouldn't");
-			 return Constants.ERROR;
-		 }
+		 paintConnections.addItemListener(new ItemListener() {
+				public void itemStateChanged(ItemEvent ev) {
+					if(ev.getStateChange()==ItemEvent.SELECTED) {
+						populationsPanel.customUpdate(DRAW_LINES_ON);
+					}
+					else if(ev.getStateChange()==ItemEvent.DESELECTED) {
+						populationsPanel.customUpdate(DRAW_LINES_OFF);
+					}
+				}
+			});
+		 		 
+		 commitButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {				
+					VirtualLayerManager.connectNodes(new Node[]{selectedNode});
+					optionsPanel.removeAll();
+					optionsPanel.add(new JLabel("Node sent"));
+					optionsPanel.repaint();
+					optionsPanel.revalidate();
+				}							
+			});		 
 		 
-		 populationsPanel.customUpdate();
+		 populationsPanel.customUpdate(DRAW_LINES_ON);
 		 GridBagConstraints popPanelConstr = new GridBagConstraints();
 		 popPanelConstr.gridx = 0;
 		 popPanelConstr.gridy = 0;
@@ -112,13 +162,15 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 sidePanel.add(infoPanel);
 		 sidePanel.add(optionsPanel);
 		 
-		 commandsPanel.setLayout(new GridLayout(1, 1));
+		 commandsPanel.setLayout(new GridLayout(1, 3));
 		 commandsPanel.setBorder(BorderFactory.createCompoundBorder(
 					BorderFactory.createTitledBorder("Commands"),
 					BorderFactory.createEmptyBorder(5,5,5,5)));
 		 commandsPanel.add(addPopulation);
+		 commandsPanel.add(paintConnections);
+		 commandsPanel.add(commitButton);
 		 		 
-		 infoPanel.setLayout(new GridLayout(3, 1));
+		 infoPanel.setLayout(new GridLayout(4, 1));
 		 infoPanel.setBorder(BorderFactory.createCompoundBorder(
 					BorderFactory.createTitledBorder("Pop/Dev info"),
 					BorderFactory.createEmptyBorder(5,5,5,5)));	
@@ -149,10 +201,30 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 
 		 return Constants.SUCCESS;
 	 }
+	
+	/**
+	 * Method that takes the user through the procedure by which it is possible
+	 * to add a new populations	 
+	 */
 	 
 	private void addPopProcedure() {
 		JButton addInputsButton = new JButton("Add inputs");
 		JButton addOutputsButton = new JButton("Add outputs");
+		JButton addNeuronsButton = new JButton("Add neurons");
+		
+		short neuronsUsed = 0;
+		for (Population pop : selectedNode.terminal.populations.values()) {
+			neuronsUsed += pop.numOfNeurons;
+		}
+		
+		numOfDendrites = numOfSynapses = selectedNode.originalNumOfSynapses;
+		
+		SpinnerNumberModel numberModel = 
+				new SpinnerNumberModel(1, 1, selectedNode.terminal.numOfNeurons - neuronsUsed, 1);
+        JSpinner neuronsSpinner = new JSpinner(numberModel);	
+		
+        // TODO: Display error message
+		if (selectedNode.terminal.numOfNeurons - neuronsUsed == 0) {return;}
 		
 		if (selectedPop != null) {
 			selectedPop.labelIcon.setImage(selectedPop.deselectedImg);
@@ -198,6 +270,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 					components[i].setEnabled(true);
 				
 				optionsPanel.removeAll();
+				
 				if (inputPops.size() == 0 & inputDevs.size() == 0)
 					optionsPanel.add(new JLabel("Select at least 1 input"));
 				else if (outputPops.size() == 0 & outputDevs.size() == 0)
@@ -205,43 +278,57 @@ public class PartitionTool extends JFrame implements WindowListener {
 				else  {
 					optionsPanel.add(new JLabel("Population created"));
 				
-					short numOfDendrites = 0, numOfSynapses = 0, numOfNeurons = 0;
 					Population population = new Population(numOfNeurons, numOfDendrites, numOfSynapses);
 
 					ArrayList<Integer> inputs = new ArrayList<>();
 					ArrayList<Integer> outputs = new ArrayList<>();
+					
 					for (Population inputPop : inputPops) {
 						inputPop.outputIndexes.add(population.id);
-						numOfDendrites += inputPop.numOfNeurons;
 						inputs.add(inputPop.id);
 					}
-					for (Terminal inputDev : inputDevs) {						
-						numOfDendrites += inputDev.numOfNeurons;
+					for (Terminal inputDev : inputDevs) {	
 						inputs.add(inputDev.id);
 					}
 					for (Population outputPop : outputPops) {
 						outputPop.inputIndexes.add(population.id);
-						numOfSynapses += outputPop.numOfNeurons;
 						outputs.add(outputPop.id);
 					}
 					for (Terminal outputDev : outputDevs) {
-						numOfSynapses += outputDev.numOfNeurons;
 						outputs.add(outputDev.id);
 					}
 					
-					population.numOfDendrites = numOfDendrites;
-					population.numOfNeurons = numOfNeurons;
-					population.numOfSynapses = numOfSynapses;
 					population.inputIndexes = inputs;
 					population.outputIndexes = outputs;
-					selectedNode.terminal.populations.put(population.id, population);
-					populationsPanel.customUpdate();
+					
+					selectedNode.terminal.addPopulation(population);
+					populationsPanel.customUpdate(DRAW_LINES_ON);
 				}
 				
 				inputPops.clear();
 				inputDevs.clear();
 				outputPops.clear();
 				outputDevs.clear();
+				
+				numOfNeurons = numOfSynapses = numOfDendrites = 0;
+				
+				thisFrame.revalidate();
+				thisFrame.repaint();
+				thisFrame.pack();
+			}
+		});
+		
+		addNeuronsButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				addingInputs = true;
+				
+				Integer number = (Integer)neuronsSpinner.getValue();	
+				numOfNeurons = (short) number.intValue();
+				
+				optionsPanel.removeAll();
+				optionsPanel.add(new JLabel("Select inputs"));
+				optionsPanel.add(addInputsButton);
 				
 				thisFrame.revalidate();
 				thisFrame.repaint();
@@ -250,13 +337,12 @@ public class PartitionTool extends JFrame implements WindowListener {
 		});
 		
 		optionsPanel.removeAll();
-		optionsPanel.add(new JLabel("Select inputs"));
-		optionsPanel.add(addInputsButton);
+		optionsPanel.add(neuronsSpinner);
+		optionsPanel.add(addNeuronsButton);
 		
 		this.revalidate();
 		this.repaint();
 		this.pack();
-		addingInputs = true;
 	}
 	 
 	void close() {
@@ -301,6 +387,10 @@ public class PartitionTool extends JFrame implements WindowListener {
 	
 	private void buildPopulationsMatrix(HashMap<Integer, Population> populationsMap) {
 		Collection<Population> populations = populationsMap.values();
+		
+		// Reset global depth and width values
+		maxWidth = 0; 
+		maxDepth = selectedNode.terminal.presynapticTerminals.size() == 0 ? 0 : 1;
 		
 		// Before the order of the matrix is known, a HashMap of arrays is used to store the entries.
 		// If a double array were to used immediately, it would need to be updated every time the order 
@@ -402,11 +492,6 @@ public class PartitionTool extends JFrame implements WindowListener {
 		// Array of coupled of points which are the extremes of the segments
 		// that connect the populations
 		ArrayList<int[][]> lineEnds = new ArrayList<>();
-	
-		private static final int ENTRY_SIDE = 64, // Entry is one space of the grid used to display the populations
-				ICON_SIDE = 48,
-				BORDER_SIDE = ENTRY_SIDE - ICON_SIDE, // Border is the space between the side of entry and that of the icon inside of it	
-				ICON_LAYER = 1; 
 				
 		PopulationsPanel () {
 			this.setOpaque(true);
@@ -420,7 +505,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 * belong to the same layer
 		 */
 		
-		void customUpdate () { 
+		void customUpdate (boolean drawLines) { 
 			this.removeAll();
 			lineEnds.clear();	
 			
@@ -486,10 +571,10 @@ public class PartitionTool extends JFrame implements WindowListener {
 						label.setBounds(offset + BORDER_SIDE + j * ENTRY_SIDE, yPos, ICON_SIDE, ICON_SIDE);
 												
 						//label.setText("(" + j + ", " + i + ")");
-						label.setText("" + label.population.id);
+						//label.setText("" + label.population.id);
 						label.setVerticalTextPosition(JLabel.TOP);
 						label.setHorizontalTextPosition(JLabel.CENTER);						
-						System.out.println(label.population.id);
+						//System.out.println(label.population.id);
 						
 						this.add(label, ICON_LAYER);
 												
@@ -500,9 +585,8 @@ public class PartitionTool extends JFrame implements WindowListener {
 						for (Integer index : popMatrix[i][j].inputIndexes) {
 							JLabel inputLabel;
 							
-							// If the current population belongs to the first row, then its inputs must be searched
-							// for among the input terminals						
-							if (i == 1) {
+							// If the input is not among the populations then it must be a terminal					
+							if (!selectedNode.terminal.populations.containsKey(index)) {
 								inputLabel = inputTerminalLabels.get(index);
 							}
 							else 
@@ -513,7 +597,8 @@ public class PartitionTool extends JFrame implements WindowListener {
 							coordinates[0][1] = inputLabel.getY();
 							coordinates[1][0] = label.getX();
 							coordinates[1][1] = label.getY();
-							lineEnds.add(coordinates);
+							if (drawLines)
+								lineEnds.add(coordinates);
 						}
 						/* [End of for (Integer index ...) */
 					 }			
@@ -545,7 +630,8 @@ public class PartitionTool extends JFrame implements WindowListener {
 						coordinates[0][1] = inputLabel.getY();
 						coordinates[1][0] = label.getX();
 						coordinates[1][1] = label.getY();
-						lineEnds.add(coordinates);
+						if (drawLines)
+							lineEnds.add(coordinates);
 					}
 				}
 			}		
@@ -571,6 +657,14 @@ public class PartitionTool extends JFrame implements WindowListener {
 		
 	}
 	
+	/**
+	 * Class that represents the label of a terminal. Whenever the label is clicked 
+	 * different operations may be performed depending on whether a given command had be given
+	 * before, like for instance that of initializing the procedure of adding a population
+	 * @author rodolforocco
+	 *
+	 */
+	
 	private class TerminalLabel extends JLabel implements MouseListener {
 		private ImageIcon labelIcon = new ImageIcon();
 		private Image selectedImg, deselectedImg;
@@ -581,12 +675,12 @@ public class PartitionTool extends JFrame implements WindowListener {
 			try {
 				deselectedImg = ImageIO.read(getClass().getResource("/icons/icons8-New Moon.png"));
 				selectedImg = ImageIO.read(getClass().getResource("/icons/icons8-0 Percents.png"));
-				labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(32, 32, Image.SCALE_SMOOTH)));
+				labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			this.setIcon(labelIcon);
-			this.setText(terminal.ip);
+			//this.setText(terminal.ip);
 			this.setVerticalTextPosition(JLabel.TOP);
 			this.setHorizontalTextPosition(JLabel.CENTER);
 			this.addMouseListener(this);
@@ -594,53 +688,87 @@ public class PartitionTool extends JFrame implements WindowListener {
 
 		@Override
 		public void mouseClicked(MouseEvent e) {
+			// If a population is selected it should be deselected
 			if (selectedPop != null) {
-				selectedPop.labelIcon = (new ImageIcon(selectedPop.deselectedImg.getScaledInstance(32, 32, Image.SCALE_SMOOTH)));
+				selectedPop.labelIcon = 
+						(new ImageIcon(selectedPop.deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 				selectedPop.setIcon(selectedPop.labelIcon);
 				selectedPop.repaint();
 				selectedPop = null;
 			}
 			
+			// If no terminal is selected or a terminal other than that represented by this label is selected...
 			if (selectedTerminal == null || !selectedTerminal.equals(this)) {
+				// Deselect the other terminal that may be currently selected
 				if (selectedTerminal != null) {
-					selectedTerminal.labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(32, 32, Image.SCALE_SMOOTH)));
+					selectedTerminal.labelIcon = 
+							(new ImageIcon(deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 					selectedTerminal.setIcon(selectedTerminal.labelIcon);
 					selectedTerminal.repaint();
 				}
 				
+				// Update the relevant info regarding this terminal
 				selectedTerminal = this;
-				labelIcon = (new ImageIcon(selectedImg.getScaledInstance(32, 32, Image.SCALE_SMOOTH)));
+				labelIcon = (new ImageIcon(selectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 				infoPanel.removeAll();				
 				infoPanel.add(new JLabel("# of neurons " + terminal.numOfNeurons));
 				infoPanel.add(new JLabel("# of dendrites " + terminal.numOfDendrites));
-				infoPanel.add(new JLabel("# of synapses " + terminal.numOfSynapses));				
+				infoPanel.add(new JLabel("# of synapses " + terminal.numOfSynapses));
+				infoPanel.add(new JLabel("ip " + terminal.ip));
 				infoPanel.repaint();
 				infoPanel.revalidate();
 				
+				// If currently inputs are being added to a new population...
 				if (addingInputs) {
-					if (!inputDevs.contains(terminal) & 
-							selectedNode.terminal.presynapticTerminals.contains(terminal)) {
-						inputDevs.add(terminal);						
+					// If the terminal of the selected label has not been added to the inputs before...
+					if (!inputDevs.contains(terminal)) {
+						// If the number of dendrites is sufficient to accommodate this terminal...
+						if (numOfDendrites >= terminal.numOfNeurons) {
+							numOfDendrites -= terminal.numOfNeurons;
+							inputDevs.add(terminal);						
+							JLabel label = (JLabel) optionsPanel.getComponent(0);
+							int numOfInputs = inputPops.size() + inputDevs.size();
+							label.setText("Added " + numOfInputs + " inputs");
+							optionsPanel.repaint();
+							optionsPanel.revalidate(); 
+						} else { // The dendrites are not enough...
+							JLabel label = (JLabel) optionsPanel.getComponent(0);
+							label.setText("Insufficient resources");
+							optionsPanel.repaint();
+							optionsPanel.revalidate();
+						}						
+					} else { // Ther terminal has already been included among the inputs...
 						JLabel label = (JLabel) optionsPanel.getComponent(0);
-						int numOfInputs = inputPops.size() + inputDevs.size();
-						label.setText("Added " + numOfInputs + " inputs");
+						label.setText("Input already selected");
 						optionsPanel.repaint();
 						optionsPanel.revalidate();
 					}
-				} else if (addingOutputs) {
-					if (!outputDevs.contains(terminal) & 
-							selectedNode.terminal.postsynapticTerminals.contains(terminal)) {
-						outputDevs.add(terminal);						
+				} else if (addingOutputs) { // Like before but now the terminal is being added to the outputs of the new pop...
+					if (!outputDevs.contains(terminal)) {
+						if (numOfSynapses >= terminal.numOfNeurons) {
+							numOfSynapses -= terminal.numOfNeurons;
+							outputDevs.add(terminal);						
+							JLabel label = (JLabel) optionsPanel.getComponent(0);
+							int numOfOutputs = outputPops.size() + outputDevs.size();
+							label.setText("Added " + numOfOutputs + " outputs");
+							optionsPanel.repaint();
+							optionsPanel.revalidate();
+						} else {
+							JLabel label = (JLabel) optionsPanel.getComponent(0);
+							label.setText("Insufficient resources");
+							optionsPanel.repaint();
+							optionsPanel.revalidate();
+						}
+					} else {
 						JLabel label = (JLabel) optionsPanel.getComponent(0);
-						int numOfOutputs = outputPops.size() + outputDevs.size();
-						label.setText("Added " + numOfOutputs + " outputs");
+						label.setText("Output already selected");
 						optionsPanel.repaint();
 						optionsPanel.revalidate();
 					}
 				}
-			} else if (selectedTerminal.equals(this)) {
+			} else if (selectedTerminal.equals(this)) { // The label was already selected and thus must be deselected
 				selectedTerminal = null;
-				labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(32, 32, Image.SCALE_SMOOTH)));
+				labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 				infoPanel.removeAll();				
 				infoPanel.add(new JLabel("Select a pop. or a dev."));
 				infoPanel.repaint();
@@ -674,6 +802,14 @@ public class PartitionTool extends JFrame implements WindowListener {
 		
 	}
 	
+	/**
+	 * This class is identical to TerminalLabel with the obvious exception that the label
+	 * represents a Population object rather than a Terminal one. Minor differences follow from
+	 * this, but functionality remains the same
+	 * @author rodolforocco
+	 *
+	 */
+	
 	private class PopulationLabel extends JLabel implements MouseListener {
 		private ImageIcon labelIcon = new ImageIcon();
 		private Image selectedImg, deselectedImg;
@@ -684,7 +820,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 			try {
 				deselectedImg = ImageIO.read(getClass().getResource("/icons/neuron.png"));
 				selectedImg = ImageIO.read(getClass().getResource("/icons/neuron_selected.png"));
-				labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(32, 32, Image.SCALE_SMOOTH)));
+				labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -695,7 +831,8 @@ public class PartitionTool extends JFrame implements WindowListener {
 		@Override
 		public void mouseClicked(MouseEvent e) {
 			if (selectedTerminal != null) {
-				selectedTerminal.labelIcon = (new ImageIcon(selectedTerminal.deselectedImg.getScaledInstance(32, 32, Image.SCALE_SMOOTH)));
+				selectedTerminal.labelIcon = 
+						(new ImageIcon(selectedTerminal.deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 				selectedTerminal.setIcon(selectedTerminal.labelIcon);
 				selectedTerminal.repaint();
 				selectedTerminal = null;
@@ -703,12 +840,12 @@ public class PartitionTool extends JFrame implements WindowListener {
 			
 			if (selectedPop == null || !selectedPop.equals(this)) {	
 				if (selectedPop != null) {
-					selectedPop.labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(32, 32, Image.SCALE_SMOOTH)));
+					selectedPop.labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 					selectedPop.setIcon(selectedPop.labelIcon);
 					selectedPop.repaint();
 				}
 				selectedPop = this;
-				labelIcon = (new ImageIcon(selectedImg.getScaledInstance(32, 32, Image.SCALE_SMOOTH)));
+				labelIcon = (new ImageIcon(selectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 				infoPanel.removeAll();				
 				infoPanel.add(new JLabel("# of neurons " + population.numOfNeurons));
 				infoPanel.add(new JLabel("# of dendrites " + population.numOfDendrites));
@@ -718,26 +855,64 @@ public class PartitionTool extends JFrame implements WindowListener {
 				
 				if (addingInputs) {
 					if (!inputPops.contains(population)) {
-						inputPops.add(population);						
+						
+						/*
+						 * One difference from TerminalLabel is that we must also check that the resource of 
+						 * the input and output populations are sufficient; this condition is always satisfied for
+						 * a terminal (otherwise it wouldn't have been connected to the terminal the new population
+						 * belongs  to) 
+						 */
+						
+						if (numOfDendrites  >= population.numOfNeurons & 
+								population.numOfSynapses >= numOfNeurons) {
+							numOfDendrites -= population.numOfNeurons;
+							population.numOfSynapses -= numOfNeurons;
+							inputPops.add(population);						
+							JLabel label = (JLabel) optionsPanel.getComponent(0);
+							int numOfInputs = inputPops.size() + inputDevs.size();
+							label.setText("Added " + numOfInputs + " inputs");
+							optionsPanel.repaint();
+							optionsPanel.revalidate();
+						} else {
+							JLabel label = (JLabel) optionsPanel.getComponent(0);
+							label.setText("Insufficient resources");
+							optionsPanel.repaint();
+							optionsPanel.revalidate();
+						}
+					} else {
 						JLabel label = (JLabel) optionsPanel.getComponent(0);
-						int numOfInputs = inputPops.size() + inputDevs.size();
-						label.setText("Added " + numOfInputs + " inputs");
+						label.setText("Input already selected");
 						optionsPanel.repaint();
 						optionsPanel.revalidate();
 					}
 				} else if (addingOutputs) {
 					if (!outputPops.contains(population)) {
-						outputPops.add(population);						
+						if (numOfSynapses >= population.numOfNeurons & 
+								population.numOfDendrites >= numOfNeurons) {
+							numOfSynapses -= population.numOfNeurons;
+							population.numOfDendrites -= numOfNeurons;
+							outputPops.add(population);						
+							JLabel label = (JLabel) optionsPanel.getComponent(0);
+							int numOfOutputs = outputPops.size() + outputDevs.size();
+							label.setText("Added " + numOfOutputs + " outputs");
+							optionsPanel.repaint();
+							optionsPanel.revalidate();
+						} else {
+							JLabel label = (JLabel) optionsPanel.getComponent(0);
+							label.setText("Insufficient resources");
+							optionsPanel.repaint();
+							optionsPanel.revalidate();
+						}
+					} else {
 						JLabel label = (JLabel) optionsPanel.getComponent(0);
-						int numOfOutputs = outputPops.size() + outputDevs.size();
-						label.setText("Added " + numOfOutputs + " outputs");
+						label.setText("Output already selected");
 						optionsPanel.repaint();
 						optionsPanel.revalidate();
 					}
 				}
 			} else if (selectedPop.equals(this)) {
 				selectedPop = null;
-				labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(32, 32, Image.SCALE_SMOOTH)));
+				labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 				infoPanel.removeAll();				
 				infoPanel.add(new JLabel("Select a pop. or a dev."));
 				infoPanel.repaint();

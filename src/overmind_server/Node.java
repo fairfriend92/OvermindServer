@@ -83,6 +83,10 @@ public class Node {
 			for (Population pop : terminal.populations.values()) {
 				pop.inputIndexes.remove(Integer.valueOf(terminal.id));
 				pop.outputIndexes.remove(Integer.valueOf(terminal.id));
+				
+				// If the population is now either orphan or childless, it should be removed
+				if (pop.inputIndexes.size() == 0 | pop.outputIndexes.size() == 0)
+					terminal.removePopulation(pop);
 			}
 			operationSuccesful = true;
 		} else if (terminal.numOfSynapses >= terminal.numOfNeurons & 
