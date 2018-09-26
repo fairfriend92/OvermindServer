@@ -59,7 +59,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 	 private boolean addingInputs = false;
 	 private boolean addingOutputs = false;
 	 private PopulationLabel selectedPop = null;
-	 private TerminalLabel selectedTerminal = null;
+	 private TerminalLabel selectedDev = null;
 	 private ArrayList<Population> inputPops = new ArrayList<>(); 
 	 private ArrayList<com.example.overmind.Terminal> inputDevs = new ArrayList<>(); 
 	 private ArrayList<Population> outputPops = new ArrayList<>(); 
@@ -89,7 +89,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 addingInputs = false;
 		 addingOutputs = false;
 		 selectedPop = null;
-		 selectedTerminal = null;
+		 selectedDev = null;
 		 inputPops.clear();
 		 inputDevs.clear();
 		 commandsPanel.setEnabled(true);
@@ -232,10 +232,10 @@ public class PartitionTool extends JFrame implements WindowListener {
 			selectedPop = null;
 		}
 		
-		if (selectedTerminal != null) {
-			selectedTerminal.labelIcon.setImage(selectedTerminal.deselectedImg);
-			selectedTerminal.repaint();
-			selectedTerminal = null;
+		if (selectedDev != null) {
+			selectedDev.labelIcon.setImage(selectedDev.deselectedImg);
+			selectedDev.repaint();
+			selectedDev = null;
 		}
 		
 		commandsPanel.setEnabled(false);
@@ -698,17 +698,17 @@ public class PartitionTool extends JFrame implements WindowListener {
 			}
 			
 			// If no terminal is selected or a terminal other than that represented by this label is selected...
-			if (selectedTerminal == null || !selectedTerminal.equals(this)) {
+			if (selectedDev == null || !selectedDev.equals(this)) {
 				// Deselect the other terminal that may be currently selected
-				if (selectedTerminal != null) {
-					selectedTerminal.labelIcon = 
+				if (selectedDev != null) {
+					selectedDev.labelIcon = 
 							(new ImageIcon(deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
-					selectedTerminal.setIcon(selectedTerminal.labelIcon);
-					selectedTerminal.repaint();
+					selectedDev.setIcon(selectedDev.labelIcon);
+					selectedDev.repaint();
 				}
 				
 				// Update the relevant info regarding this terminal
-				selectedTerminal = this;
+				selectedDev = this;
 				labelIcon = (new ImageIcon(selectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 				infoPanel.removeAll();				
 				infoPanel.add(new JLabel("# of neurons " + terminal.numOfNeurons));
@@ -766,8 +766,8 @@ public class PartitionTool extends JFrame implements WindowListener {
 						optionsPanel.revalidate();
 					}
 				}
-			} else if (selectedTerminal.equals(this)) { // The label was already selected and thus must be deselected
-				selectedTerminal = null;
+			} else if (selectedDev.equals(this)) { // The label was already selected and thus must be deselected
+				selectedDev = null;
 				labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 				infoPanel.removeAll();				
 				infoPanel.add(new JLabel("Select a pop. or a dev."));
@@ -819,23 +819,43 @@ public class PartitionTool extends JFrame implements WindowListener {
 			this.population = population;
 			try {
 				deselectedImg = ImageIO.read(getClass().getResource("/icons/neuron.png"));
-				selectedImg = ImageIO.read(getClass().getResource("/icons/neuron_selected.png"));
-				labelIcon = (new ImageIcon(deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
+				selectedImg = ImageIO.read(getClass().getResource("/icons/neuron_selected.png"));	
+				Image img = null;
+				if (selectedPop != null && selectedPop.population.equals(this.population)) {
+					img = selectedImg;
+					selectedPop = this;
+				} else {
+					img = deselectedImg;
+				}
+				labelIcon = (new ImageIcon(img.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			this.setIcon(labelIcon);
 			this.addMouseListener(this);
 		}
+		
+		/*
+		 * There can't be multiple labels with the same population, therefore the equals method can
+		 * be overridden with one that compares the underlying populations, which is useful when the labels
+		 * are created afresh and their memory addresses are different from the ones they had before
+		 */
+		
+		@Override 
+		public boolean equals(Object obj) {
+			if (obj == null || !obj.getClass().equals(this.getClass())) {return false;}
+			PopulationLabel compare = (PopulationLabel) obj;
+			return this.population.equals(compare.population);
+		}
 
 		@Override
 		public void mouseClicked(MouseEvent e) {
-			if (selectedTerminal != null) {
-				selectedTerminal.labelIcon = 
-						(new ImageIcon(selectedTerminal.deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
-				selectedTerminal.setIcon(selectedTerminal.labelIcon);
-				selectedTerminal.repaint();
-				selectedTerminal = null;
+			if (selectedDev != null) {
+				selectedDev.labelIcon = 
+						(new ImageIcon(selectedDev.deselectedImg.getScaledInstance(ICON_SIDE, ICON_SIDE, Image.SCALE_SMOOTH)));
+				selectedDev.setIcon(selectedDev.labelIcon);
+				selectedDev.repaint();
+				selectedDev = null;
 			}
 			
 			if (selectedPop == null || !selectedPop.equals(this)) {	
