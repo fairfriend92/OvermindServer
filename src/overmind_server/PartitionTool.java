@@ -67,7 +67,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 	 
 	 // Matrix used to store the population so that they can be accessed 
 	 // directly based on their positions on the grid
-	 private Population[][] popMatrix;
+	 private Population[][] popsMatrix;
 		
 	 // Width and depth of the grid
 	 private int maxDepth = 0, maxWidth = 0;
@@ -204,7 +204,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 	
 	/**
 	 * Method that takes the user through the procedure by which it is possible
-	 * to add a new populations	 
+	 * to add a new population	 
 	 */
 	 
 	private void addPopProcedure() {
@@ -212,13 +212,22 @@ public class PartitionTool extends JFrame implements WindowListener {
 		JButton addOutputsButton = new JButton("Add outputs");
 		JButton addNeuronsButton = new JButton("Add neurons");
 		
+		/*
+		 * The number of neurons that a population may have should not be greater than
+		 * the number of neurons that the terminal can have in total. Additionally, if other
+		 * populations already exist, their neurons should be accounted for
+		 */
+		
 		short neuronsUsed = 0;
 		for (Population pop : selectedNode.terminal.populations.values()) {
 			neuronsUsed += pop.numOfNeurons;
 		}
 		
+		// The population can only have a number of connections equal to that 
+		// of the terminal itself
 		numOfDendrites = numOfSynapses = selectedNode.originalNumOfSynapses;
 		
+		// Create a spinner to choose the number of neurons given the aforementioned constraint
 		SpinnerNumberModel numberModel = 
 				new SpinnerNumberModel(1, 1, selectedNode.terminal.numOfNeurons - neuronsUsed, 1);
         JSpinner neuronsSpinner = new JSpinner(numberModel);	
@@ -238,16 +247,44 @@ public class PartitionTool extends JFrame implements WindowListener {
 			selectedDev = null;
 		}
 		
+		/*
+		 * During the procedure the user may not choose another command,
+		 * hence the respective panel should be disabled
+		 */
+		
 		commandsPanel.setEnabled(false);
 		Component[] components = commandsPanel.getComponents();
 		for (int i = 0; i < components.length; i++)
 			components[i].setEnabled(false);
 		
+		// Adding neurons is the first option that the user is given		
+		addNeuronsButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// If this button has been pressed it's time to move on to the selection of 
+				// the inputs
+				addingInputs = true;
+				
+				Integer number = (Integer)neuronsSpinner.getValue();	
+				numOfNeurons = (short) number.intValue();
+				
+				optionsPanel.removeAll();
+				optionsPanel.add(new JLabel("Select inputs"));
+				optionsPanel.add(addInputsButton);
+				
+				thisFrame.revalidate();
+				thisFrame.repaint();
+				thisFrame.pack();
+			}			
+		});
+		
+		// As a second step the user must selected which populations and which terminals
+		// should act as inputs of the new population
 		addInputsButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {	
-				addingInputs = false;
-				addingOutputs = true;
+				addingInputs = false; // Once the button is pressed we are not selecting inputs anymore
+				addingOutputs = true; // Instead we've moved on to selecting the outputs
 				
 				optionsPanel.removeAll();
 				optionsPanel.add(new JLabel("Select outputs"));
@@ -259,19 +296,29 @@ public class PartitionTool extends JFrame implements WindowListener {
 			}			
 		});
 		
+		// The last step asks the user to select the pop/dev that should act as outputs
 		addOutputsButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				addingOutputs = false;
 				
+				// Now that the procedure has completed the commands panel may be 
+				// enabled once again
 				commandsPanel.setEnabled(true);
 				Component[] components = commandsPanel.getComponents();
 				for (int i = 0; i < components.length; i++)
 					components[i].setEnabled(true);
 				
+				// The options panel is cleared
 				optionsPanel.removeAll();
 				
-				if (inputPops.size() == 0 & inputDevs.size() == 0)
+				/*
+				 * Display an appropriate error message in the options panel if the 
+				 * user has not selected either an input or an output, otherwise
+				 * proceed to the creation of the population
+				 */
+				
+				if (inputPops.size() == 0 & inputDevs.size() == 0) 
 					optionsPanel.add(new JLabel("Select at least 1 input"));
 				else if (outputPops.size() == 0 & outputDevs.size() == 0)
 					optionsPanel.add(new JLabel("Select at least 1 output"));
@@ -283,6 +330,8 @@ public class PartitionTool extends JFrame implements WindowListener {
 					ArrayList<Integer> inputs = new ArrayList<>();
 					ArrayList<Integer> outputs = new ArrayList<>();
 					
+					// Add to the ArrayLists of the new populations the IDs of the inputs
+					// and the outputs
 					for (Population inputPop : inputPops) {
 						inputPop.outputIndexes.add(population.id);
 						inputs.add(inputPop.id);
@@ -302,7 +351,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 					population.outputIndexes = outputs;
 					
 					selectedNode.terminal.addPopulation(population);
-					populationsPanel.customUpdate(DRAW_LINES_ON);
+					populationsPanel.customUpdate(DRAW_LINES_ON); // This call will automatically trigger the update of the pops matrix
 				}
 				
 				inputPops.clear();
@@ -318,25 +367,9 @@ public class PartitionTool extends JFrame implements WindowListener {
 			}
 		});
 		
-		addNeuronsButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				addingInputs = true;
-				
-				Integer number = (Integer)neuronsSpinner.getValue();	
-				numOfNeurons = (short) number.intValue();
-				
-				optionsPanel.removeAll();
-				optionsPanel.add(new JLabel("Select inputs"));
-				optionsPanel.add(addInputsButton);
-				
-				thisFrame.revalidate();
-				thisFrame.repaint();
-				thisFrame.pack();
-			}			
-		});
-		
 		optionsPanel.removeAll();
+		
+		// The user is first given the option of choosing how many neurons the population should have
 		optionsPanel.add(neuronsSpinner);
 		optionsPanel.add(addNeuronsButton);
 		
@@ -405,11 +438,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 */
 					
 		for (Population population : populations) {
-			int depthUpwards = ExploreUpwards(population, 0);
-			
-			// Layer 0 in unique to the presynaptic terminals
-			//depthUpwards = depthUpwards == 0 ? 1 : depthUpwards;
-			
+			int depthUpwards = ExploreUpwards(population, 0);		
 			int depthDownwards = ExploreDownwards(population, 0);
 			int depth = depthUpwards + depthDownwards;
 			
@@ -426,19 +455,20 @@ public class PartitionTool extends JFrame implements WindowListener {
 		}
 		
 		// Create the matrix
-		popMatrix = new Population[maxDepth][];
+		popsMatrix = new Population[maxDepth][];
 		for(int i = 0; i < maxDepth; i++) {
 			// Each array represents a different row of populations
 			ArrayList<Population> row = matrixElements.get(Integer.valueOf(i));
 			
 			if (row != null) {
-				popMatrix[i] = new Population[row.size()];
+				popsMatrix[i] = new Population[row.size()];
 				for (int j = 0; j < row.size(); j++) {
-					popMatrix[i][j] = row.get(j);
+					popsMatrix[i][j] = row.get(j);
 				}
 			}
-		}			
-		
+		}		
+
+		selectedNode.terminal.popsMatrix = popsMatrix;		
 	}
 	
 	/**
@@ -558,8 +588,8 @@ public class PartitionTool extends JFrame implements WindowListener {
 			for (int i = 0; i < maxDepth; i++) { 			
 				int yPos =	BORDER_SIDE + i * ENTRY_SIDE;					
 
-				if (popMatrix[i] != null) {				
-					int rowWidth = popMatrix[i].length;		
+				if (popsMatrix[i] != null) {				
+					int rowWidth = popsMatrix[i].length;		
 										
 					// Iterate over the populations of a given layer		
 					for (int j = 0; j < rowWidth; j++) {
@@ -567,7 +597,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 						// do so, calculate the offset from the boder
 						offset = (width - rowWidth * ENTRY_SIDE) / 2;				
 						
-						PopulationLabel label = new PopulationLabel(popMatrix[i][j]);					
+						PopulationLabel label = new PopulationLabel(popsMatrix[i][j]);					
 						label.setBounds(offset + BORDER_SIDE + j * ENTRY_SIDE, yPos, ICON_SIDE, ICON_SIDE);
 												
 						//label.setText("(" + j + ", " + i + ")");
@@ -582,7 +612,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 						
 						// Store the starting and the ending points of the segments that connect the current node to
 						// its inputs
-						for (Integer index : popMatrix[i][j].inputIndexes) {
+						for (Integer index : popsMatrix[i][j].inputIndexes) {
 							JLabel inputLabel;
 							
 							// If the input is not among the populations then it must be a terminal					

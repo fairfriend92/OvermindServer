@@ -1014,15 +1014,15 @@ public class VirtualLayerManager extends Thread{
 						
 						// A dummy terminal is required to send the updated info to the physical device
 						com.example.overmind.Terminal tmpTerminal = new com.example.overmind.Terminal();
-						
+												
 						// The terminal acting as holder of the new info is updated
 						tmpTerminal.updateTerminal(nodeToSync.terminal);
-																			
+																		
 						// Write the info in the steam					
 						nodeToSync.writeObjectIntoStream(tmpTerminal);	
-	
+							
 						System.out.println("Terminal with ip " + nodeToSync.terminal.ip + " has been updated");
-						
+												
 						// Reset the collection of weights that have not been updated
 						nodeToSync.terminal.newWeights = new byte[0];
 						nodeToSync.terminal.newWeightsIndexes = new int[0];
@@ -1037,7 +1037,7 @@ public class VirtualLayerManager extends Thread{
 								
 				}			
 																
-			}
+			}		
 			
 			unsyncNodes.clear();
 			
