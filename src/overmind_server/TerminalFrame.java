@@ -570,7 +570,7 @@ public class TerminalFrame {
 			if (presynapticTerminal.ip.equals(serverIP) & !isThisTerminal) {
 				if (presynapticTerminal.natPort == Constants.UDP_PORT)
 					preConnListModel.addElement("Presynaptic device # " + i + " is this server");
-				else if (VirtualLayerManager.nodesTable.containsKey((presynapticTerminal.ip + "/" + presynapticTerminal.natPort).hashCode())) 
+				else if (VirtualLayerManager.nodesTable.containsKey(VirtualLayerManager.physical2VirtualID.get(presynapticTerminal.id))) 
 					preConnListModel.addElement("Presynaptic device # " + i + " is under local connection");
 				else 						
 					preConnListModel.addElement("Presynaptic device # " + i + " is an app");
@@ -596,7 +596,7 @@ public class TerminalFrame {
 			if (postsynapticTerminal.ip.equals(serverIP) & !isThisTerminal) {
 				if (postsynapticTerminal.natPort == Constants.UDP_PORT)
 					postConnListModel.addElement("Postsynaptic device # " + i + " is this server");
-				else if (VirtualLayerManager.nodesTable.containsKey((postsynapticTerminal.ip + "/" + postsynapticTerminal.natPort).hashCode()))
+				else if (VirtualLayerManager.nodesTable.containsKey(VirtualLayerManager.physical2VirtualID.get(postsynapticTerminal.id)))
 					postConnListModel.addElement("Postsynaptic device # " + i + " is under local connection");
 				else 
 					postConnListModel.addElement("Postsynaptic device # " + i + " is an app");

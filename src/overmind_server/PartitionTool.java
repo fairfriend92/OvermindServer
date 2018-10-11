@@ -58,6 +58,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 	 
 	 private boolean addingInputs = false;
 	 private boolean addingOutputs = false;
+	 private boolean firstTimeOpened = true;
 	 private PopulationLabel selectedPop = null;
 	 private TerminalLabel selectedDev = null;
 	 private ArrayList<Population> inputPops = new ArrayList<>(); 
@@ -73,10 +74,8 @@ public class PartitionTool extends JFrame implements WindowListener {
 	 private int maxDepth = 0, maxWidth = 0;
 	 
 	 private short numOfDendrites = 0, numOfSynapses = 0, numOfNeurons = 0;
-
 	 
-	 int open() {
-		 this.setTitle("Partition Tool");
+	 int open() {		 
 		 this.setVisible(true);
 		 this.selectedNode = VirtualLayerVisualizer.selectedNode;
 		 
@@ -85,6 +84,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 			 return Constants.ERROR;
 		 }
 		 
+		 this.setTitle("Partition Tool");
 		 thisFrame = this;
 		 addingInputs = false;
 		 addingOutputs = false;
@@ -96,6 +96,22 @@ public class PartitionTool extends JFrame implements WindowListener {
 			Component[] components = commandsPanel.getComponents();
 			for (int i = 0; i < components.length; i++)
 				components[i].setEnabled(true);
+			 
+		 paintConnections.setSelected(true);
+		 
+		 if (firstTimeOpened) {createComponents();}
+		 
+		 populationsPanel.customUpdate(DRAW_LINES_ON);
+		 
+		 this.revalidate();
+		 this.repaint();
+		 this.pack();
+		 
+		 return Constants.SUCCESS;
+	 }
+	 
+	 void createComponents() {
+		 firstTimeOpened = false;
 		 
 		 try {
 			 Image img = ImageIO.read(getClass().getResource("/icons/add.png"));
@@ -125,8 +141,6 @@ public class PartitionTool extends JFrame implements WindowListener {
 				}			
 			});
 		 
-		 paintConnections.setSelected(true);
-		 
 		 paintConnections.addItemListener(new ItemListener() {
 				public void itemStateChanged(ItemEvent ev) {
 					if(ev.getStateChange()==ItemEvent.SELECTED) {
@@ -149,7 +163,6 @@ public class PartitionTool extends JFrame implements WindowListener {
 				}							
 			});		 
 		 
-		 populationsPanel.customUpdate(DRAW_LINES_ON);
 		 GridBagConstraints popPanelConstr = new GridBagConstraints();
 		 popPanelConstr.gridx = 0;
 		 popPanelConstr.gridy = 0;
@@ -183,8 +196,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 					BorderFactory.createEmptyBorder(5,5,5,5)));	
 		 optionsPanel.removeAll();
 		 optionsPanel.add(new JLabel("Select a command"));
-		 
-		 
+		 		 
 		 addPopPanel.setLayout(new GridBagLayout());
 			 
 		 globalPanel.setLayout(new GridBagLayout());
@@ -195,11 +207,6 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		 this.setContentPane(globalPanel);
 		 //this.setResizable(false);
-		 this.revalidate();
-		 this.repaint();
-		 this.pack();
-		 
-		 return Constants.SUCCESS;
 	 }
 	
 	/**
@@ -326,7 +333,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 					optionsPanel.add(new JLabel("Population created"));
 				
 					Population population = new Population(numOfNeurons, numOfDendrites, numOfSynapses);
-
+				
 					ArrayList<Integer> inputs = new ArrayList<>();
 					ArrayList<Integer> outputs = new ArrayList<>();
 					
@@ -344,7 +351,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 						outputs.add(outputPop.id);
 					}
 					for (Terminal outputDev : outputDevs) {
-						outputs.add(outputDev.id);
+						outputs.add(outputDev.id);		
 					}
 					
 					population.inputIndexes = inputs;
@@ -415,15 +422,25 @@ public class PartitionTool extends JFrame implements WindowListener {
 	 * This method is used to build the matrix which contains the populations from the respective hash map. 
 	 * The matrix structure is useful to organize the populations in a grid that can be visualized, whereas
 	 * the hash map is useful for accessing the populations using their IDs
+	 * 
 	 * @param populationsMap: The HashMap containing the populations. Their IDs are used as keys
+	 * @param terminal This is an optional parameter. If it's different from null the matrix of this terminal is updated
+	 * 		  instead of that of the selected terminal
 	 */
 	
-	private void buildPopulationsMatrix(HashMap<Integer, Population> populationsMap) {
+	void buildPopulationsMatrix(HashMap<Integer, Population> populationsMap, Terminal terminal) {
 		Collection<Population> populations = populationsMap.values();
 		
+		// Values which are local to this instance of PartitionTool should be updated only if the populations
+		// come from the selected terminal
+		boolean updateLocalValues = terminal == null || 
+				(selectedNode != null && selectedNode.terminal.id == terminal.id);		
+		
 		// Reset global depth and width values
-		maxWidth = 0; 
-		maxDepth = selectedNode.terminal.presynapticTerminals.size() == 0 ? 0 : 1;
+		if (updateLocalValues) {
+			maxWidth = 0; 
+			maxDepth = 0;
+		}
 		
 		// Before the order of the matrix is known, a HashMap of arrays is used to store the entries.
 		// If a double array were to used immediately, it would need to be updated every time the order 
@@ -438,7 +455,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 */
 					
 		for (Population population : populations) {
-			int depthUpwards = ExploreUpwards(population, 0);		
+			int depthUpwards = ExploreUpwards(population, 0) - 1;		
 			int depthDownwards = ExploreDownwards(population, 0);
 			int depth = depthUpwards + depthDownwards;
 			
@@ -450,8 +467,10 @@ public class PartitionTool extends JFrame implements WindowListener {
 			int width = matrixElements.get(key).size();
 			
 			// Check if the order of the matrix should be increased based on the new info
-			maxDepth = depth > maxDepth ? depth : maxDepth;
-			maxWidth = width > maxWidth ? width : maxWidth;
+			if (updateLocalValues) {
+				maxDepth = depth > maxDepth ? depth : maxDepth;
+				maxWidth = width > maxWidth ? width : maxWidth;
+			}
 		}
 		
 		// Create the matrix
@@ -460,15 +479,23 @@ public class PartitionTool extends JFrame implements WindowListener {
 			// Each array represents a different row of populations
 			ArrayList<Population> row = matrixElements.get(Integer.valueOf(i));
 			
-			if (row != null) {
-				popsMatrix[i] = new Population[row.size()];
-				for (int j = 0; j < row.size(); j++) {
-					popsMatrix[i][j] = row.get(j);
-				}
-			}
+			popsMatrix[i] = new Population[row.size()];
+			for (int j = 0; j < row.size(); j++) {
+				popsMatrix[i][j] = row.get(j);
+			}			
 		}		
 
-		selectedNode.terminal.popsMatrix = popsMatrix;		
+		if (updateLocalValues) {
+			selectedNode.terminal.popsMatrix = popsMatrix;	
+			
+			// TODO: This might not be necessary
+			if (terminal != null) {
+				terminal.popsMatrix = popsMatrix;
+				selectedNode.terminal.updateTerminal(terminal);
+				} 
+		} else {
+			terminal.popsMatrix = popsMatrix;
+		}
 	}
 	
 	/**
@@ -539,7 +566,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 			this.removeAll();
 			lineEnds.clear();	
 			
-			buildPopulationsMatrix(selectedNode.terminal.populations);
+			buildPopulationsMatrix(selectedNode.terminal.populations, null);
 			
 			/*
 			 * Pre-compute the max width of all the rows. There's the chance that the width
@@ -555,7 +582,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 			width *= ENTRY_SIDE;
 
 			this.setPreferredSize(new Dimension(width + BORDER_SIDE, 
-					BORDER_SIDE + ENTRY_SIDE * (maxDepth + 1))); 			
+					BORDER_SIDE + ENTRY_SIDE * (maxDepth + 2))); // The + 2 accounts for the input and the output layers	
 			
 			/*
 			 * Display the presynaptic terminals
@@ -586,7 +613,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 			
 			// Iterate over the layers
 			for (int i = 0; i < maxDepth; i++) { 			
-				int yPos =	BORDER_SIDE + i * ENTRY_SIDE;					
+				int yPos =	BORDER_SIDE + (i + 1) * ENTRY_SIDE;					
 
 				if (popsMatrix[i] != null) {				
 					int rowWidth = popsMatrix[i].length;		
@@ -649,7 +676,10 @@ public class PartitionTool extends JFrame implements WindowListener {
 			for (Terminal postsynTerminal : selectedNode.terminal.postsynapticTerminals) {
 				TerminalLabel label = new TerminalLabel(postsynTerminal);
 				int i = selectedNode.terminal.postsynapticTerminals.indexOf(postsynTerminal);
-				label.setBounds(offset + BORDER_SIDE + i * ENTRY_SIDE, BORDER_SIDE + maxDepth * ENTRY_SIDE, ICON_SIDE, ICON_SIDE);
+				label.setBounds(offset + BORDER_SIDE + i * ENTRY_SIDE, 
+						BORDER_SIDE + (maxDepth + 1) * ENTRY_SIDE, // The + 1 accounts for the input layer
+						ICON_SIDE, 
+						ICON_SIDE);
 				label.setFont(font);
 				this.add(label, ICON_LAYER);				
 				

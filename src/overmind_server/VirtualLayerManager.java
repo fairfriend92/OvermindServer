@@ -959,23 +959,23 @@ public class VirtualLayerManager extends Thread{
 		
 		@Override
 		public Boolean call() {
-		
+				
 			/*
 			 * Sync the GUI with the updated info about the terminals 
 			 */	
 			
-			if (!unsyncNodes.isEmpty()) {		
+			if (!unsyncNodes.isEmpty()) {						
 				
 				// TODO: Use iterator instead of for loop. 				
 				
 				// Iterate over all the nodes that need to be sync
-				for (int i = 0; i < unsyncNodes.size(); i++) {		
-					
+				for (int i = 0; i < unsyncNodes.size(); i++) {	
+										
 					Node nodeToSync = unsyncNodes.get(i);
 																					
 					// Branch depending on whether the terminal is new or not
 					if (nodeToSync.terminalFrame.localUpdatedNode == null 
-							&& !nodeToSync.isShadowNode) {		
+							&& !nodeToSync.isShadowNode) {								
 						
 						VLVisualizer.layeredPaneVL.addNode(nodeToSync);
 						
@@ -991,12 +991,12 @@ public class VirtualLayerManager extends Thread{
 						numberOfSyncNodes++;																			
 						
 					} else if(!nodeToSync.isShadowNode) {  // TODO: Revise terminology used here to make things clearer. 
-						
+												
 						nodeToSync.terminalFrame.update(nodeToSync); 
 						
 						
 					} else if (nodeToSync.isShadowNode) {
-						
+												
 						nodeToSync.isShadowNode = false;
 						VLVisualizer.layeredPaneVL.addNode(nodeToSync);
 						nodeToSync.terminalFrame.mainPanel.removeAll();
@@ -1011,7 +1011,7 @@ public class VirtualLayerManager extends Thread{
 					 */
 						
 					try {
-						
+												
 						// A dummy terminal is required to send the updated info to the physical device
 						com.example.overmind.Terminal tmpTerminal = new com.example.overmind.Terminal();
 												

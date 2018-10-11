@@ -62,7 +62,7 @@ public class VirtualLayerVisualizer extends Thread{
 	JToggleButton cutLink = new JToggleButton();
 	JToggleButton createLink = new JToggleButton();	
 	
-	PartitionTool partTool = new PartitionTool();
+	static PartitionTool partTool = new PartitionTool();
 	
 	@Override
 	public void run () {

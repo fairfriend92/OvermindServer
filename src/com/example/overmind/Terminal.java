@@ -21,6 +21,8 @@ public class Terminal implements Serializable {
     
     // Matrix that organizes populations based on their connections
     public Population[][] popsMatrix = null;
+    
+    // TODO: The following two maps are not strictly necessary
 
     // Map that connects a presynpatic terminal to the populations it stimulates that live on this terminal
     public HashMap<Integer, ArrayList<Integer>> inputsToPopulations = new HashMap<>();
@@ -70,6 +72,30 @@ public class Terminal implements Serializable {
             hash *= 16777619;
         }
         return hash;
+    }
+    
+    /**
+     * This method thoroughly remove any reference to a terminal from this object. More
+     * specifically it updates the mapping from input terminals to populations a from 
+     * populations to output terminals
+     *  
+     * @param terminal The terminal to be removed
+     */
+    
+    public void removeTerminal(Terminal terminal) {
+    	presynapticTerminals.remove(terminal);
+    	
+    	ArrayList<Integer> terminalToPops = inputsToPopulations.get(Integer.valueOf(terminal.id));
+    	if (terminalToPops != null) {
+	    	for (Integer popId : terminalToPops) {
+	    		Population pop = populations.get(popId);    		
+	    		pop.inputIndexes.remove(Integer.valueOf(terminal.id));    		
+	    		if (pop.inputIndexes.size() == 0) {populations.remove(popId);}
+	    	}
+	    	inputsToPopulations.remove(Integer.valueOf(terminal.id));
+    	}
+    	
+    	// TODO: Remove indexes in case terminal is a postsynapticTerminal
     }
     
     /**
@@ -200,10 +226,8 @@ public class Terminal implements Serializable {
         if (terminal.popsMatrix != null) {
         	this.popsMatrix = new Population[terminal.popsMatrix.length][];
         	for (int i = 0; i < terminal.popsMatrix.length; i++) {
-        		if (popsMatrix[i] != null) {
-	        		this.popsMatrix[i] = new Population[terminal.popsMatrix[i].length];
-	        		System.arraycopy(terminal.popsMatrix[i], 0, this.popsMatrix[i], 0, terminal.popsMatrix[i].length);
-        		}
+        		this.popsMatrix[i] = new Population[terminal.popsMatrix[i].length];
+        		System.arraycopy(terminal.popsMatrix[i], 0, this.popsMatrix[i], 0, terminal.popsMatrix[i].length);        		
         	}
         }        
     }
