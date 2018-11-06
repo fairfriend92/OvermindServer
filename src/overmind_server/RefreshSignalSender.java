@@ -44,7 +44,9 @@ public class RefreshSignalSender implements Runnable {
         
         assert server != null;
         
-        server.ip = Constants.USE_LOCAL_CONNECTION ? VirtualLayerManager.localIP : VirtualLayerManager.serverIP;        
+        server.ip = Constants.USE_LOCAL_CONNECTION ? VirtualLayerManager.localIP : VirtualLayerManager.serverIP;    
+        server.natPort = Constants.UDP_PORT;
+        server.id = server.customHashCode();
         server.postsynapticTerminals.add(targetTerminal);
         server.numOfNeurons = 8 < targetTerminal.numOfDendrites ? 8 : targetTerminal.numOfDendrites;;
         server.numOfSynapses = (short)(32767 - targetTerminal.numOfNeurons); 

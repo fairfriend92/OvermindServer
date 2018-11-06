@@ -11,7 +11,7 @@ import java.util.ArrayList;
 
 public class Population implements Serializable {
     public short numOfNeurons, numOfDendrites, numOfSynapses;
-    public int id;
+    public int id, layer;
     public ArrayList<Integer> inputIndexes = new ArrayList<>();
     public ArrayList<Integer> outputIndexes = new ArrayList<>();
 
@@ -20,6 +20,7 @@ public class Population implements Serializable {
         this.numOfDendrites = numOfDendrites;
         this.numOfSynapses = numOfSynapses;
         this.id = this.hashCode(); 
+        layer = 0;
         
     }
 

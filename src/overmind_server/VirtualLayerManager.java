@@ -82,7 +82,7 @@ public class VirtualLayerManager extends Thread{
 	private ObjectInputStream input = null;
 	private ObjectOutputStream output = null;
 	
-    static com.example.overmind.Terminal thisServer = new com.example.overmind.Terminal();
+    public static com.example.overmind.Terminal thisServer = new com.example.overmind.Terminal();
 			
 	@Override
 	public void run() {
@@ -834,9 +834,9 @@ public class VirtualLayerManager extends Thread{
 					
 					// Remove all the references to the disconnected terminal from the arraylists containing the indexes 
 					// of the terminals stimulated by population
-					Iterator<Map.Entry<Integer, Population>> entriesIterator = tmpNode.terminal.populations.entrySet().iterator();
+					Iterator<Population> entriesIterator = tmpNode.terminal.populations.iterator();
 					while (entriesIterator.hasNext()) {
-						int populationId = entriesIterator.next().getValue().id;
+						int populationId = entriesIterator.next().id;
 						tmpNode.terminal.populationsToOutputs.get(populationId).remove(node.terminal.id);
 					}					
 					
@@ -963,9 +963,9 @@ public class VirtualLayerManager extends Thread{
 			/*
 			 * Sync the GUI with the updated info about the terminals 
 			 */	
-			
-			if (!unsyncNodes.isEmpty()) {						
-				
+						
+			if (!unsyncNodes.isEmpty()) {					
+								
 				// TODO: Use iterator instead of for loop. 				
 				
 				// Iterate over all the nodes that need to be sync
@@ -992,8 +992,7 @@ public class VirtualLayerManager extends Thread{
 						
 					} else if(!nodeToSync.isShadowNode) {  // TODO: Revise terminology used here to make things clearer. 
 												
-						nodeToSync.terminalFrame.update(nodeToSync); 
-						
+						nodeToSync.terminalFrame.update(nodeToSync); 						
 						
 					} else if (nodeToSync.isShadowNode) {
 												
@@ -1017,7 +1016,7 @@ public class VirtualLayerManager extends Thread{
 												
 						// The terminal acting as holder of the new info is updated
 						tmpTerminal.updateTerminal(nodeToSync.terminal);
-																		
+																					
 						// Write the info in the steam					
 						nodeToSync.writeObjectIntoStream(tmpTerminal);	
 							

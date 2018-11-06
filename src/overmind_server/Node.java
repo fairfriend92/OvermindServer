@@ -80,7 +80,7 @@ public class Node {
 			
 			// Some of the populations may be connected to the pre or postsynaptic terminals
 			// representing lateral connections and thus must be disconnected 
-			for (Population pop : terminal.populations.values()) {
+			for (Population pop : terminal.populations) {
 				pop.inputIndexes.remove(Integer.valueOf(terminal.id));
 				pop.outputIndexes.remove(Integer.valueOf(terminal.id));
 				

@@ -100,6 +100,10 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 paintConnections.setSelected(true);
 		 
 		 if (firstTimeOpened) {createComponents();}
+		 else {
+			 optionsPanel.removeAll();
+			 optionsPanel.add(new JLabel("Select a command"));
+		 }
 		 
 		 populationsPanel.customUpdate(DRAW_LINES_ON);
 		 
@@ -190,7 +194,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 infoPanel.removeAll();
 		 infoPanel.add(new JLabel("Select a pop. or a dev."));
 		 
-		 optionsPanel.setLayout(new GridLayout(2, 1));
+		 optionsPanel.setLayout(new GridLayout(3, 1));
 		 optionsPanel.setBorder(BorderFactory.createCompoundBorder(
 					BorderFactory.createTitledBorder("Command options"),
 					BorderFactory.createEmptyBorder(5,5,5,5)));	
@@ -218,6 +222,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 		JButton addInputsButton = new JButton("Add inputs");
 		JButton addOutputsButton = new JButton("Add outputs");
 		JButton addNeuronsButton = new JButton("Add neurons");
+		JButton cancelButton = new JButton("Cancel");
 		
 		/*
 		 * The number of neurons that a population may have should not be greater than
@@ -226,7 +231,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 */
 		
 		short neuronsUsed = 0;
-		for (Population pop : selectedNode.terminal.populations.values()) {
+		for (Population pop : selectedNode.terminal.populations) {
 			neuronsUsed += pop.numOfNeurons;
 		}
 		
@@ -278,6 +283,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 				optionsPanel.removeAll();
 				optionsPanel.add(new JLabel("Select inputs"));
 				optionsPanel.add(addInputsButton);
+				optionsPanel.add(cancelButton);
 				
 				thisFrame.revalidate();
 				thisFrame.repaint();
@@ -296,6 +302,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 				optionsPanel.removeAll();
 				optionsPanel.add(new JLabel("Select outputs"));
 				optionsPanel.add(addOutputsButton);
+				optionsPanel.add(cancelButton);
 				
 				thisFrame.revalidate();
 				thisFrame.repaint();
@@ -374,11 +381,40 @@ public class PartitionTool extends JFrame implements WindowListener {
 			}
 		});
 		
+		cancelButton.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				addingInputs = false;
+				addingOutputs = false;
+				
+				inputPops.clear();
+				inputDevs.clear();
+				outputPops.clear();
+				outputDevs.clear();
+				
+				numOfNeurons = numOfDendrites = numOfSynapses = 0;
+				optionsPanel.removeAll();
+				optionsPanel.add(new JLabel("Select a command"));
+				
+				commandsPanel.setEnabled(true);
+				Component[] components = commandsPanel.getComponents();
+				for (int i = 0; i < components.length; i++)
+					components[i].setEnabled(true);
+				
+				thisFrame.revalidate();
+				thisFrame.repaint();
+				thisFrame.pack();
+			}
+			
+		});
+		
 		optionsPanel.removeAll();
 		
 		// The user is first given the option of choosing how many neurons the population should have
 		optionsPanel.add(neuronsSpinner);
 		optionsPanel.add(addNeuronsButton);
+		optionsPanel.add(cancelButton);
 		
 		this.revalidate();
 		this.repaint();
@@ -423,13 +459,12 @@ public class PartitionTool extends JFrame implements WindowListener {
 	 * The matrix structure is useful to organize the populations in a grid that can be visualized, whereas
 	 * the hash map is useful for accessing the populations using their IDs
 	 * 
-	 * @param populationsMap: The HashMap containing the populations. Their IDs are used as keys
+	 * @param populations: The ArrayList containing the populations. 
 	 * @param terminal This is an optional parameter. If it's different from null the matrix of this terminal is updated
 	 * 		  instead of that of the selected terminal
 	 */
 	
-	void buildPopulationsMatrix(HashMap<Integer, Population> populationsMap, Terminal terminal) {
-		Collection<Population> populations = populationsMap.values();
+	void buildPopulationsMatrix(ArrayList<Population> populations, Terminal terminal) {
 		
 		// Values which are local to this instance of PartitionTool should be updated only if the populations
 		// come from the selected terminal
@@ -488,11 +523,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 		if (updateLocalValues) {
 			selectedNode.terminal.popsMatrix = popsMatrix;	
 			
-			// TODO: This might not be necessary
-			if (terminal != null) {
-				terminal.popsMatrix = popsMatrix;
-				selectedNode.terminal.updateTerminal(terminal);
-				} 
+			if (terminal != null) { terminal.popsMatrix = popsMatrix; }
 		} else {
 			terminal.popsMatrix = popsMatrix;
 		}
@@ -511,7 +542,16 @@ public class PartitionTool extends JFrame implements WindowListener {
 
 		if (population != null) {	
 			for (Integer index : population.outputIndexes) {
-				int tmpDepth = ExploreDownwards(selectedNode.terminal.populations.get(index), depth);
+				
+				Population pop = null;
+				for (Population tmpPop : selectedNode.terminal.populations) 
+					if (tmpPop.id == index) {
+						pop = tmpPop;
+						break;
+					}
+				assert pop != null;
+				
+				int tmpDepth = ExploreDownwards(pop, depth);
 				newDepth = tmpDepth + 1 > newDepth ? tmpDepth + 1: newDepth;
 			}
 		} 
@@ -526,7 +566,16 @@ public class PartitionTool extends JFrame implements WindowListener {
 		
 		if (population != null) {	
 			for (Integer index : population.inputIndexes) {
-				int tmpDepth = ExploreUpwards(selectedNode.terminal.populations.get(index), depth);
+				
+				Population pop = null;
+				for (Population tmpPop : selectedNode.terminal.populations) 
+					if (tmpPop.id == index) {
+						pop = tmpPop;
+						break;
+					}
+				assert pop != null;
+				
+				int tmpDepth = ExploreUpwards(pop, depth);
 				newDepth = tmpDepth + 1 > newDepth ? tmpDepth + 1: newDepth;
 			}
 		} 
@@ -642,8 +691,9 @@ public class PartitionTool extends JFrame implements WindowListener {
 						for (Integer index : popsMatrix[i][j].inputIndexes) {
 							JLabel inputLabel;
 							
-							// If the input is not among the populations then it must be a terminal					
-							if (!selectedNode.terminal.populations.containsKey(index)) {
+							// If the input is not among the populations then it must be a terminal	
+							// Note: Equals method of Population can also accept Integer type
+							if (!selectedNode.terminal.populations.contains(index)) {
 								inputLabel = inputTerminalLabels.get(index);
 							}
 							else 
