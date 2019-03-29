@@ -28,7 +28,7 @@ public class Terminal implements Serializable, Comparable<Terminal> {
     public HashMap<Integer, ArrayList<Integer>> inputsToPopulations = new HashMap<>();
 
     // Map that connects the populations on this terminal to the presynaptic terminals
-    public HashMap<Integer, ArrayList<Integer>> populationsToOutputs = new HashMap<>();
+    public HashMap<Integer, ArrayList<Integer>> outputsToPopulations = new HashMap<>();
 
     public String serverIP;
     public String ip;
@@ -144,14 +144,14 @@ public class Terminal implements Serializable, Comparable<Terminal> {
                 output.inputIndexes.remove(pop.id);
                 if (output.inputIndexes.size() == 0)
                     removePopulation(output);
+            } else {
+                ArrayList<Integer> popsIndexes = outputsToPopulations.get(outputId);
+                popsIndexes.remove(pop.id);
+
+                if (popsIndexes.size() == 0)
+                	outputsToPopulations.remove(outputId);            	
             }
 
-            /*
-             * Here the code is different as we merely need to eliminate the list containing
-             * all the mappings of the population to be removed to the postsynaptic terminals
-             */
-
-            populationsToOutputs.remove(pop.id); // It is not guaranteed that there is such a list but this is not a problem
         }
     }
 
@@ -199,9 +199,11 @@ public class Terminal implements Serializable, Comparable<Terminal> {
             if (output != null) {
                 output.inputIndexes.add(pop.id);
             } else {
-                ArrayList<Integer> popsIndexes = new ArrayList<>();
-                popsIndexes.add(outputId);
-                populationsToOutputs.put(pop.id, popsIndexes);
+            	ArrayList<Integer> popsIndexes = outputsToPopulations.get(outputId);
+                if (popsIndexes == null)
+                    popsIndexes = new ArrayList<>();
+                popsIndexes.add(pop.id);
+                outputsToPopulations.put(outputId, popsIndexes);    
             }
 
         }
@@ -224,7 +226,7 @@ public class Terminal implements Serializable, Comparable<Terminal> {
         this.postsynapticTerminals = new ArrayList<>(terminal.postsynapticTerminals);
         this.populations = new ArrayList<>(terminal.populations);
         this.inputsToPopulations = new HashMap<>(terminal.inputsToPopulations);
-        this.populationsToOutputs = new HashMap<>(terminal.populationsToOutputs);
+        this.outputsToPopulations = new HashMap<>(terminal.outputsToPopulations);
         this.newWeights = new byte[terminal.newWeights.length];
         this.newWeightsIndexes = new int[terminal.newWeightsIndexes.length];
         this.updateWeightsFlags = new byte[terminal.updateWeightsFlags.length];

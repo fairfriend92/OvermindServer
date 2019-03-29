@@ -36,12 +36,14 @@ import javax.swing.JToggleButton;
 import javax.swing.SpinnerNumberModel;
 
 public class PartitionTool extends JFrame implements WindowListener {		
-	 Node selectedNode = null;	
+	 public Node selectedNode = null;	
 	 
 	 private static final boolean DRAW_LINES_ON = true, DRAW_LINES_OFF = false;
-	 private static final int ENTRY_SIDE = 64, // Entry is one space of the grid used to display the populations
+	// Entry is one space of the grid used to display the populations.
+	 private static final int ENTRY_SIDE = 64, 
 				ICON_SIDE = 48,
-				BORDER_SIDE = ENTRY_SIDE - ICON_SIDE, // Border is the space between the side of entry and that of the icon inside of it	
+				// Border is the space between the side of entry and that of the icon inside of it.
+				BORDER_SIDE = ENTRY_SIDE - ICON_SIDE, 
 				ICON_LAYER = 1; 
 	 
 	 private PopulationsPanel populationsPanel = new PopulationsPanel();
@@ -51,7 +53,8 @@ public class PartitionTool extends JFrame implements WindowListener {
 	 private JPanel infoPanel = new JPanel();
 	 private JPanel optionsPanel = new JPanel();
 	 private JPanel addPopPanel = new JPanel();
-	 private JButton addPopulation = new JButton();	 
+	 private JButton addPopulation = new JButton();	
+	 private JButton removePopulation = new JButton();
 	 private JButton commitButton = new JButton();
 	 private JToggleButton paintConnections = new JToggleButton();
 	 private JFrame thisFrame;
@@ -67,10 +70,10 @@ public class PartitionTool extends JFrame implements WindowListener {
 	 private ArrayList<com.example.overmind.Terminal> outputDevs = new ArrayList<>();
 	 
 	 // Matrix used to store the population so that they can be accessed 
-	 // directly based on their positions on the grid
+	 // directly based on their positions on the grid.
 	 private Population[][] popsMatrix;
 		
-	 // Width and depth of the grid
+	 // Width and depth of the grid.
 	 private int maxDepth = 0, maxWidth = 0;
 	 
 	 private short numOfDendrites = 0, numOfSynapses = 0, numOfNeurons = 0;
@@ -105,6 +108,8 @@ public class PartitionTool extends JFrame implements WindowListener {
 			 optionsPanel.add(new JLabel("Select a command"));
 		 }
 		 
+		 this.pack();
+		 
 		 populationsPanel.customUpdate(DRAW_LINES_ON);
 		 
 		 this.revalidate();
@@ -120,6 +125,13 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 try {
 			 Image img = ImageIO.read(getClass().getResource("/icons/add.png"));
 			 addPopulation.setIcon(new ImageIcon(img.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
+		 } catch (IOException e) {
+			 e.printStackTrace();
+		 }
+		 
+		 try {
+			 Image img = ImageIO.read(getClass().getResource("/icons/remove.png"));
+			 removePopulation.setIcon(new ImageIcon(img.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
 		 } catch (IOException e) {
 			 e.printStackTrace();
 		 }
@@ -170,11 +182,13 @@ public class PartitionTool extends JFrame implements WindowListener {
 		 GridBagConstraints popPanelConstr = new GridBagConstraints();
 		 popPanelConstr.gridx = 0;
 		 popPanelConstr.gridy = 0;
+		 popPanelConstr.fill = GridBagConstraints.BOTH;
 		 
 		 sidePanel.setLayout(new GridLayout(3, 1));
 		 GridBagConstraints sidePanelConstr = new GridBagConstraints();
 		 sidePanelConstr.gridx = 1;
 		 sidePanelConstr.gridy = 0;
+		 sidePanelConstr.fill = GridBagConstraints.BOTH;
 		 sidePanel.add(commandsPanel);
 		 sidePanel.add(infoPanel);
 		 sidePanel.add(optionsPanel);
@@ -184,6 +198,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 					BorderFactory.createTitledBorder("Commands"),
 					BorderFactory.createEmptyBorder(5,5,5,5)));
 		 commandsPanel.add(addPopulation);
+		 commandsPanel.add(removePopulation);
 		 commandsPanel.add(paintConnections);
 		 commandsPanel.add(commitButton);
 		 		 
@@ -365,7 +380,8 @@ public class PartitionTool extends JFrame implements WindowListener {
 					population.outputIndexes = outputs;
 					
 					selectedNode.terminal.addPopulation(population);
-					populationsPanel.customUpdate(DRAW_LINES_ON); // This call will automatically trigger the update of the pops matrix
+					// This call will automatically trigger the update of the pops matrix.
+					populationsPanel.customUpdate(DRAW_LINES_ON); 
 				}
 				
 				inputPops.clear();
@@ -464,7 +480,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 	 * 		  instead of that of the selected terminal
 	 */
 	
-	void buildPopulationsMatrix(ArrayList<Population> populations, Terminal terminal) {
+	public void buildPopulationsMatrix(ArrayList<Population> populations, Terminal terminal) {
 		
 		// Values which are local to this instance of PartitionTool should be updated only if the populations
 		// come from the selected terminal
@@ -531,10 +547,10 @@ public class PartitionTool extends JFrame implements WindowListener {
 	
 	/**
 	 * Recursive method that explore the tree of the populations downwards until 
-	 * it's found and output terminal
-	 * @param population: The population from which the exploration starts
-	 * @param depth: The depth of the current population
-	 * @return: The depth of the last known population
+	 * it's found an output terminal.
+	 * @param population: The population from which the exploration starts.
+	 * @param depth: The depth of the current population.
+	 * @return: The depth of the last known population.
 	 */
 	
 	private int ExploreDownwards(Population population, int depth) {
@@ -559,7 +575,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 		return newDepth;		
 	}
 	
-	// Just as before but the exploration is upwards 
+	// Just as before but the exploration is upwards. 
 	
 	private int ExploreUpwards(Population population, int depth) {
 		int newDepth = depth;
@@ -587,13 +603,14 @@ public class PartitionTool extends JFrame implements WindowListener {
 	 * Custom class that describes the panel which visualizes how the neural network of a
 	 * given device is partitioned into multiple populations. 
 	 * 
-	 * Populations are organized on a grid based on their pre and postsynaptic connections
+	 * Populations are organized on a grid based on their presynaptic and postsynaptic connections.
 	 * @author rodolforocco
 	 *
 	 */
 	
 	private class PopulationsPanel extends JLayeredPane {		
 		private Font font = new Font("label font", Font.PLAIN, 10);
+		private int minHeight = 480;
 		
 		// Array of coupled of points which are the extremes of the segments
 		// that connect the populations
@@ -604,11 +621,11 @@ public class PartitionTool extends JFrame implements WindowListener {
 			this.setBackground(Color.white);
 			this.setBorder(BorderFactory.createLineBorder(Color.black));
 		}
-						
+								
 		/**
 		 * Method which is called whenever the partition tool is opened. The populations are displayed
 		 * on a grid, the row represents different layers. Therefore populations on different columns but same row 
-		 * belong to the same layer
+		 * belong to the same layer.
 		 */
 		
 		void customUpdate (boolean drawLines) { 
@@ -618,10 +635,10 @@ public class PartitionTool extends JFrame implements WindowListener {
 			buildPopulationsMatrix(selectedNode.terminal.populations, null);
 			
 			/*
-			 * Pre-compute the max width of all the rows. There's the chance that the width
+			 * Precompute the max width of all the rows. There's the chance that the width
 			 * of the matrix is smaller of that of the first or last rows, which contain terminal 
 			 * nodes and not populations. Therefore maxWidth must be checked against the width of
-			 * these rows
+			 * these rows.
 			 */
 						
 			int width = selectedNode.terminal.presynapticTerminals.size() > maxWidth ? 
@@ -630,8 +647,17 @@ public class PartitionTool extends JFrame implements WindowListener {
 					width : selectedNode.terminal.postsynapticTerminals.size();
 			width *= ENTRY_SIDE;
 
-			this.setPreferredSize(new Dimension(width + BORDER_SIDE, 
-					BORDER_SIDE + ENTRY_SIDE * (maxDepth + 2))); // The + 2 accounts for the input and the output layers	
+			int height = BORDER_SIDE + ENTRY_SIDE * (maxDepth + 2); // The + 2 accounts for the input and the output layers.
+			
+			minHeight = sidePanel.getHeight() > minHeight ? sidePanel.getHeight() : minHeight; 
+			
+			int yOffset = 0;
+			if (height < minHeight) {
+				yOffset = (minHeight - height) / 2;
+				height = minHeight;
+			}
+			
+			this.setPreferredSize(new Dimension(width + BORDER_SIDE, height)); 	
 			
 			/*
 			 * Display the presynaptic terminals
@@ -647,7 +673,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 			for (Terminal presynTerminal : selectedNode.terminal.presynapticTerminals) {
 				TerminalLabel label = new TerminalLabel(presynTerminal);
 				int i = selectedNode.terminal.presynapticTerminals.indexOf(presynTerminal);
-				label.setBounds(offset + BORDER_SIDE + i * ENTRY_SIDE, BORDER_SIDE, ICON_SIDE, ICON_SIDE);
+				label.setBounds(offset + BORDER_SIDE + i * ENTRY_SIDE, BORDER_SIDE + yOffset, ICON_SIDE, ICON_SIDE);
 				label.setFont(font);
 				this.add(label, ICON_LAYER);
 				inputTerminalLabels.put(label.terminal.id, label);
@@ -662,7 +688,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 			
 			// Iterate over the layers
 			for (int i = 0; i < maxDepth; i++) { 			
-				int yPos =	BORDER_SIDE + (i + 1) * ENTRY_SIDE;					
+				int yPos =	BORDER_SIDE + (i + 1) * ENTRY_SIDE + yOffset;					
 
 				if (popsMatrix[i] != null) {				
 					int rowWidth = popsMatrix[i].length;		
@@ -727,7 +753,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 				TerminalLabel label = new TerminalLabel(postsynTerminal);
 				int i = selectedNode.terminal.postsynapticTerminals.indexOf(postsynTerminal);
 				label.setBounds(offset + BORDER_SIDE + i * ENTRY_SIDE, 
-						BORDER_SIDE + (maxDepth + 1) * ENTRY_SIDE, // The + 1 accounts for the input layer
+						BORDER_SIDE + (maxDepth + 1) * ENTRY_SIDE + yOffset, // The + 1 accounts for the input layer
 						ICON_SIDE, 
 						ICON_SIDE);
 				label.setFont(font);
@@ -752,7 +778,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 		
 		/**
 		 * Custom paint method that in addition to the standard operations 
-		 * also paints the segments that connect the populations and terminals
+		 * also paints the segments that connect the populations and terminals.
 		 */
 		
 		@Override
@@ -838,7 +864,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 							inputDevs.add(terminal);						
 							JLabel label = (JLabel) optionsPanel.getComponent(0);
 							int numOfInputs = inputPops.size() + inputDevs.size();
-							label.setText("Added " + numOfInputs + " inputs");
+							label.setText("Selected " + numOfInputs + " inputs");
 							optionsPanel.repaint();
 							optionsPanel.revalidate(); 
 						} else { // The dendrites are not enough...
@@ -860,7 +886,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 							outputDevs.add(terminal);						
 							JLabel label = (JLabel) optionsPanel.getComponent(0);
 							int numOfOutputs = outputPops.size() + outputDevs.size();
-							label.setText("Added " + numOfOutputs + " outputs");
+							label.setText("Selected " + numOfOutputs + " outputs");
 							optionsPanel.repaint();
 							optionsPanel.revalidate();
 						} else {
@@ -1000,7 +1026,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 							inputPops.add(population);						
 							JLabel label = (JLabel) optionsPanel.getComponent(0);
 							int numOfInputs = inputPops.size() + inputDevs.size();
-							label.setText("Added " + numOfInputs + " inputs");
+							label.setText("Selected " + numOfInputs + " inputs");
 							optionsPanel.repaint();
 							optionsPanel.revalidate();
 						} else {
@@ -1024,7 +1050,7 @@ public class PartitionTool extends JFrame implements WindowListener {
 							outputPops.add(population);						
 							JLabel label = (JLabel) optionsPanel.getComponent(0);
 							int numOfOutputs = outputPops.size() + outputDevs.size();
-							label.setText("Added " + numOfOutputs + " outputs");
+							label.setText("Selected " + numOfOutputs + " outputs");
 							optionsPanel.repaint();
 							optionsPanel.revalidate();
 						} else {

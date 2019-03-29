@@ -110,10 +110,12 @@ public class TerminalFrame {
 				latestSpikes[i] = new byte[dataBytes]; 
 	    }
 
+	    @Override
 	    public Dimension getPreferredSize() {
 	        return new Dimension(this.getWidth(), localUpdatedNode.terminal.numOfNeurons + 30);
 	    }	  	    
 
+	    @Override
 	    public void paintComponent(Graphics g) {
 	        super.paintComponent(g); 
 	        

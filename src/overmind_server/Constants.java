@@ -20,7 +20,7 @@ public class Constants {
     public final static int UDP_PORT = 4194;
     public final static int SERVER_PORT_TCP = 4195;
 	public final static int SERVER_PORT_UDP = 4196;
-	public static boolean USE_LOCAL_CONNECTION = false;
+	public static boolean USE_LOCAL_CONNECTION = true;
 	
 	/* Hard limits constants */
 	

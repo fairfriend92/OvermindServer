@@ -43,6 +43,9 @@ import java.util.concurrent.TimeUnit;
 import com.example.overmind.Population;
 import com.example.overmind.Terminal;
 
+// TODO: The terminal should contain the maximum number of synapses while the node should contain the 
+// number of used synapses. The populations of a given terminal should not have a limited number of synapses. 
+
 public class VirtualLayerManager extends Thread{			
 	
 	static boolean shutdown = false;	
@@ -211,7 +214,7 @@ public class VirtualLayerManager extends Thread{
 				
 				terminal.natPort = testPacket.getPort();		
 							
-				//terminal.ip = testPacket.getAddress().toString().substring(1);
+				terminal.ip = testPacket.getAddress().toString().substring(1);
 				
 				terminal.id = terminal.customHashCode();
 			
@@ -221,7 +224,9 @@ public class VirtualLayerManager extends Thread{
 	        	e.printStackTrace();
 			} 
 			
+			// TODO: Is this line necessary?
 			thisServer.numOfDendrites = terminal.numOfNeurons;
+			
 			thisServer.presynapticTerminals = new ArrayList<>();
 			thisServer.presynapticTerminals.add(terminal);
 			
@@ -831,14 +836,8 @@ public class VirtualLayerManager extends Thread{
 					tmpNode.terminal.numOfSynapses += node.terminal.numOfNeurons;
 					//unsyncNodes.add(tmpNode);
 					modifiedNodes.add(tmpNode);
-					
-					// Remove all the references to the disconnected terminal from the arraylists containing the indexes 
-					// of the terminals stimulated by population
-					Iterator<Population> entriesIterator = tmpNode.terminal.populations.iterator();
-					while (entriesIterator.hasNext()) {
-						int populationId = entriesIterator.next().id;
-						tmpNode.terminal.populationsToOutputs.get(populationId).remove(node.terminal.id);
-					}					
+										
+					tmpNode.terminal.outputsToPopulations.remove(node.terminal.id);			
 					
 					nodeHasBeenModified = false;
 				}

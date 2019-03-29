@@ -62,7 +62,7 @@ public class VirtualLayerVisualizer extends Thread{
 	JToggleButton cutLink = new JToggleButton();
 	JToggleButton createLink = new JToggleButton();	
 	
-	static PartitionTool partTool = new PartitionTool();
+	public static PartitionTool partTool = new PartitionTool();
 	
 	@Override
 	public void run () {
@@ -574,11 +574,10 @@ public class VirtualLayerVisualizer extends Thread{
 	 */
 	
 	public class LayeredPaneVL extends JLayeredPane implements MouseMotionListener {
-		// The panel on which the connections are drawn
 		public DrawablePanelVL connPanel = new DrawablePanelVL();
 		
 		@Override
-		public void setPreferredSize(Dimension d) {
+		public void setPreferredSize(Dimension d) {			
 			super.setPreferredSize(d);			
 			connPanel.setPreferredSize(d);	
 		}
@@ -586,7 +585,7 @@ public class VirtualLayerVisualizer extends Thread{
 		public LayeredPaneVL () {
 							
 			connPanel.add(this);
-			this.setPreferredSize(new Dimension(640, 480));
+			this.setPreferredSize(new Dimension(800, 600));
 			this.setOpaque(false);
 			this.addMouseMotionListener(this);
 									

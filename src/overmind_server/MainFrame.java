@@ -216,6 +216,7 @@ public class MainFrame {
 		});			
 		
 		JCheckBox useLocalConnection = new JCheckBox("Use local connection", false);
+		useLocalConnection.setSelected(true);
 		useLocalConnection.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {							
