@@ -8,7 +8,7 @@ Overmind consists of 2 main components:
   1) A client application, to be run on the Android terminals, that simulates the local sub-network and takes care of communications with other client applications
   2) A server application, that runs on a desktop pc and manages the topology of the virtual network that is made of the client terminals 
   
-Communications among terminals are direct, i.e. the terminals form of a P2P network. The server facilitates the "UDP hole punching" technique to make direct communications among clients possible. A brief overview of the simulator can be found here; more technical details can be found here.
+Communications among terminals are direct, i.e. the terminals form of a P2P network. The server facilitates the "UDP hole punching" technique to make direct communications among clients possible. A brief overview of the simulator can be found <a href="https://drive.google.com/file/d/1HXEZPquvL074W5A8zCYezKZsSuZJRPBV/view?usp=sharing">here</a>; more technical details can be found <a href="https://drive.google.com/file/d/1mpvIt8U_E-32HUVETb6icVovcQidOv6U/view?usp=sharing">here</a>.
 
 <h2>OvermindServer</h2>
 
